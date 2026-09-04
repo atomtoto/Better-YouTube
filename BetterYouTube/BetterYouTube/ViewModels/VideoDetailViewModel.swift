@@ -11,10 +11,10 @@ final class VideoDetailViewModel: ObservableObject {
     private let service: YouTubeAPIService
     private let library: LibraryStore
 
-    init(video: Video, service: YouTubeAPIService = .shared, library: LibraryStore = .shared) {
+    init(video: Video, service: YouTubeAPIService = .shared, library: LibraryStore? = nil) {
         self.video = video
         self.service = service
-        self.library = library
+        self.library = library ?? .shared
     }
 
     var isFavorite: Bool { library.isFavorite(video) }

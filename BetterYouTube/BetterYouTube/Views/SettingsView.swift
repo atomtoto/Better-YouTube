@@ -8,7 +8,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("YouTube Data API v3 Key") {
+            Section {
                 TextField("API key", text: $draftKey)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -23,6 +23,8 @@ struct SettingsView: View {
                         .foregroundStyle(.green)
                         .font(.footnote)
                 }
+            } header: {
+                Text("YouTube Data API v3 Key")
             } footer: {
                 Text("Create a free key at console.cloud.google.com by enabling the YouTube Data API v3 and generating an API key credential. The key is stored only on this device.")
             }
