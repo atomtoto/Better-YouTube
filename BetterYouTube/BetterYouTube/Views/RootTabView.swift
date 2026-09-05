@@ -3,29 +3,36 @@ import SwiftUI
 struct RootTabView: View {
     @EnvironmentObject private var apiKeyStore: APIKeyStore
     @EnvironmentObject private var auth: GoogleAuthService
+    @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var notificationStore: NotificationStore
     @State private var showsOnboarding = false
 
     var body: some View {
-        TabView {
-            NavigationStack {
+        TabView(selection: $router.selectedTab) {
+            NavigationStack(path: $router.homePath) {
                 HomeView()
             }
             .tabItem { Label("Home", systemImage: "play.circle.fill") }
+            .badge(notificationStore.unreadCount)
+            .tag(AppRouter.Tab.home)
 
             NavigationStack {
                 SearchView()
             }
             .tabItem { Label("Search", systemImage: "magnifyingglass") }
+            .tag(AppRouter.Tab.search)
 
             NavigationStack {
                 LibraryView()
             }
             .tabItem { Label("Library", systemImage: "square.stack.fill") }
+            .tag(AppRouter.Tab.library)
 
             NavigationStack {
                 SettingsView()
             }
             .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+            .tag(AppRouter.Tab.settings)
         }
         .sheet(isPresented: $showsOnboarding) {
             OnboardingView()
@@ -140,4 +147,7 @@ private struct FeatureRow: View {
         .environmentObject(LibraryStore.shared)
         .environmentObject(GoogleAuthService.shared)
         .environmentObject(RecentSearchStore.shared)
+        .environmentObject(NotificationStore.shared)
+        .environmentObject(NotificationService.shared)
+        .environmentObject(AppRouter.shared)
 }

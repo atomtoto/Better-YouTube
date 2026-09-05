@@ -1,12 +1,16 @@
 import SwiftUI
 
 struct ChannelView: View {
+    @EnvironmentObject private var notificationStore: NotificationStore
+    @EnvironmentObject private var notifications: NotificationService
     @StateObject private var viewModel: ChannelViewModel
     private let initialChannel: Channel?
+    private let channelId: String
 
     init(channelId: String, initialChannel: Channel? = nil) {
         _viewModel = StateObject(wrappedValue: ChannelViewModel(channelId: channelId))
         self.initialChannel = initialChannel
+        self.channelId = channelId
     }
 
     private var channel: Channel? { viewModel.channel ?? initialChannel }
@@ -45,9 +49,35 @@ struct ChannelView: View {
         }
         .navigationTitle(channel?.title ?? "Channel")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    toggleNotifications()
+                } label: {
+                    Image(systemName: notificationStore.isOptedIn(channelId) ? "bell.fill" : "bell")
+                }
+                .accessibilityLabel(
+                    notificationStore.isOptedIn(channelId)
+                        ? "Turn off notifications for this channel"
+                        : "Notify me about new videos from this channel"
+                )
+            }
+        }
         .navigationDestination(for: Video.self) { VideoDetailView(video: $0) }
         .task {
             if viewModel.channel == nil { await viewModel.load() }
+        }
+    }
+
+    /// Turning the bell on for the first time also asks for system permission.
+    private func toggleNotifications() {
+        let wasOptedIn = notificationStore.isOptedIn(channelId)
+        notificationStore.toggleOptIn(channelId)
+        guard !wasOptedIn else { return }
+        Task {
+            if notifications.authorizationStatus == .notDetermined {
+                await notifications.requestAuthorization()
+            }
         }
     }
 }
@@ -107,4 +137,6 @@ struct ChannelHeaderView: View {
         ))
     }
     .environmentObject(LibraryStore.shared)
+        .environmentObject(NotificationStore.shared)
+        .environmentObject(NotificationService.shared)
 }

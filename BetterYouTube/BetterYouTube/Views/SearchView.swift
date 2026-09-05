@@ -1,17 +1,11 @@
 import SwiftUI
 
+/// Search with the field pinned to the bottom, within thumb reach. Opening the tab does exactly
+/// two things: raise the keyboard and show recent searches — nothing is fetched until you ask.
 struct SearchView: View {
     @EnvironmentObject private var recents: RecentSearchStore
     @StateObject private var viewModel = SearchViewModel()
-
-    private let categories: [(title: String, symbol: String, colors: [Color])] = [
-        ("Music", "music.note", [.pink, .purple]),
-        ("Gaming", "gamecontroller.fill", [.indigo, .blue]),
-        ("News", "newspaper.fill", [.orange, .red]),
-        ("Sport", "sportscourt.fill", [.green, .teal]),
-        ("Tech", "cpu.fill", [.blue, .cyan]),
-        ("Podcasts", "mic.fill", [.purple, .indigo])
-    ]
+    @FocusState private var isFieldFocused: Bool
 
     var body: some View {
         Group {
@@ -26,38 +20,88 @@ struct SearchView: View {
                     message: "Try a different search term."
                 )
             } else if viewModel.results.isEmpty {
-                browse
+                recentSearches
             } else {
                 results
             }
         }
         .background(Color(uiColor: .systemBackground))
         .navigationTitle("Search")
-        .searchable(text: $viewModel.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Videos and channels")
-        .onChange(of: viewModel.query) { _ in viewModel.queryChanged() }
-        .onSubmit(of: .search) { viewModel.submit() }
+        .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom) { searchField }
         .navigationDestination(for: Video.self) { VideoDetailView(video: $0) }
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
+        .onAppear { isFieldFocused = true }
     }
 
-    // MARK: Browse (empty state)
+    // MARK: Bottom search field
 
-    private var browse: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.section) {
-                if !recents.terms.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Recently Searched")
-                                .font(.title2.bold())
-                            Spacer()
-                            Button("Clear") { recents.clear() }
-                                .font(.subheadline.weight(.semibold))
-                        }
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
 
+                TextField("Search videos and channels", text: $viewModel.query)
+                    .focused($isFieldFocused)
+                    .submitLabel(.search)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .onSubmit {
+                        viewModel.submit()
+                        isFieldFocused = false
+                    }
+
+                if !viewModel.query.isEmpty {
+                    Button {
+                        viewModel.clear()
+                        isFieldFocused = true
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Clear search")
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
+
+            if isFieldFocused || !viewModel.query.isEmpty {
+                Button("Search") {
+                    viewModel.submit()
+                    isFieldFocused = false
+                }
+                .font(.subheadline.weight(.semibold))
+                .disabled(viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.gutter)
+        .padding(.vertical, 8)
+        .background(.bar)
+        .animation(.easeInOut(duration: 0.18), value: isFieldFocused)
+        .animation(.easeInOut(duration: 0.18), value: viewModel.query.isEmpty)
+    }
+
+    // MARK: Recents
+
+    private var recentSearches: some View {
+        Group {
+            if recents.terms.isEmpty {
+                EmptyStateView(
+                    title: "Search YouTube",
+                    systemImage: "magnifyingglass",
+                    message: "Look for videos and channels. Your recent searches will show up here."
+                )
+            } else {
+                List {
+                    Section {
                         ForEach(recents.terms, id: \.self) { term in
                             Button {
                                 viewModel.search(term: term)
+                                isFieldFocused = false
                             } label: {
                                 HStack(spacing: 12) {
                                     Image(systemName: "clock.arrow.circlepath")
@@ -65,40 +109,39 @@ struct SearchView: View {
                                     Text(term)
                                         .foregroundStyle(.primary)
                                     Spacer()
-                                    Image(systemName: "arrow.up.left")
-                                        .font(.footnote)
-                                        .foregroundStyle(.tertiary)
+                                    Button {
+                                        viewModel.query = term
+                                        isFieldFocused = true
+                                    } label: {
+                                        Image(systemName: "arrow.up.left")
+                                            .font(.footnote)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .padding(.vertical, 10)
                             }
                             .buttonStyle(.plain)
-                            Divider()
+                            .swipeActions {
+                                Button(role: .destructive) {
+                                    recents.remove(term)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                    } header: {
+                        HStack {
+                            Text("Recent Searches")
+                            Spacer()
+                            Button("Clear") { recents.clear() }
+                                .font(.caption.weight(.semibold))
+                                .textCase(nil)
                         }
                     }
                 }
-
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Browse Categories")
-                        .font(.title2.bold())
-
-                    LazyVGrid(
-                        columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                        spacing: 12
-                    ) {
-                        ForEach(categories, id: \.title) { category in
-                            Button {
-                                viewModel.search(term: category.title)
-                            } label: {
-                                CategoryTile(title: category.title, symbol: category.symbol, colors: category.colors)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
+                .listStyle(.plain)
             }
-            .padding(Theme.Spacing.gutter)
         }
-        .scrollIndicators(.hidden)
     }
 
     // MARK: Results
@@ -127,30 +170,7 @@ struct SearchView: View {
             }
         }
         .listStyle(.plain)
-    }
-}
-
-private struct CategoryTile: View {
-    let title: String
-    let symbol: String
-    let colors: [Color]
-
-    var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
-
-            Image(systemName: symbol)
-                .font(.system(size: 46))
-                .foregroundStyle(.white.opacity(0.25))
-                .offset(x: 96, y: -14)
-
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding(12)
-        }
-        .frame(height: 88)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .scrollDismissesKeyboard(.immediately)
     }
 }
 

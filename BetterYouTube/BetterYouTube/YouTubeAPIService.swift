@@ -308,40 +308,64 @@ actor YouTubeAPIService {
     }
 
     /// Latest uploads across the channels the user follows, newest first.
-    func subscriptionFeed(channelLimit: Int = 12, perChannel: Int = 3) async throws -> [Video] {
+    func subscriptionFeed(channelLimit: Int = 25, perChannel: Int = 3) async throws -> [Video] {
         let channels = try await mySubscriptions(maxResults: channelLimit)
-        guard !channels.isEmpty else { return [] }
+        return try await videos(fromChannels: channels.map(\.id), perChannel: perChannel)
+    }
 
-        // One batched channels.list call resolves every uploads playlist at once.
-        let ids = channels.map(\.id).joined(separator: ",")
+    /// Recent uploads across an arbitrary set of channels, newest first.
+    ///
+    /// Costs one `channels.list` call for the whole set plus one `playlistItems.list` per channel
+    /// (1 unit each) — the same feed via `search.list` would cost 100 units per channel.
+    func videos(fromChannels channelIds: [String], perChannel: Int = 4, limit: Int = 40) async throws -> [Video] {
+        let ids = Array(Set(channelIds.filter { !$0.isEmpty })).prefix(50)
+        guard !ids.isEmpty else { return [] }
+
         let response: YTListResponse<YTResourceItem> = try await request(
             path: "channels",
-            query: ["part": "contentDetails", "id": ids],
-            requiresAuth: true
+            query: ["part": "contentDetails", "id": ids.joined(separator: ",")]
         )
         let playlistIds = response.items.compactMap { item -> String? in
-            if let uploads = item.contentDetails?.relatedPlaylists?.uploads {
-                uploadsPlaylistCache[item.id] = uploads
-                return uploads
-            }
-            return nil
+            guard let uploads = item.contentDetails?.relatedPlaylists?.uploads else { return nil }
+            uploadsPlaylistCache[item.id] = uploads
+            return uploads
         }
 
         var videos: [Video] = []
-        try await withThrowingTaskGroup(of: [Video].self) { group in
+        await withTaskGroup(of: [Video].self) { group in
             for playlistId in playlistIds {
                 group.addTask { [weak self] in
                     guard let self else { return [] }
                     return (try? await self.rawPlaylistItems(playlistId: playlistId, maxResults: perChannel)) ?? []
                 }
             }
-            for try await batch in group {
+            for await batch in group {
                 videos.append(contentsOf: batch)
             }
         }
 
         let sorted = videos.sorted { ($0.publishedAt ?? .distantPast) > ($1.publishedAt ?? .distantPast) }
-        return await enrich(Array(sorted.prefix(30)))
+        return await enrich(Array(sorted.prefix(limit)))
+    }
+
+    /// Channel avatars for feed rows — one batched call for up to 50 channels.
+    func channelAvatars(ids: [String]) async -> [String: URL] {
+        let unique = Array(Set(ids.filter { !$0.isEmpty })).prefix(50)
+        guard !unique.isEmpty else { return [:] }
+
+        let response: YTListResponse<YTResourceItem>? = try? await request(
+            path: "channels",
+            query: ["part": "snippet", "id": unique.joined(separator: ",")]
+        )
+        guard let items = response?.items else { return [:] }
+
+        return Dictionary(
+            items.compactMap { item -> (String, URL)? in
+                guard let url = item.snippet?.thumbnails?.bestURL else { return nil }
+                return (item.id, url)
+            },
+            uniquingKeysWith: { first, _ in first }
+        )
     }
 
     /// Playlist items without the enrichment pass, so batched callers enrich once at the end.

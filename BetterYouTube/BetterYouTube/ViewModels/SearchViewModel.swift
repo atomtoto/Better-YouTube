@@ -31,33 +31,26 @@ final class SearchViewModel: ObservableObject {
         }
     }
 
-    /// Debounces typing so a 100-unit search request doesn't fire on every keystroke.
-    func queryChanged() {
-        searchTask?.cancel()
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            results = []
-            hasSearched = false
-            errorMessage = nil
-            return
-        }
-        searchTask = Task {
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            guard !Task.isCancelled else { return }
-            await performSearch(trimmed)
-        }
-    }
-
+    /// Searching is explicit — `search.list` costs 100 of the 10,000 daily quota units, so it
+    /// runs when you submit, never while you type.
     func submit() {
-        searchTask?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        Task { await performSearch(trimmed) }
+        searchTask?.cancel()
+        searchTask = Task { await performSearch(trimmed) }
     }
 
     func search(term: String) {
         query = term
         submit()
+    }
+
+    func clear() {
+        searchTask?.cancel()
+        query = ""
+        results = []
+        hasSearched = false
+        errorMessage = nil
     }
 
     private func performSearch(_ text: String) async {

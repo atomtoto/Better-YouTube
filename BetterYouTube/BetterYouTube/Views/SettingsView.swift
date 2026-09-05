@@ -1,9 +1,12 @@
 import SwiftUI
+import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject private var apiKeyStore: APIKeyStore
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var auth: GoogleAuthService
+    @EnvironmentObject private var notificationStore: NotificationStore
+    @EnvironmentObject private var notifications: NotificationService
 
     @State private var draftKey: String = ""
     @State private var draftClientId: String = ""
@@ -14,6 +17,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             accountSection
+            notificationsSection
             apiKeySection
 
             Section("On This Device") {
@@ -107,6 +111,56 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
+    private var notificationsSection: some View {
+        Section {
+            Picker("New videos", selection: $notificationStore.mode) {
+                ForEach(NotificationMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .onChange(of: notificationStore.mode) { mode in
+                guard mode != .off else { return }
+                Task {
+                    if notifications.authorizationStatus == .notDetermined {
+                        await notifications.requestAuthorization()
+                    }
+                }
+            }
+
+            if notificationStore.mode == .selected {
+                LabeledContent("Channels with the bell on", value: "\(notificationStore.channelOptIns.count)")
+            }
+
+            if notificationStore.isEnabled && notifications.authorizationStatus == .denied {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Label("Allow notifications in iOS Settings", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+            }
+
+            Button {
+                Task { await BackgroundRefresh.checkForNewVideos() }
+            } label: {
+                Label("Check for New Videos Now", systemImage: "arrow.clockwise")
+            }
+            .disabled(!notificationStore.isEnabled || !auth.isSignedIn)
+        } header: {
+            Text("Notifications")
+        } footer: {
+            Text("""
+            Better YouTube checks your subscriptions for new uploads in the background and notifies \
+            you locally — the Data API offers no push channel for personal accounts, so delivery \
+            follows iOS's background-refresh schedule and the moment you open the app. Turn the \
+            bell on from a channel page to pick individual channels.
+            """)
+        }
+    }
+
     private var apiKeySection: some View {
         Section {
             TextField("API key", text: $draftKey)
@@ -150,4 +204,6 @@ struct SettingsView: View {
         .environmentObject(APIKeyStore.shared)
         .environmentObject(LibraryStore.shared)
         .environmentObject(GoogleAuthService.shared)
+        .environmentObject(NotificationStore.shared)
+        .environmentObject(NotificationService.shared)
 }

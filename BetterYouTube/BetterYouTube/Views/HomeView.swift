@@ -3,102 +3,120 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var library: LibraryStore
+    @EnvironmentObject private var notificationStore: NotificationStore
+    @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel = HomeViewModel()
+
+    @State private var showsNotifications = false
+    @State private var isResolvingDeepLink = false
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: Theme.Spacing.section) {
-                if viewModel.isLoading && viewModel.trending.isEmpty {
-                    loadingState
-                } else if let message = viewModel.errorMessage, viewModel.trending.isEmpty {
-                    EmptyStateView(
-                        title: "Nothing to show yet",
-                        systemImage: "wifi.exclamationmark",
-                        message: message
-                    )
-                    .padding(.top, 60)
-                } else {
-                    if let featured = viewModel.featured {
-                        NavigationLink(value: featured) {
-                            FeaturedVideoCard(video: featured)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, Theme.Spacing.gutter)
-                    }
-
-                    if !viewModel.subscriptionFeed.isEmpty {
-                        carousel(
-                            title: "From Your Subscriptions",
-                            subtitle: "New uploads",
-                            videos: viewModel.subscriptionFeed
-                        )
-                    }
-
-                    if !viewModel.trendingRest.isEmpty {
-                        carousel(
-                            title: "Trending Now",
-                            subtitle: "Popular on YouTube",
-                            videos: viewModel.trendingRest
-                        )
-                    }
-
-                    if !library.history.isEmpty {
-                        carousel(
-                            title: "Continue Watching",
-                            subtitle: "Recently played",
-                            videos: Array(library.history.prefix(12))
-                        )
+            LazyVStack(spacing: 24) {
+                Picker("Feed", selection: $viewModel.feed) {
+                    ForEach(HomeViewModel.Feed.allCases) { feed in
+                        Text(feed.title).tag(feed)
                     }
                 }
-            }
-            .padding(.vertical, Theme.Spacing.gutter)
-        }
-        .scrollIndicators(.hidden)
-        .background(Color(uiColor: .systemBackground))
-        .navigationTitle("Home")
-        .navigationDestination(for: Video.self) { VideoDetailView(video: $0) }
-        .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
-        .refreshable { await viewModel.load(isSignedIn: auth.isSignedIn) }
-        .task {
-            if viewModel.trending.isEmpty {
-                await viewModel.load(isSignedIn: auth.isSignedIn)
-            }
-        }
-    }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, Theme.Spacing.gutter)
 
-    private func carousel(title: String, subtitle: String, videos: [Video]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: title, subtitle: subtitle) {
-                VideoListView(title: title, videos: videos)
-            }
-            .padding(.horizontal, Theme.Spacing.gutter)
-
-            ScrollView(.horizontal) {
-                LazyHStack(alignment: .top, spacing: Theme.Spacing.card) {
-                    ForEach(videos) { video in
-                        NavigationLink(value: video) {
-                            VideoCardView(video: video)
+                if viewModel.isLoading && viewModel.videos.isEmpty {
+                    placeholderFeed
+                } else if viewModel.videos.isEmpty {
+                    emptyState
+                        .padding(.top, 40)
+                } else {
+                    ForEach(viewModel.videos) { video in
+                        Button {
+                            router.homePath.append(video)
+                        } label: {
+                            FeedVideoCard(video: video, avatarURL: viewModel.avatar(for: video.channelId))
                         }
                         .buttonStyle(.plain)
                         .videoContextMenu(video)
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.gutter)
             }
-            .scrollIndicators(.hidden)
+            .padding(.vertical, 12)
+        }
+        .scrollIndicators(.hidden)
+        .background(Color(uiColor: .systemBackground))
+        .navigationTitle("Home")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showsNotifications = true
+                } label: {
+                    Image(systemName: notificationStore.unreadCount > 0 ? "bell.badge.fill" : "bell")
+                        .symbolRenderingMode(notificationStore.unreadCount > 0 ? .multicolor : .monochrome)
+                }
+                .accessibilityLabel(
+                    notificationStore.unreadCount > 0
+                        ? "Notifications, \(notificationStore.unreadCount) unread"
+                        : "Notifications"
+                )
+            }
+        }
+        .sheet(isPresented: $showsNotifications) {
+            NotificationsView()
+        }
+        .navigationDestination(for: Video.self) { VideoDetailView(video: $0) }
+        .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
+        .refreshable { await viewModel.load(isSignedIn: auth.isSignedIn, library: library) }
+        .task(id: auth.isSignedIn) {
+            await viewModel.load(isSignedIn: auth.isSignedIn, library: library)
+        }
+        .task(id: router.pendingVideoId) {
+            await resolveDeepLink()
         }
     }
 
-    private var loadingState: some View {
-        VStack(spacing: 20) {
+    // MARK: Pieces
+
+    private var emptyState: some View {
+        EmptyStateView(
+            title: auth.isSignedIn ? "Nothing new yet" : "Your feed lives here",
+            systemImage: "sparkles.tv",
+            message: auth.isSignedIn
+                ? "Watch a few videos and this feed will fill up with more from the channels you spend time on."
+                : "Sign in with Google in Settings to see your subscriptions, or search for something to get started."
+        )
+    }
+
+    private var placeholderFeed: some View {
+        VStack(spacing: 24) {
             ForEach(0..<3, id: \.self) { _ in
-                RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                    .fill(Color(uiColor: .tertiarySystemFill))
-                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                VStack(alignment: .leading, spacing: 10) {
+                    RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                        .fill(Color(uiColor: .tertiarySystemFill))
+                        .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                    HStack(spacing: 10) {
+                        Circle()
+                            .fill(Color(uiColor: .tertiarySystemFill))
+                            .frame(width: 36, height: 36)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Capsule().fill(Color(uiColor: .tertiarySystemFill)).frame(height: 12)
+                            Capsule().fill(Color(uiColor: .tertiarySystemFill)).frame(width: 140, height: 10)
+                        }
+                    }
+                }
             }
         }
         .padding(.horizontal, Theme.Spacing.gutter)
         .redacted(reason: .placeholder)
+    }
+
+    /// A tapped notification carries only a video ID; fetch it, then push it.
+    private func resolveDeepLink() async {
+        guard let videoId = router.pendingVideoId, !isResolvingDeepLink else { return }
+        isResolvingDeepLink = true
+        defer { isResolvingDeepLink = false }
+
+        if let video = try? await YouTubeAPIService.shared.video(id: videoId) {
+            router.homePath.append(video)
+        }
+        router.pendingVideoId = nil
     }
 }
 
@@ -147,4 +165,6 @@ extension View {
         .environmentObject(APIKeyStore.shared)
         .environmentObject(LibraryStore.shared)
         .environmentObject(GoogleAuthService.shared)
+        .environmentObject(NotificationStore.shared)
+        .environmentObject(AppRouter.shared)
 }

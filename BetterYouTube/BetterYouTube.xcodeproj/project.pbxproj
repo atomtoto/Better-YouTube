@@ -20,22 +20,28 @@
 		729A150EAE4793319564AD3F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D530576D5CF8B70831C69D /* Models.swift */; };
 		7A740261748970FEF044EFF9 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A988341166DB56C3D423057 /* RootTabView.swift */; };
 		883E82C72D4B8774B0085056 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 205910A80EFBDFAD9310F5CD /* LibraryView.swift */; };
+		92C647B6ACC49AED8349A942 /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 974548E984460DB3448AB42E /* BackgroundRefresh.swift */; };
 		9427E70309498CDBF08B3846 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD59E0EB71DC1D5B631D2753 /* SettingsView.swift */; };
 		9AA644F99737914623BCC493 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21564C00B7A7393D5BECE8BD /* Theme.swift */; };
 		A8919DA2647E9FC9978D1AF7 /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD881385B495588F558E961F /* Utilities.swift */; };
 		C137247EE09FF7F5BE9BAB52 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A21370A0999F08944A80A55D /* EmptyStateView.swift */; };
 		C4E6F1F31ADE99A7910810A5 /* VideoDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D57351945F0E296A48ED74 /* VideoDetailView.swift */; };
+		C5F04AFA84BF255122D02CF1 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61454B909858AA3CBDB6C50B /* NotificationsView.swift */; };
 		D0687455C07D878E9DB04308 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C981C1E53AF7B815CD93FB6D /* Assets.xcassets */; };
 		D48F23EB00D70C7A8F59E083 /* ChannelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6389BFBA5B84E6680E8B48C2 /* ChannelView.swift */; };
+		DBF6495C80DFA30A092734B2 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 166B42AABD82F80D72120EEE /* NotificationService.swift */; };
 		DD9C34817BEF71E78E3483E7 /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61B079CDDB3B2E4D7C531283 /* Persistence.swift */; };
 		E83091452729593944F09C0A /* BetterYouTubeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2460DE7F50655C47F611B382 /* BetterYouTubeApp.swift */; };
+		E89A43ACB50A99F54A042E70 /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F8E4D66B2D6AE73ACD3D031 /* AppRouter.swift */; };
 		F4F905BB38F666A73F65B59F /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD1CCEBA5BC1F5564078632 /* SearchView.swift */; };
 		F9A34079A47F4D73B5FCCF81 /* VideoCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200946DDA34EED92264FD752 /* VideoCardView.swift */; };
+		FA2F4E3FA41EB5FAAA3CD491 /* NotificationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EC14D7ABDA495DEE45A4CFE /* NotificationStore.swift */; };
 		FB8E1F0DC99B3252C39A41C1 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07915B6C44135B78F0C9D66 /* SearchViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		107874484CC359A0ABCA8FC3 /* YouTubePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubePlayerView.swift; sourceTree = "<group>"; };
+		166B42AABD82F80D72120EEE /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		200946DDA34EED92264FD752 /* VideoCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VideoCardView.swift; path = VideoCardView.swift; sourceTree = "<group>"; };
 		205910A80EFBDFAD9310F5CD /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		21564C00B7A7393D5BECE8BD /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Theme.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -43,13 +49,17 @@
 		2460DE7F50655C47F611B382 /* BetterYouTubeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterYouTubeApp.swift; sourceTree = "<group>"; };
 		5016CD8EFDC2305017EC7822 /* YouTubeAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeAPIService.swift; sourceTree = "<group>"; };
 		5A988341166DB56C3D423057 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
+		5EC14D7ABDA495DEE45A4CFE /* NotificationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationStore.swift; path = NotificationStore.swift; sourceTree = "<group>"; };
+		61454B909858AA3CBDB6C50B /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationsView.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		61B079CDDB3B2E4D7C531283 /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
 		6389BFBA5B84E6680E8B48C2 /* ChannelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelView.swift; sourceTree = "<group>"; };
 		6BD1CCEBA5BC1F5564078632 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		7F8E4D66B2D6AE73ACD3D031 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppRouter.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		81918909E83595C8F4212CCC /* BetterYouTube.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BetterYouTube.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		83D530576D5CF8B70831C69D /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		916A473B8AC88B5BD27F4644 /* GoogleAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GoogleAuthService.swift; path = GoogleAuthService.swift; sourceTree = "<group>"; };
 		96B410CBE5CAEC145B8691C5 /* VideoDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoDetailViewModel.swift; sourceTree = "<group>"; };
+		974548E984460DB3448AB42E /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BackgroundRefresh.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
 		9AC2AB4BA1EE45E903DE78F4 /* ChannelViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelViewModel.swift; sourceTree = "<group>"; };
 		A21370A0999F08944A80A55D /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		A53E430DB94C6F43C0F367A6 /* PlaylistViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlaylistViewModel.swift; path = PlaylistViewModel.swift; sourceTree = "<group>"; };
@@ -95,6 +105,7 @@
 				107874484CC359A0ABCA8FC3 /* YouTubePlayerView.swift */,
 				DA6B490E99286C354C0290CE /* Components */,
 				B0AA470184C4B77CEE258C2D /* VideoListView.swift */,
+				61454B909858AA3CBDB6C50B /* NotificationsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -126,6 +137,10 @@
 				9CECDDFA5EF2AE0232F90708 /* Views */,
 				21564C00B7A7393D5BECE8BD /* Theme.swift */,
 				916A473B8AC88B5BD27F4644 /* GoogleAuthService.swift */,
+				7F8E4D66B2D6AE73ACD3D031 /* AppRouter.swift */,
+				5EC14D7ABDA495DEE45A4CFE /* NotificationStore.swift */,
+				166B42AABD82F80D72120EEE /* NotificationService.swift */,
+				974548E984460DB3448AB42E /* BackgroundRefresh.swift */,
 			);
 			path = BetterYouTube;
 			sourceTree = "<group>";
@@ -230,6 +245,11 @@
 				65EF4FBA823C879F89655E17 /* PlaylistViewModel.swift in Sources */,
 				05BF4C809493100BE416DA7F /* VideoListView.swift in Sources */,
 				F9A34079A47F4D73B5FCCF81 /* VideoCardView.swift in Sources */,
+				E89A43ACB50A99F54A042E70 /* AppRouter.swift in Sources */,
+				FA2F4E3FA41EB5FAAA3CD491 /* NotificationStore.swift in Sources */,
+				DBF6495C80DFA30A092734B2 /* NotificationService.swift in Sources */,
+				92C647B6ACC49AED8349A942 /* BackgroundRefresh.swift in Sources */,
+				C5F04AFA84BF255122D02CF1 /* NotificationsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

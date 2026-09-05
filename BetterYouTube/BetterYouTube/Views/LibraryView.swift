@@ -138,4 +138,5 @@ private struct LibraryRow: View {
     NavigationStack { LibraryView() }
         .environmentObject(LibraryStore.shared)
         .environmentObject(GoogleAuthService.shared)
+        .environmentObject(NotificationStore.shared)
 }

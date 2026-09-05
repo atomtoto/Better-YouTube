@@ -27,6 +27,82 @@ struct VideoCardView: View {
     }
 }
 
+/// Full-width feed card: big artwork, then avatar + title + metadata, the way the YouTube app
+/// lays out its home feed — with Apple's type scale, corner radii and materials.
+struct FeedVideoCard: View {
+    let video: Video
+    var avatarURL: URL?
+
+    @EnvironmentObject private var library: LibraryStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ArtworkView(url: video.thumbnailURL, duration: video.duration, cornerRadius: Theme.Radius.card)
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .artworkShadow()
+
+            HStack(alignment: .top, spacing: 10) {
+                AvatarView(url: avatarURL, size: 36)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(video.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+
+                    Text(metadataLine)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+
+                Menu {
+                    Button {
+                        library.toggleWatchLater(video)
+                    } label: {
+                        Label(
+                            library.isInWatchLater(video) ? "Remove from Watch Later" : "Save to Watch Later",
+                            systemImage: library.isInWatchLater(video) ? "clock.badge.xmark" : "clock"
+                        )
+                    }
+                    Button {
+                        library.toggleFavorite(video)
+                    } label: {
+                        Label(
+                            library.isFavorite(video) ? "Remove from Favorites" : "Add to Favorites",
+                            systemImage: library.isFavorite(video) ? "heart.slash" : "heart"
+                        )
+                    }
+                    if let url = video.watchURL {
+                        ShareLink(item: url) {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
+                }
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.gutter)
+        .contentShape(Rectangle())
+    }
+
+    private var metadataLine: String {
+        var parts: [String] = []
+        if !video.channelTitle.isEmpty { parts.append(video.channelTitle) }
+        if let views = video.viewCount { parts.append("\(CountFormatter.abbreviated(views)) views") }
+        if let date = video.publishedAt { parts.append(RelativeDateFormatter.string(from: date)) }
+        return parts.joined(separator: " · ")
+    }
+}
+
 /// Compact list row, mirroring the density of Apple Music's track rows.
 struct VideoRowView: View {
     let video: Video
