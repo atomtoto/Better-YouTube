@@ -37,6 +37,7 @@
 		F9A34079A47F4D73B5FCCF81 /* VideoCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200946DDA34EED92264FD752 /* VideoCardView.swift */; };
 		FA2F4E3FA41EB5FAAA3CD491 /* NotificationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EC14D7ABDA495DEE45A4CFE /* NotificationStore.swift */; };
 		FB8E1F0DC99B3252C39A41C1 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07915B6C44135B78F0C9D66 /* SearchViewModel.swift */; };
+		03AB6715F4D5961DAE9D71E9 /* BetterYouTube.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6F82E79045F550B7755B4537 /* BetterYouTube.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -72,6 +73,7 @@
 		F3BA485BDDB7D18FEDC8D887 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F7F28A6D4028554035CB0ECA /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		FA6A4A758FCEBAA99EF9A975 /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryViewModel.swift; path = LibraryViewModel.swift; sourceTree = "<group>"; };
+		6F82E79045F550B7755B4537 /* BetterYouTube.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = BetterYouTube.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -133,6 +135,7 @@
 				5016CD8EFDC2305017EC7822 /* YouTubeAPIService.swift */,
 				F3BA485BDDB7D18FEDC8D887 /* Info.plist */,
 				C981C1E53AF7B815CD93FB6D /* Assets.xcassets */,
+				6F82E79045F550B7755B4537 /* BetterYouTube.icon */,
 				A28680D3E3CD8001077030DA /* ViewModels */,
 				9CECDDFA5EF2AE0232F90708 /* Views */,
 				21564C00B7A7393D5BECE8BD /* Theme.swift */,
@@ -211,6 +214,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0687455C07D878E9DB04308 /* Assets.xcassets in Resources */,
+				03AB6715F4D5961DAE9D71E9 /* BetterYouTube.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -259,7 +263,7 @@
 		34B30D8D79C98DB375308719 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = BetterYouTube;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -286,7 +290,7 @@
 		4DEB3661A38156DF250681D7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = BetterYouTube;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

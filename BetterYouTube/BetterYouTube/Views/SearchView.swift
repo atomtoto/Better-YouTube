@@ -36,22 +36,24 @@ struct SearchView: View {
 
     // MARK: Bottom search field
 
+    private var canSubmit: Bool {
+        !viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     private var searchField: some View {
         HStack(spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(isFieldFocused ? Color.accentColor : .secondary)
+                    .animation(.easeInOut(duration: 0.15), value: isFieldFocused)
 
                 TextField("Search videos and channels", text: $viewModel.query)
                     .focused($isFieldFocused)
                     .submitLabel(.search)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                    .onSubmit {
-                        viewModel.submit()
-                        isFieldFocused = false
-                    }
+                    .onSubmit(submit)
 
                 if !viewModel.query.isEmpty {
                     Button {
@@ -59,30 +61,47 @@ struct SearchView: View {
                         isFieldFocused = true
                     } label: {
                         Image(systemName: "xmark.circle.fill")
+                            .font(.subheadline)
                             .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
+                    .transition(.opacity.combined(with: .scale(scale: 0.7)))
                     .accessibilityLabel("Clear search")
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 14)
+            .frame(height: 40)
             .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
+            .overlay(
+                Capsule().strokeBorder(
+                    isFieldFocused ? Color.accentColor.opacity(0.4) : Color.clear,
+                    lineWidth: 1.5
+                )
+            )
+            .animation(.easeInOut(duration: 0.15), value: isFieldFocused)
+            .animation(.easeInOut(duration: 0.15), value: viewModel.query.isEmpty)
 
-            if isFieldFocused || !viewModel.query.isEmpty {
-                Button("Search") {
-                    viewModel.submit()
-                    isFieldFocused = false
-                }
-                .font(.subheadline.weight(.semibold))
-                .disabled(viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            Button(action: submit) {
+                Image(systemName: "arrow.right")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(canSubmit ? Color.accentColor : Color(uiColor: .tertiarySystemFill), in: Circle())
+                    .contentShape(Circle())
             }
+            .buttonStyle(.plain)
+            .disabled(!canSubmit)
+            .animation(.easeInOut(duration: 0.15), value: canSubmit)
+            .accessibilityLabel("Search")
         }
         .padding(.horizontal, Theme.Spacing.gutter)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .background(.bar)
-        .animation(.easeInOut(duration: 0.18), value: isFieldFocused)
-        .animation(.easeInOut(duration: 0.18), value: viewModel.query.isEmpty)
+    }
+
+    private func submit() {
+        viewModel.submit()
+        isFieldFocused = false
     }
 
     // MARK: Recents
