@@ -9,42 +9,45 @@ struct ChannelView: View {
         self.initialChannel = initialChannel
     }
 
-    private var displayChannel: Channel? { viewModel.channel ?? initialChannel }
+    private var channel: Channel? { viewModel.channel ?? initialChannel }
 
     var body: some View {
         Group {
-            if viewModel.isLoading && displayChannel == nil {
+            if viewModel.isLoading && channel == nil {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let message = viewModel.errorMessage, displayChannel == nil {
+            } else if let message = viewModel.errorMessage, channel == nil {
                 EmptyStateView(title: "Couldn't load channel", message: message)
             } else {
                 List {
-                    if let channel = displayChannel {
+                    if let channel {
                         Section {
                             ChannelHeaderView(channel: channel)
                                 .listRowInsets(EdgeInsets())
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
                         }
                     }
-                    Section("Videos") {
+
+                    Section("Latest Videos") {
+                        if viewModel.videos.isEmpty && viewModel.isLoading {
+                            ProgressView()
+                        }
                         ForEach(viewModel.videos) { video in
                             NavigationLink(value: video) {
-                                VideoRowView(video: video)
+                                VideoRowView(video: video, showsChannel: false)
                             }
+                            .videoContextMenu(video)
                         }
                     }
                 }
                 .listStyle(.plain)
             }
         }
-        .navigationTitle(displayChannel?.title ?? "Channel")
+        .navigationTitle(channel?.title ?? "Channel")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: Video.self) { video in
-            VideoDetailView(video: video)
-        }
+        .navigationDestination(for: Video.self) { VideoDetailView(video: $0) }
         .task {
-            if viewModel.channel == nil {
-                await viewModel.load()
-            }
+            if viewModel.channel == nil { await viewModel.load() }
         }
     }
 }
@@ -53,49 +56,55 @@ struct ChannelHeaderView: View {
     let channel: Channel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 12) {
-                AsyncImage(url: channel.thumbnailURL) { phase in
-                    if case .success(let image) = phase {
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } else {
-                        Circle().fill(Color.gray.opacity(0.25))
-                    }
-                }
-                .frame(width: 64, height: 64)
-                .clipShape(Circle())
+        VStack(spacing: 12) {
+            AvatarView(url: channel.thumbnailURL, size: 96)
+                .artworkShadow()
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(channel.title)
-                        .font(.headline)
-                    if let subs = channel.subscriberCount {
-                        Text("\(CountFormatter.abbreviated(subs)) subscribers")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    if let count = channel.videoCount {
-                        Text("\(count) videos")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+            VStack(spacing: 4) {
+                Text(channel.title)
+                    .font(.title2.bold())
+                    .multilineTextAlignment(.center)
+
+                Text(statsLine)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
 
             if !channel.description.isEmpty {
                 Text(channel.description)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .lineLimit(3)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(4)
             }
         }
-        .padding()
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+        .padding(.horizontal, Theme.Spacing.gutter)
+    }
+
+    private var statsLine: String {
+        var parts: [String] = []
+        if let subs = channel.subscriberCount {
+            parts.append("\(CountFormatter.abbreviated(subs)) subscribers")
+        }
+        if let videos = channel.videoCount {
+            parts.append("\(CountFormatter.abbreviated(videos)) videos")
+        }
+        return parts.joined(separator: " · ")
     }
 }
 
 #Preview {
     NavigationStack {
-        ChannelView(channelId: "UC123")
+        ChannelView(channelId: "UC1", initialChannel: Channel(
+            id: "UC1",
+            title: "Example Channel",
+            description: "A channel used for previews.",
+            thumbnailURL: nil,
+            subscriberCount: 128_000,
+            videoCount: 342
+        ))
     }
-    .environmentObject(APIKeyStore.shared)
     .environmentObject(LibraryStore.shared)
 }

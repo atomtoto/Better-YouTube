@@ -17,9 +17,6 @@ final class VideoDetailViewModel: ObservableObject {
         self.library = library ?? .shared
     }
 
-    var isFavorite: Bool { library.isFavorite(video) }
-    var isInWatchLater: Bool { library.isInWatchLater(video) }
-
     func onAppear() {
         library.recordWatch(video)
         Task { await refreshDetails() }
@@ -48,13 +45,4 @@ final class VideoDetailViewModel: ObservableObject {
         isLoadingComments = false
     }
 
-    func toggleFavorite() {
-        library.toggleFavorite(video)
-        objectWillChange.send()
-    }
-
-    func toggleWatchLater() {
-        library.toggleWatchLater(video)
-        objectWillChange.send()
-    }
 }

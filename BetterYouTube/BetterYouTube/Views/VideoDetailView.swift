@@ -2,144 +2,167 @@ import SwiftUI
 
 struct VideoDetailView: View {
     @StateObject private var viewModel: VideoDetailViewModel
+    @EnvironmentObject private var library: LibraryStore
     @State private var isDescriptionExpanded = false
 
     init(video: Video) {
         _viewModel = StateObject(wrappedValue: VideoDetailViewModel(video: video))
     }
 
+    private var video: Video { viewModel.video }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                YouTubePlayerView(videoId: viewModel.video.id)
+            VStack(alignment: .leading, spacing: 20) {
+                YouTubePlayerView(videoId: video.id)
                     .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+                    .artworkShadow()
+                    .padding(.horizontal, Theme.Spacing.gutter)
+                    .padding(.top, 8)
 
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(viewModel.video.title)
-                        .font(.title3.weight(.semibold))
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(video.title)
+                        .font(.title3.bold())
+                        .fixedSize(horizontal: false, vertical: true)
 
-                    metadataRow
-
-                    actionRow
-
-                    Divider()
-
-                    NavigationLink(value: Channel(
-                        id: viewModel.video.channelId,
-                        title: viewModel.video.channelTitle,
-                        description: "",
-                        thumbnailURL: nil
-                    )) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "person.crop.circle.fill")
-                                .font(.system(size: 36))
-                                .foregroundStyle(.secondary)
-                            VStack(alignment: .leading) {
-                                Text(viewModel.video.channelTitle)
-                                    .font(.subheadline.weight(.semibold))
-                                Text("View channel")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    if !viewModel.video.description.isEmpty {
-                        Divider()
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(viewModel.video.description)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(isDescriptionExpanded ? nil : 3)
-                            Button(isDescriptionExpanded ? "Show less" : "Show more") {
-                                withAnimation { isDescriptionExpanded.toggle() }
-                            }
-                            .font(.caption.weight(.semibold))
-                        }
-                    }
-
-                    Divider()
-                    commentsSection
+                    Text(metadataLine)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
-                .padding()
+                .padding(.horizontal, Theme.Spacing.gutter)
+
+                actionRow
+                    .padding(.horizontal, Theme.Spacing.gutter)
+
+                channelCard
+                    .padding(.horizontal, Theme.Spacing.gutter)
+
+                if !video.description.isEmpty {
+                    descriptionCard
+                        .padding(.horizontal, Theme.Spacing.gutter)
+                }
+
+                commentsSection
+                    .padding(.horizontal, Theme.Spacing.gutter)
+            }
+            .padding(.bottom, 32)
+        }
+        .scrollIndicators(.hidden)
+        .background(Color(uiColor: .systemBackground))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                if let url = video.watchURL {
+                    ShareLink(item: url) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
             }
         }
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: Channel.self) { channel in
             ChannelView(channelId: channel.id, initialChannel: channel.title.isEmpty ? nil : channel)
         }
         .task { viewModel.onAppear() }
     }
 
-    private var metadataRow: some View {
-        HStack {
-            if let views = viewModel.video.viewCount {
-                Text("\(CountFormatter.abbreviated(views)) views")
-            }
-            if viewModel.video.viewCount != nil && viewModel.video.publishedAt != nil {
-                Text("•")
-            }
-            if let date = viewModel.video.publishedAt {
-                Text(RelativeDateFormatter.string(from: date))
-            }
-            Spacer()
+    private var metadataLine: String {
+        var parts: [String] = []
+        if let views = video.viewCount {
+            parts.append("\(CountFormatter.abbreviated(views)) views")
         }
-        .font(.footnote)
-        .foregroundStyle(.secondary)
+        if let date = video.publishedAt {
+            parts.append(RelativeDateFormatter.string(from: date))
+        }
+        return parts.joined(separator: " · ")
     }
 
     private var actionRow: some View {
-        HStack(spacing: 24) {
-            Button {
-                viewModel.toggleFavorite()
-            } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: viewModel.isFavorite ? "heart.fill" : "heart")
-                        .font(.title3)
-                        .foregroundStyle(viewModel.isFavorite ? .red : .primary)
-                    Text("Like")
-                        .font(.caption2)
-                }
+        HStack(spacing: 10) {
+            ActionPill(
+                title: video.likeCount.map(CountFormatter.abbreviated) ?? "Like",
+                systemImage: library.isFavorite(video) ? "hand.thumbsup.fill" : "hand.thumbsup",
+                isActive: library.isFavorite(video)
+            ) {
+                library.toggleFavorite(video)
             }
 
-            Button {
-                viewModel.toggleWatchLater()
-            } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: viewModel.isInWatchLater ? "clock.badge.checkmark.fill" : "clock.badge.plus")
-                        .font(.title3)
-                    Text("Watch later")
-                        .font(.caption2)
-                }
+            ActionPill(
+                title: "Later",
+                systemImage: library.isInWatchLater(video) ? "clock.fill" : "clock",
+                isActive: library.isInWatchLater(video)
+            ) {
+                library.toggleWatchLater(video)
             }
 
-            if let likes = viewModel.video.likeCount {
-                VStack(spacing: 4) {
-                    Image(systemName: "hand.thumbsup")
-                        .font(.title3)
-                    Text(CountFormatter.abbreviated(likes))
-                        .font(.caption2)
+            if let url = video.watchURL {
+                ShareLink(item: url) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                        .font(.subheadline.weight(.medium))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
                 }
+                .buttonStyle(.plain)
             }
 
-            Spacer()
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var channelCard: some View {
+        NavigationLink(value: Channel(
+            id: video.channelId,
+            title: video.channelTitle,
+            description: "",
+            thumbnailURL: nil
+        )) {
+            HStack(spacing: 12) {
+                AvatarView(url: nil, size: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(video.channelTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text("View channel")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(12)
+            .cardBackground()
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.primary)
+    }
+
+    private var descriptionCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(video.description)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .lineLimit(isDescriptionExpanded ? nil : 3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(isDescriptionExpanded ? "Show Less" : "Show More") {
+                withAnimation(.easeInOut(duration: 0.2)) { isDescriptionExpanded.toggle() }
+            }
+            .font(.caption.weight(.semibold))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .cardBackground()
     }
 
     private var commentsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             Text("Comments")
-                .font(.headline)
+                .font(.title3.bold())
 
             if viewModel.isLoadingComments {
-                ProgressView()
+                ProgressView().frame(maxWidth: .infinity)
             } else if let error = viewModel.commentsError {
                 Text(error)
                     .font(.footnote)
@@ -157,23 +180,37 @@ struct VideoDetailView: View {
     }
 }
 
+private struct ActionPill: View {
+    let title: String
+    let systemImage: String
+    var isActive: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.subheadline.weight(.medium))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .background(
+                    isActive ? AnyShapeStyle(Color.red.opacity(0.15)) : AnyShapeStyle(Color(uiColor: .secondarySystemBackground)),
+                    in: Capsule()
+                )
+                .foregroundStyle(isActive ? Color.red : Color.primary)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct CommentRowView: View {
     let comment: VideoComment
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            AsyncImage(url: comment.authorAvatarURL) { phase in
-                if case .success(let image) = phase {
-                    image.resizable().aspectRatio(contentMode: .fill)
-                } else {
-                    Circle().fill(Color.gray.opacity(0.25))
-                }
-            }
-            .frame(width: 32, height: 32)
-            .clipShape(Circle())
+            AvatarView(url: comment.authorAvatarURL, size: 32)
 
             VStack(alignment: .leading, spacing: 4) {
-                HStack {
+                HStack(spacing: 6) {
                     Text(comment.authorName)
                         .font(.caption.weight(.semibold))
                     Text(RelativeDateFormatter.string(from: comment.publishedAt))
@@ -182,6 +219,7 @@ struct CommentRowView: View {
                 }
                 Text(comment.text)
                     .font(.footnote)
+                    .fixedSize(horizontal: false, vertical: true)
                 if comment.likeCount > 0 {
                     Label("\(comment.likeCount)", systemImage: "hand.thumbsup")
                         .font(.caption2)
@@ -194,19 +232,8 @@ struct CommentRowView: View {
 
 #Preview {
     NavigationStack {
-        VideoDetailView(video: Video(
-            id: "dQw4w9WgXcQ",
-            title: "Example video",
-            channelId: "UC123",
-            channelTitle: "Example Channel",
-            description: "A sample description that is reasonably long so the show more button has something to do.",
-            thumbnailURL: nil,
-            publishedAt: Date(),
-            viewCount: 1_234_567,
-            likeCount: 12_345,
-            duration: "3:45"
-        ))
+        VideoDetailView(video: .preview)
     }
-    .environmentObject(APIKeyStore.shared)
     .environmentObject(LibraryStore.shared)
+    .environmentObject(GoogleAuthService.shared)
 }

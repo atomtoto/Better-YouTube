@@ -1,7 +1,9 @@
 import Foundation
 
-/// Persists the user's library (favorites, watch later, watch history) to a JSON file
-/// in the app's Documents directory, so it survives relaunches without needing a database.
+/// Persists the on-device library (favorites, watch later, watch history) as JSON in Documents.
+///
+/// These lists are local by necessity: the YouTube Data API has never exposed the account's
+/// Watch Later or watch history playlists (Google removed API access to `WL` and `HL` in 2016).
 @MainActor
 final class LibraryStore: ObservableObject {
     static let shared = LibraryStore()
@@ -25,8 +27,8 @@ final class LibraryStore: ObservableObject {
     }
 
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL) else { return }
-        guard let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data) else { return }
+        guard let data = try? Data(contentsOf: fileURL),
+              let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data) else { return }
         favorites = snapshot.favorites
         watchLater = snapshot.watchLater
         history = snapshot.history
@@ -38,9 +40,8 @@ final class LibraryStore: ObservableObject {
         try? data.write(to: fileURL, options: .atomic)
     }
 
-    func isFavorite(_ video: Video) -> Bool {
-        favorites.contains(video)
-    }
+    func isFavorite(_ video: Video) -> Bool { favorites.contains(video) }
+    func isInWatchLater(_ video: Video) -> Bool { watchLater.contains(video) }
 
     func toggleFavorite(_ video: Video) {
         if let index = favorites.firstIndex(of: video) {
@@ -49,10 +50,6 @@ final class LibraryStore: ObservableObject {
             favorites.insert(video, at: 0)
         }
         persist()
-    }
-
-    func isInWatchLater(_ video: Video) -> Bool {
-        watchLater.contains(video)
     }
 
     func toggleWatchLater(_ video: Video) {
@@ -73,11 +70,6 @@ final class LibraryStore: ObservableObject {
         persist()
     }
 
-    func removeFromHistory(at offsets: IndexSet) {
-        history.remove(atOffsets: offsets)
-        persist()
-    }
-
     func removeFavorites(at offsets: IndexSet) {
         favorites.remove(atOffsets: offsets)
         persist()
@@ -88,8 +80,47 @@ final class LibraryStore: ObservableObject {
         persist()
     }
 
+    func removeFromHistory(at offsets: IndexSet) {
+        history.remove(atOffsets: offsets)
+        persist()
+    }
+
     func clearHistory() {
         history.removeAll()
         persist()
+    }
+}
+
+/// Recent search terms, mirroring the "Recently Searched" list in Apple's own apps.
+@MainActor
+final class RecentSearchStore: ObservableObject {
+    static let shared = RecentSearchStore()
+
+    @Published private(set) var terms: [String] = []
+
+    private static let storageKey = "recent_searches"
+    private static let limit = 12
+
+    private init() {
+        terms = UserDefaults.standard.stringArray(forKey: Self.storageKey) ?? []
+    }
+
+    func record(_ term: String) {
+        let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        terms.removeAll { $0.caseInsensitiveCompare(trimmed) == .orderedSame }
+        terms.insert(trimmed, at: 0)
+        if terms.count > Self.limit { terms.removeLast(terms.count - Self.limit) }
+        UserDefaults.standard.set(terms, forKey: Self.storageKey)
+    }
+
+    func remove(_ term: String) {
+        terms.removeAll { $0 == term }
+        UserDefaults.standard.set(terms, forKey: Self.storageKey)
+    }
+
+    func clear() {
+        terms.removeAll()
+        UserDefaults.standard.set(terms, forKey: Self.storageKey)
     }
 }

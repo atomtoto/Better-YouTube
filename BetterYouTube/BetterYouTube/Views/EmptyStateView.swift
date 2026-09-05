@@ -7,13 +7,16 @@ struct EmptyStateView: View {
     var message: String?
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             Image(systemName: systemImage)
-                .font(.system(size: 40))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(.tertiary)
+                .padding(.bottom, 4)
+
             Text(title)
-                .font(.headline)
+                .font(.title3.weight(.semibold))
                 .multilineTextAlignment(.center)
+
             if let message {
                 Text(message)
                     .font(.subheadline)
@@ -21,7 +24,15 @@ struct EmptyStateView: View {
                     .multilineTextAlignment(.center)
             }
         }
-        .padding()
+        .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+}
+
+#Preview {
+    EmptyStateView(
+        title: "No Results",
+        systemImage: "magnifyingglass",
+        message: "Try a different search term."
+    )
 }

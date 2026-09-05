@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Video
+// MARK: - Domain models
 
 struct Video: Identifiable, Codable, Equatable, Hashable {
     let id: String
@@ -14,6 +14,8 @@ struct Video: Identifiable, Codable, Equatable, Hashable {
     var likeCount: Int?
     var duration: String?
 
+    var watchURL: URL? { URL(string: "https://www.youtube.com/watch?v=\(id)") }
+
     static func == (lhs: Video, rhs: Video) -> Bool {
         lhs.id == rhs.id
     }
@@ -22,8 +24,6 @@ struct Video: Identifiable, Codable, Equatable, Hashable {
         hasher.combine(id)
     }
 }
-
-// MARK: - Channel
 
 struct Channel: Identifiable, Codable, Equatable, Hashable {
     let id: String
@@ -34,7 +34,14 @@ struct Channel: Identifiable, Codable, Equatable, Hashable {
     var videoCount: Int?
 }
 
-// MARK: - Comment
+struct Playlist: Identifiable, Codable, Equatable, Hashable {
+    let id: String
+    let title: String
+    let description: String
+    let thumbnailURL: URL?
+    var itemCount: Int?
+    var channelTitle: String?
+}
 
 struct VideoComment: Identifiable, Codable, Equatable, Hashable {
     let id: String
@@ -45,40 +52,65 @@ struct VideoComment: Identifiable, Codable, Equatable, Hashable {
     let publishedAt: Date?
 }
 
-// MARK: - YouTube Data API v3 raw response models
+/// Search results can contain either a video or a channel.
+enum SearchResult: Identifiable, Hashable {
+    case video(Video)
+    case channel(Channel)
+
+    var id: String {
+        switch self {
+        case .video(let v): return "video-\(v.id)"
+        case .channel(let c): return "channel-\(c.id)"
+        }
+    }
+}
+
+// MARK: - YouTube Data API v3 response models
 
 struct YTListResponse<Item: Decodable>: Decodable {
     let items: [Item]
     let nextPageToken: String?
 }
 
-struct YTThumbnails: Decodable {
-    let defaultThumb: YTThumbnail?
-    let medium: YTThumbnail?
-    let high: YTThumbnail?
-
-    enum CodingKeys: String, CodingKey {
-        case defaultThumb = "default"
-        case medium
-        case high
-    }
-
-    var bestURL: URL? {
-        (high ?? medium ?? defaultThumb)?.url
-    }
-}
-
 struct YTThumbnail: Decodable {
     let url: URL
 }
 
+struct YTThumbnails: Decodable {
+    let defaultThumb: YTThumbnail?
+    let medium: YTThumbnail?
+    let high: YTThumbnail?
+    let standard: YTThumbnail?
+    let maxres: YTThumbnail?
+
+    enum CodingKeys: String, CodingKey {
+        case defaultThumb = "default"
+        case medium, high, standard, maxres
+    }
+
+    var bestURL: URL? {
+        (maxres ?? standard ?? high ?? medium ?? defaultThumb)?.url
+    }
+}
+
+/// `id` is a nested object on `search.list` items and on playlist-item resource references.
+struct YTResourceId: Decodable {
+    let kind: String?
+    let videoId: String?
+    let channelId: String?
+    let playlistId: String?
+}
+
 struct YTSnippet: Decodable {
-    let title: String
-    let description: String
+    let title: String?
+    let description: String?
     let channelId: String?
     let channelTitle: String?
     let thumbnails: YTThumbnails?
     let publishedAt: String?
+    let resourceId: YTResourceId?
+    let videoOwnerChannelId: String?
+    let videoOwnerChannelTitle: String?
 }
 
 struct YTStatistics: Decodable {
@@ -88,11 +120,18 @@ struct YTStatistics: Decodable {
     let videoCount: String?
 }
 
-struct YTContentDetails: Decodable {
-    let duration: String?
+struct YTRelatedPlaylists: Decodable {
+    let uploads: String?
 }
 
-/// `videos.list` / `channels.list` items expose `id` as a plain string.
+struct YTContentDetails: Decodable {
+    let duration: String?
+    let relatedPlaylists: YTRelatedPlaylists?
+    let itemCount: Int?
+    let videoId: String?
+}
+
+/// `videos.list`, `channels.list` and `playlists.list` items expose `id` as a plain string.
 struct YTResourceItem: Decodable {
     let id: String
     let snippet: YTSnippet?
@@ -100,16 +139,20 @@ struct YTResourceItem: Decodable {
     let contentDetails: YTContentDetails?
 }
 
-/// `search.list` items expose `id` as a nested object.
 struct YTSearchItem: Decodable {
-    let id: YTSearchItemId
+    let id: YTResourceId
     let snippet: YTSnippet?
 }
 
-struct YTSearchItemId: Decodable {
-    let kind: String
-    let videoId: String?
-    let channelId: String?
+struct YTPlaylistItemResource: Decodable {
+    let id: String
+    let snippet: YTSnippet?
+    let contentDetails: YTContentDetails?
+}
+
+struct YTSubscriptionItem: Decodable {
+    let id: String
+    let snippet: YTSnippet?
 }
 
 struct YTCommentThreadItem: Decodable {
@@ -140,20 +183,20 @@ struct YTErrorResponse: Decodable {
     let error: YTError
 }
 
-// MARK: - Mapping helpers
+// MARK: - Mapping
 
 enum YTDateParser {
-    static let formatter: ISO8601DateFormatter = {
+    private static let fractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
     }()
 
+    private static let plain = ISO8601DateFormatter()
+
     static func parse(_ string: String?) -> Date? {
         guard let string else { return nil }
-        if let date = formatter.date(from: string) { return date }
-        let fallback = ISO8601DateFormatter()
-        return fallback.date(from: string)
+        return fractional.date(from: string) ?? plain.date(from: string)
     }
 }
 
@@ -180,9 +223,19 @@ extension Video {
         self.description = searchItem.snippet?.description ?? ""
         self.thumbnailURL = searchItem.snippet?.thumbnails?.bestURL
         self.publishedAt = YTDateParser.parse(searchItem.snippet?.publishedAt)
-        self.viewCount = nil
-        self.likeCount = nil
-        self.duration = nil
+    }
+
+    init?(playlistItem: YTPlaylistItemResource) {
+        guard let videoId = playlistItem.contentDetails?.videoId ?? playlistItem.snippet?.resourceId?.videoId else {
+            return nil
+        }
+        self.id = videoId
+        self.title = playlistItem.snippet?.title ?? ""
+        self.channelId = playlistItem.snippet?.videoOwnerChannelId ?? playlistItem.snippet?.channelId ?? ""
+        self.channelTitle = playlistItem.snippet?.videoOwnerChannelTitle ?? playlistItem.snippet?.channelTitle ?? ""
+        self.description = playlistItem.snippet?.description ?? ""
+        self.thumbnailURL = playlistItem.snippet?.thumbnails?.bestURL
+        self.publishedAt = YTDateParser.parse(playlistItem.snippet?.publishedAt)
     }
 }
 
@@ -202,8 +255,25 @@ extension Channel {
         self.title = searchItem.snippet?.title ?? ""
         self.description = searchItem.snippet?.description ?? ""
         self.thumbnailURL = searchItem.snippet?.thumbnails?.bestURL
-        self.subscriberCount = nil
-        self.videoCount = nil
+    }
+
+    init?(subscription: YTSubscriptionItem) {
+        guard let channelId = subscription.snippet?.resourceId?.channelId else { return nil }
+        self.id = channelId
+        self.title = subscription.snippet?.title ?? ""
+        self.description = subscription.snippet?.description ?? ""
+        self.thumbnailURL = subscription.snippet?.thumbnails?.bestURL
+    }
+}
+
+extension Playlist {
+    init(resource: YTResourceItem) {
+        self.id = resource.id
+        self.title = resource.snippet?.title ?? ""
+        self.description = resource.snippet?.description ?? ""
+        self.thumbnailURL = resource.snippet?.thumbnails?.bestURL
+        self.itemCount = resource.contentDetails?.itemCount
+        self.channelTitle = resource.snippet?.channelTitle
     }
 }
 
@@ -216,18 +286,5 @@ extension VideoComment {
         self.text = snippet.textDisplay
         self.likeCount = snippet.likeCount
         self.publishedAt = YTDateParser.parse(snippet.publishedAt)
-    }
-}
-
-/// Search results can contain either a video or a channel.
-enum SearchResult: Identifiable, Hashable {
-    case video(Video)
-    case channel(Channel)
-
-    var id: String {
-        switch self {
-        case .video(let v): return "video-\(v.id)"
-        case .channel(let c): return "channel-\(c.id)"
-        }
     }
 }
