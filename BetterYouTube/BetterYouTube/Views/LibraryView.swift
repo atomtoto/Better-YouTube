@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Apple Music-style library: category rows on top, recently watched artwork underneath.
 struct LibraryView: View {
+    @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var auth: GoogleAuthService
     @StateObject private var viewModel = LibraryViewModel()
@@ -63,9 +64,12 @@ struct LibraryView: View {
             if !library.history.isEmpty {
                 Section("Recently Watched") {
                     ForEach(library.history.prefix(6)) { video in
-                        NavigationLink(value: video) {
+                        Button {
+                            player.play(video)
+                        } label: {
                             VideoRowView(video: video)
                         }
+                        .buttonStyle(.plain)
                         .videoContextMenu(video)
                     }
                 }
@@ -73,7 +77,6 @@ struct LibraryView: View {
         }
         .listStyle(.insetGrouped)
         .navigationTitle("Library")
-        .navigationDestination(for: Video.self) { VideoDetailView(video: $0) }
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
         .refreshable {
             if auth.isSignedIn { await viewModel.load() }

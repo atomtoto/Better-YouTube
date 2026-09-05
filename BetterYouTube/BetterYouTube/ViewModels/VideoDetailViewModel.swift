@@ -1,5 +1,6 @@
 import Foundation
 
+/// Backs the details shown under the expanded player: the enriched video plus its comments.
 @MainActor
 final class VideoDetailViewModel: ObservableObject {
     @Published private(set) var video: Video
@@ -9,20 +10,19 @@ final class VideoDetailViewModel: ObservableObject {
     @Published var commentsError: String?
 
     private let service: YouTubeAPIService
-    private let library: LibraryStore
 
-    init(video: Video, service: YouTubeAPIService = .shared, library: LibraryStore? = nil) {
+    init(video: Video, service: YouTubeAPIService = .shared) {
         self.video = video
         self.service = service
-        self.library = library ?? .shared
     }
 
-    func onAppear() {
-        library.recordWatch(video)
-        Task { await refreshDetails() }
-        Task { await loadComments() }
+    func loadAll() async {
+        async let details: Void = refreshDetails()
+        async let comments: Void = loadComments()
+        _ = await (details, comments)
     }
 
+    /// Feed and playlist entries arrive without statistics; fetch the full record.
     func refreshDetails() async {
         do {
             if let updated = try await service.video(id: video.id) {
@@ -44,5 +44,4 @@ final class VideoDetailViewModel: ObservableObject {
         }
         isLoadingComments = false
     }
-
 }

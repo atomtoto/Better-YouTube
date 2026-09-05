@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ChannelView: View {
+    @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var notificationStore: NotificationStore
     @EnvironmentObject private var notifications: NotificationService
     @StateObject private var viewModel: ChannelViewModel
@@ -37,9 +38,12 @@ struct ChannelView: View {
                             ProgressView()
                         }
                         ForEach(viewModel.videos) { video in
-                            NavigationLink(value: video) {
+                            Button {
+                                player.play(video, upNext: viewModel.videos.after(video))
+                            } label: {
                                 VideoRowView(video: video, showsChannel: false)
                             }
+                            .buttonStyle(.plain)
                             .videoContextMenu(video)
                         }
                     }
@@ -63,7 +67,6 @@ struct ChannelView: View {
                 )
             }
         }
-        .navigationDestination(for: Video.self) { VideoDetailView(video: $0) }
         .task {
             if viewModel.channel == nil { await viewModel.load() }
         }

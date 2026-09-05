@@ -1,14 +1,13 @@
 import SwiftUI
 
 struct HomeView: View {
+    @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var notificationStore: NotificationStore
-    @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel = HomeViewModel()
 
     @State private var showsNotifications = false
-    @State private var isResolvingDeepLink = false
 
     var body: some View {
         ScrollView {
@@ -29,7 +28,7 @@ struct HomeView: View {
                 } else {
                     ForEach(viewModel.videos) { video in
                         Button {
-                            router.homePath.append(video)
+                            player.play(video, upNext: viewModel.videos.after(video))
                         } label: {
                             FeedVideoCard(video: video, avatarURL: viewModel.avatar(for: video.channelId))
                         }
@@ -61,14 +60,10 @@ struct HomeView: View {
         .sheet(isPresented: $showsNotifications) {
             NotificationsView()
         }
-        .navigationDestination(for: Video.self) { VideoDetailView(video: $0) }
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
         .refreshable { await viewModel.load(isSignedIn: auth.isSignedIn, library: library) }
         .task(id: auth.isSignedIn) {
             await viewModel.load(isSignedIn: auth.isSignedIn, library: library)
-        }
-        .task(id: router.pendingVideoId) {
-            await resolveDeepLink()
         }
     }
 
@@ -105,18 +100,6 @@ struct HomeView: View {
         }
         .padding(.horizontal, Theme.Spacing.gutter)
         .redacted(reason: .placeholder)
-    }
-
-    /// A tapped notification carries only a video ID; fetch it, then push it.
-    private func resolveDeepLink() async {
-        guard let videoId = router.pendingVideoId, !isResolvingDeepLink else { return }
-        isResolvingDeepLink = true
-        defer { isResolvingDeepLink = false }
-
-        if let video = try? await YouTubeAPIService.shared.video(id: videoId) {
-            router.homePath.append(video)
-        }
-        router.pendingVideoId = nil
     }
 }
 

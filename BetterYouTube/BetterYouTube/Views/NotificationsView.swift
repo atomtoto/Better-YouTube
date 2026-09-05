@@ -6,6 +6,7 @@ struct NotificationsView: View {
     @EnvironmentObject private var store: NotificationStore
     @EnvironmentObject private var notifications: NotificationService
     @EnvironmentObject private var auth: GoogleAuthService
+    @EnvironmentObject private var player: PlayerManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var isRefreshing = false
@@ -25,7 +26,7 @@ struct NotificationsView: View {
                             Button {
                                 store.markRead(item)
                                 dismiss()
-                                AppRouter.shared.open(videoId: item.videoId)
+                                Task { await player.open(videoId: item.videoId) }
                             } label: {
                                 NotificationRow(item: item)
                             }
@@ -125,4 +126,5 @@ private struct NotificationRow: View {
         .environmentObject(NotificationStore.shared)
         .environmentObject(NotificationService.shared)
         .environmentObject(GoogleAuthService.shared)
+        .environmentObject(PlayerManager.shared)
 }

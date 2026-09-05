@@ -3,6 +3,7 @@ import SwiftUI
 /// Search with the field pinned to the bottom, within thumb reach. Opening the tab does exactly
 /// two things: raise the keyboard and show recent searches — nothing is fetched until you ask.
 struct SearchView: View {
+    @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var recents: RecentSearchStore
     @StateObject private var viewModel = SearchViewModel()
     @FocusState private var isFieldFocused: Bool
@@ -29,7 +30,6 @@ struct SearchView: View {
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) { searchField }
-        .navigationDestination(for: Video.self) { VideoDetailView(video: $0) }
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
         .onAppear { isFieldFocused = true }
     }
@@ -170,9 +170,12 @@ struct SearchView: View {
             if !viewModel.videos.isEmpty {
                 Section("Videos") {
                     ForEach(viewModel.videos) { video in
-                        NavigationLink(value: video) {
+                        Button {
+                            player.play(video, upNext: viewModel.videos.after(video))
+                        } label: {
                             VideoRowView(video: video)
                         }
+                        .buttonStyle(.plain)
                         .videoContextMenu(video)
                     }
                 }

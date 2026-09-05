@@ -12,6 +12,7 @@ struct BetterYouTubeApp: App {
     @StateObject private var notificationStore = NotificationStore.shared
     @StateObject private var notifications = NotificationService.shared
     @StateObject private var router = AppRouter.shared
+    @StateObject private var player = PlayerManager.shared
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -25,6 +26,7 @@ struct BetterYouTubeApp: App {
                 .environmentObject(notificationStore)
                 .environmentObject(notifications)
                 .environmentObject(router)
+                .environmentObject(player)
                 .tint(.red)
         }
         .onChange(of: scenePhase) { phase in

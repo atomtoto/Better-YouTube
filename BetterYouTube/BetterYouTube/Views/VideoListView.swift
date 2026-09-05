@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Reusable list of videos, used for "See All" destinations and every library category.
 struct VideoListView: View {
+    @EnvironmentObject private var player: PlayerManager
     let title: String
     let videos: [Video]
     var onDelete: ((IndexSet) -> Void)?
@@ -17,9 +18,12 @@ struct VideoListView: View {
             } else {
                 List {
                     ForEach(videos) { video in
-                        NavigationLink(value: video) {
+                        Button {
+                            player.play(video, upNext: videos.after(video))
+                        } label: {
                             VideoRowView(video: video)
                         }
+                        .buttonStyle(.plain)
                         .videoContextMenu(video)
                     }
                     .onDelete(perform: onDelete)
@@ -29,7 +33,6 @@ struct VideoListView: View {
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: Video.self) { VideoDetailView(video: $0) }
     }
 }
 
@@ -125,6 +128,7 @@ struct PlaylistsView: View {
 /// Videos inside a playlist, fetched via `playlistItems.list` (1 quota unit).
 struct PlaylistDetailView: View {
     let playlist: Playlist
+    @EnvironmentObject private var player: PlayerManager
     @StateObject private var viewModel: PlaylistViewModel
 
     init(playlist: Playlist) {
@@ -142,9 +146,12 @@ struct PlaylistDetailView: View {
                 List {
                     Section {
                         ForEach(viewModel.videos) { video in
-                            NavigationLink(value: video) {
+                            Button {
+                                player.play(video, upNext: viewModel.videos.after(video))
+                            } label: {
                                 VideoRowView(video: video)
                             }
+                            .buttonStyle(.plain)
                             .videoContextMenu(video)
                         }
                     } header: {
@@ -171,7 +178,6 @@ struct PlaylistDetailView: View {
         }
         .navigationTitle(playlist.title)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: Video.self) { VideoDetailView(video: $0) }
         .task {
             if viewModel.videos.isEmpty { await viewModel.load() }
         }

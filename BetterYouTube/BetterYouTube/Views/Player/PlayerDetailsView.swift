@@ -1,126 +1,122 @@
 import SwiftUI
 
-struct VideoDetailView: View {
-    @StateObject private var viewModel: VideoDetailViewModel
+/// Everything below the video in the expanded player: title, actions, channel, description,
+/// the up-next queue and comments.
+struct PlayerDetailsView: View {
+    let video: Video
+
     @EnvironmentObject private var library: LibraryStore
+    @EnvironmentObject private var player: PlayerManager
+    @EnvironmentObject private var router: AppRouter
+    @StateObject private var viewModel: VideoDetailViewModel
     @State private var isDescriptionExpanded = false
 
     init(video: Video) {
+        self.video = video
         _viewModel = StateObject(wrappedValue: VideoDetailViewModel(video: video))
     }
 
-    private var video: Video { viewModel.video }
+    /// Prefer the enriched copy (view/like counts, full description) once it arrives.
+    private var displayed: Video { viewModel.video }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                YouTubePlayerView(videoId: video.id)
-                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
-                    .artworkShadow()
-                    .padding(.horizontal, Theme.Spacing.gutter)
-                    .padding(.top, 8)
-
+            VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(video.title)
-                        .font(.title3.bold())
+                    Text(displayed.title)
+                        .font(.headline)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text(metadataLine)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                .padding(.horizontal, Theme.Spacing.gutter)
 
                 actionRow
-                    .padding(.horizontal, Theme.Spacing.gutter)
+                channelRow
 
-                channelCard
-                    .padding(.horizontal, Theme.Spacing.gutter)
-
-                if !video.description.isEmpty {
+                if !displayed.description.isEmpty {
                     descriptionCard
-                        .padding(.horizontal, Theme.Spacing.gutter)
+                }
+
+                if !player.upNext.isEmpty {
+                    upNextSection
                 }
 
                 commentsSection
-                    .padding(.horizontal, Theme.Spacing.gutter)
             }
-            .padding(.bottom, 32)
+            .padding(.horizontal, Theme.Spacing.gutter)
+            .padding(.top, 16)
+            .padding(.bottom, 40)
         }
         .scrollIndicators(.hidden)
-        .background(Color(uiColor: .systemBackground))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                if let url = video.watchURL {
-                    ShareLink(item: url) {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                }
-            }
-        }
-        .navigationDestination(for: Channel.self) { channel in
-            ChannelView(channelId: channel.id, initialChannel: channel.title.isEmpty ? nil : channel)
-        }
-        .task { viewModel.onAppear() }
+        .task { await viewModel.loadAll() }
     }
 
     private var metadataLine: String {
         var parts: [String] = []
-        if let views = video.viewCount {
+        if let views = displayed.viewCount {
             parts.append("\(CountFormatter.abbreviated(views)) views")
         }
-        if let date = video.publishedAt {
+        if let date = displayed.publishedAt {
             parts.append(RelativeDateFormatter.string(from: date))
         }
         return parts.joined(separator: " · ")
     }
 
     private var actionRow: some View {
-        HStack(spacing: 10) {
-            ActionPill(
-                title: video.likeCount.map(CountFormatter.abbreviated) ?? "Like",
-                systemImage: library.isFavorite(video) ? "hand.thumbsup.fill" : "hand.thumbsup",
-                isActive: library.isFavorite(video)
-            ) {
-                library.toggleFavorite(video)
-            }
-
-            ActionPill(
-                title: "Later",
-                systemImage: library.isInWatchLater(video) ? "clock.fill" : "clock",
-                isActive: library.isInWatchLater(video)
-            ) {
-                library.toggleWatchLater(video)
-            }
-
-            if let url = video.watchURL {
-                ShareLink(item: url) {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                        .font(.subheadline.weight(.medium))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
+        ScrollView(.horizontal) {
+            HStack(spacing: 10) {
+                PlayerActionPill(
+                    title: displayed.likeCount.map(CountFormatter.abbreviated) ?? "Like",
+                    systemImage: library.isFavorite(displayed) ? "hand.thumbsup.fill" : "hand.thumbsup",
+                    isActive: library.isFavorite(displayed)
+                ) {
+                    library.toggleFavorite(displayed)
                 }
-                .buttonStyle(.plain)
-            }
 
-            Spacer(minLength: 0)
+                PlayerActionPill(
+                    title: "Later",
+                    systemImage: library.isInWatchLater(displayed) ? "clock.fill" : "clock",
+                    isActive: library.isInWatchLater(displayed)
+                ) {
+                    library.toggleWatchLater(displayed)
+                }
+
+                if let url = displayed.watchURL {
+                    ShareLink(item: url) {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                            .font(.subheadline.weight(.medium))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 2)
         }
+        .scrollIndicators(.hidden)
     }
 
-    private var channelCard: some View {
-        NavigationLink(value: Channel(
-            id: video.channelId,
-            title: video.channelTitle,
-            description: "",
-            thumbnailURL: nil
-        )) {
+    private var channelRow: some View {
+        Button {
+            // Leaving the player for a channel: shrink rather than stop, like the YouTube app.
+            player.collapse()
+            router.selectedTab = .home
+            router.homePath.append(
+                Channel(
+                    id: displayed.channelId,
+                    title: displayed.channelTitle,
+                    description: "",
+                    thumbnailURL: nil
+                )
+            )
+        } label: {
             HStack(spacing: 12) {
-                AvatarView(url: nil, size: 44)
+                AvatarView(url: nil, size: 40)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(video.channelTitle)
+                    Text(displayed.channelTitle)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                     Text("View channel")
@@ -140,7 +136,7 @@ struct VideoDetailView: View {
 
     private var descriptionCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(video.description)
+            Text(displayed.description)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .lineLimit(isDescriptionExpanded ? nil : 3)
@@ -154,6 +150,24 @@ struct VideoDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .cardBackground()
+    }
+
+    private var upNextSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Up Next")
+                .font(.title3.bold())
+
+            ForEach(player.upNext.prefix(10)) { video in
+                Button {
+                    let index = player.upNext.firstIndex(of: video) ?? 0
+                    player.play(video, upNext: Array(player.upNext.dropFirst(index + 1)))
+                } label: {
+                    VideoRowView(video: video)
+                }
+                .buttonStyle(.plain)
+                .videoContextMenu(video)
+            }
+        }
     }
 
     private var commentsSection: some View {
@@ -180,7 +194,7 @@ struct VideoDetailView: View {
     }
 }
 
-private struct ActionPill: View {
+private struct PlayerActionPill: View {
     let title: String
     let systemImage: String
     var isActive: Bool = false
@@ -193,7 +207,9 @@ private struct ActionPill: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
                 .background(
-                    isActive ? AnyShapeStyle(Color.red.opacity(0.15)) : AnyShapeStyle(Color(uiColor: .secondarySystemBackground)),
+                    isActive
+                        ? AnyShapeStyle(Color.red.opacity(0.15))
+                        : AnyShapeStyle(Color(uiColor: .secondarySystemBackground)),
                     in: Capsule()
                 )
                 .foregroundStyle(isActive ? Color.red : Color.primary)
@@ -226,14 +242,8 @@ struct CommentRowView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Spacer(minLength: 0)
         }
     }
-}
-
-#Preview {
-    NavigationStack {
-        VideoDetailView(video: .preview)
-    }
-    .environmentObject(LibraryStore.shared)
-    .environmentObject(GoogleAuthService.shared)
 }

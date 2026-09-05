@@ -52,6 +52,14 @@ struct VideoComment: Identifiable, Codable, Equatable, Hashable {
     let publishedAt: Date?
 }
 
+extension Array where Element == Video {
+    /// The videos following `video` in this list — what the player queues up next.
+    func after(_ video: Video) -> [Video] {
+        guard let index = firstIndex(of: video) else { return [] }
+        return Array(dropFirst(index + 1))
+    }
+}
+
 /// Search results can contain either a video or a channel.
 enum SearchResult: Identifiable, Hashable {
     case video(Video)

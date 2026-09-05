@@ -5,9 +5,29 @@ struct RootTabView: View {
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var notificationStore: NotificationStore
+    @EnvironmentObject private var player: PlayerManager
     @State private var showsOnboarding = false
 
     var body: some View {
+        ZStack(alignment: .bottom) {
+            tabs
+            // Lives above every tab so playback survives navigation and tab switches.
+            PlayerContainerView()
+        }
+        .sheet(isPresented: $showsOnboarding) {
+            OnboardingView()
+        }
+        .onAppear {
+            showsOnboarding = !apiKeyStore.hasKey && !auth.isSignedIn
+        }
+        .task(id: router.pendingVideoId) {
+            guard let videoId = router.pendingVideoId else { return }
+            router.pendingVideoId = nil
+            await player.open(videoId: videoId)
+        }
+    }
+
+    private var tabs: some View {
         TabView(selection: $router.selectedTab) {
             NavigationStack(path: $router.homePath) {
                 HomeView()
@@ -33,12 +53,6 @@ struct RootTabView: View {
             }
             .tabItem { Label("Settings", systemImage: "gearshape.fill") }
             .tag(AppRouter.Tab.settings)
-        }
-        .sheet(isPresented: $showsOnboarding) {
-            OnboardingView()
-        }
-        .onAppear {
-            showsOnboarding = !apiKeyStore.hasKey && !auth.isSignedIn
         }
     }
 }
