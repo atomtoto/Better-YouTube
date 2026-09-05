@@ -96,7 +96,14 @@ struct SettingsView: View {
         } header: {
             Text("YouTube Account")
         } footer: {
-            Text("Optional. Create an OAuth 2.0 client ID of type iOS in the Google Cloud Console and paste it here to read your subscriptions, playlists and liked videos. Watch Later and watch history are not available through the API — those lists stay on this device.")
+            Text("""
+            Optional. In the Google Cloud Console: create an OAuth 2.0 client ID of type iOS, then \
+            open Google Auth Platform → Audience and add your own Google account under Test users — \
+            while the consent screen is in Testing, every other account is refused with \
+            "access_denied". Paste the client ID above to read your subscriptions, playlists and \
+            liked videos. Watch Later and watch history are not available through the API, so those \
+            lists stay on this device.
+            """)
         }
     }
 

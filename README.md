@@ -50,6 +50,13 @@ enriched with a single batched `videos.list` call. Only the search box spends 10
    client ID** of type **iOS** with the app's bundle identifier
    (`com.atomtoto.BetterYouTube`, or your own). Paste the client ID in Settings, then tap
    *Sign in with Google*.
+   - **Add yourself as a test user**, or sign-in fails with `Error 403: access_denied`. In
+     *Google Auth Platform → Audience*, with publishing status **Testing**, only the accounts listed
+     under *Test users* may grant consent — add the Google account you sign in with. Alternatively
+     switch the app to **In production** (with the `youtube.readonly` sensitive scope you'll then see
+     an "unverified app" interstitial you can pass via *Advanced*).
+   - Note: while in Testing, Google expires refresh tokens after **7 days**, so you'll be asked to
+     sign in again about once a week. Publishing the app removes that limit.
    - The flow is OAuth 2.0 with PKCE via `ASWebAuthenticationSession`, so no client secret is
      needed and no URL scheme has to be registered manually.
    - Scope requested: `youtube.readonly`. Tokens are stored in the iOS keychain; the API key lives

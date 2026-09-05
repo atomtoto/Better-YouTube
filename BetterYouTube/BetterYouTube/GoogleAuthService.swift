@@ -10,7 +10,10 @@ enum AuthError: LocalizedError {
     case missingClientId
     case invalidClientId
     case cancelled
+    case consentDenied(String?)
     case exchangeFailed(String)
+    /// Google rejected the credentials themselves (expired or revoked refresh token).
+    case tokenRejected(String)
 
     var errorDescription: String? {
         switch self {
@@ -20,7 +23,18 @@ enum AuthError: LocalizedError {
             return "That doesn't look like an iOS OAuth client ID (it should end in .apps.googleusercontent.com)."
         case .cancelled:
             return "Sign-in was cancelled."
+        case .consentDenied(let reason):
+            if reason == "access_denied" {
+                return """
+                Google refused the consent screen (access_denied). While the OAuth consent screen is \
+                in Testing, only accounts listed as test users can sign in — add your Google account \
+                under Google Auth Platform → Audience → Test users, or publish the app.
+                """
+            }
+            return "Google refused the sign-in request" + (reason.map { " (\($0))" } ?? "") + "."
         case .exchangeFailed(let message):
+            return message
+        case .tokenRejected(let message):
             return message
         }
     }
@@ -160,10 +174,14 @@ final class GoogleAuthService: ObservableObject {
         }
 
         let callbackURL = try await authenticate(url: authURL, scheme: scheme)
-        guard let code = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)?
-            .queryItems?
-            .first(where: { $0.name == "code" })?
-            .value else {
+        let callbackItems = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)?.queryItems ?? []
+
+        // Google reports refusals on the redirect itself (e.g. error=access_denied), not as a failure.
+        if let error = callbackItems.first(where: { $0.name == "error" })?.value {
+            throw AuthError.consentDenied(error)
+        }
+
+        guard let code = callbackItems.first(where: { $0.name == "code" })?.value else {
             throw AuthError.cancelled
         }
 
@@ -197,7 +215,12 @@ final class GoogleAuthService: ObservableObject {
             KeychainStore.save(refreshed)
             tokens = refreshed
             return refreshed.accessToken
+        } catch AuthError.tokenRejected {
+            // Revoked, or a Testing-mode refresh token past its 7-day life: ask for a fresh consent.
+            signOut()
+            return nil
         } catch {
+            // Transient failure (offline, 5xx): keep the session and retry on the next request.
             return nil
         }
     }
@@ -270,7 +293,11 @@ final class GoogleAuthService: ObservableObject {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let message = String(data: data, encoding: .utf8) ?? "Token request failed."
-            throw AuthError.exchangeFailed(message)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            // 400/401 means Google rejected the grant itself, not a transient problem.
+            throw (400...401).contains(status)
+                ? AuthError.tokenRejected(message)
+                : AuthError.exchangeFailed(message)
         }
 
         let decoded = try JSONDecoder().decode(TokenResponse.self, from: data)
