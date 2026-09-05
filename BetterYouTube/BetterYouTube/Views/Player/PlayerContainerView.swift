@@ -10,6 +10,7 @@ struct PlayerContainerView: View {
     private let miniBarHeight: CGFloat = 62
     private let tabBarHeight: CGFloat = 49
     private let miniVideoWidth: CGFloat = 104
+    private let headerHeight: CGFloat = 44
 
     var body: some View {
         GeometryReader { proxy in
@@ -21,7 +22,7 @@ struct PlayerContainerView: View {
             let videoHeight = expanded ? (size.width * 9 / 16) : miniBarHeight - 12
             let miniBarCenterY = size.height - tabBarHeight - miniBarHeight / 2
             let videoCenterX = expanded ? size.width / 2 : (miniVideoWidth / 2) + 14
-            let videoCenterY = expanded ? videoHeight / 2 : miniBarCenterY
+            let videoCenterY = expanded ? headerHeight + videoHeight / 2 : miniBarCenterY
 
             ZStack(alignment: .topLeading) {
                 // 1. Backdrops — drawn under the video surface.
@@ -35,19 +36,25 @@ struct PlayerContainerView: View {
                         .frame(width: size.width - 16, height: miniBarHeight)
                         .position(x: size.width / 2, y: miniBarCenterY)
                         .onTapGesture { player.expand() }
+                        .gesture(miniDragGesture)
                 }
 
-                // 2. The one and only video surface.
+                // 2. The one and only video surface. Expanded, it takes the taps so YouTube's own
+                //    controls work; collapsed, taps fall through to the bar and expand the player.
                 PlayerSurface(webView: player.webView)
                     .frame(width: videoWidth, height: videoHeight)
                     .clipShape(RoundedRectangle(cornerRadius: expanded ? 0 : 8, style: .continuous))
                     .position(x: videoCenterX, y: videoCenterY)
-                    .allowsHitTesting(false)
+                    .allowsHitTesting(expanded)
 
                 // 3. Chrome — drawn over the video.
                 if expanded {
-                    ExpandedPlayerView(videoHeight: videoHeight)
-                        .frame(width: size.width, height: size.height)
+                    ExpandedPlayerView(
+                        videoHeight: videoHeight,
+                        headerHeight: headerHeight,
+                        dragOffset: $dragOffset
+                    )
+                    .frame(width: size.width, height: size.height)
                 } else {
                     MiniPlayerControls(leadingInset: miniVideoWidth + 20)
                         .frame(width: size.width - 16, height: miniBarHeight)
@@ -55,30 +62,22 @@ struct PlayerContainerView: View {
                 }
             }
             .offset(y: dragOffset)
-            .gesture(dragGesture(expanded: expanded))
         }
         .opacity(player.currentVideo == nil ? 0 : 1)
         .allowsHitTesting(player.currentVideo != nil)
     }
 
-    /// Drag down to shrink the full player, drag up on the mini bar to bring it back.
-    private func dragGesture(expanded: Bool) -> some Gesture {
+    /// Flick the mini bar up to go full screen.
+    private var miniDragGesture: some Gesture {
         DragGesture()
             .onChanged { value in
-                if expanded {
-                    dragOffset = max(0, value.translation.height)
-                } else {
-                    dragOffset = min(0, value.translation.height) / 4
-                }
+                dragOffset = min(0, value.translation.height) / 4
             }
             .onEnded { value in
-                let translation = value.translation.height
                 withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
                     dragOffset = 0
                 }
-                if expanded, translation > 120 {
-                    player.collapse()
-                } else if !expanded, translation < -40 {
+                if value.translation.height < -40 {
                     player.expand()
                 }
             }
@@ -105,7 +104,9 @@ private struct MiniPlayerControls: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Color.clear.frame(width: leadingInset - 12)
+            Color.clear
+                .frame(width: leadingInset - 12)
+                .allowsHitTesting(false)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(player.currentVideo?.title ?? "")
@@ -156,6 +157,7 @@ private struct MiniPlayerControls: View {
             .frame(height: 2)
             .padding(.horizontal, 10)
             .padding(.bottom, 4)
+            .allowsHitTesting(false)
         }
     }
 }

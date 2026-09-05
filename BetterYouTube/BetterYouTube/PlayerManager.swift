@@ -2,8 +2,8 @@ import Foundation
 import SwiftUI
 import WebKit
 
-/// One event coming back from the YouTube IFrame API. Kept to primitives so it can cross
-/// actor boundaries from the script-message handler.
+/// One event coming back from the embedded player. Kept to primitives so it can cross actor
+/// boundaries from the script-message handler.
 struct PlayerEvent: Sendable {
     let type: String
     let time: Double?
@@ -33,8 +33,9 @@ final class PlayerScriptBridge: NSObject, WKScriptMessageHandler {
 /// keeps playing while you browse — the mini player in the YouTube app, the Now Playing bar in
 /// Apple Music.
 ///
-/// Playback runs through YouTube's IFrame Player API (`controls: 0`), which is what lets the app
-/// draw its own transport controls while staying inside the official embed.
+/// The embed draws its own transport (the same controls as the YouTube app); this type drives it
+/// over postMessage for the mini player's play/pause and progress, and for auto-advancing the
+/// queue.
 @MainActor
 final class PlayerManager: ObservableObject {
     static let shared = PlayerManager()
@@ -46,17 +47,12 @@ final class PlayerManager: ObservableObject {
     @Published private(set) var isBuffering = false
     @Published private(set) var currentTime: Double = 0
     @Published private(set) var duration: Double = 0
-    @Published var areControlsVisible = true
-
-    /// True while a finger is on the scrubber, so time updates don't fight it.
-    var isScrubbing = false
 
     let webView: WKWebView
 
     private let bridge = PlayerScriptBridge()
     private var isPlayerReady = false
     private var pendingVideoId: String?
-    private var hideControlsTask: Task<Void, Never>?
 
     private init() {
         let configuration = WKWebViewConfiguration()
@@ -85,7 +81,6 @@ final class PlayerManager: ObservableObject {
         currentTime = 0
         duration = 0
         isBuffering = true
-        showControls()
 
         let isFirstVideo = currentVideo == nil
         withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
@@ -97,7 +92,7 @@ final class PlayerManager: ObservableObject {
             pendingVideoId = video.id
             loadShell(initialVideoId: video.id)
         } else {
-            evaluate("loadVideo('\(video.id)')")
+            evaluate("setVideo('\(video.id)')")
         }
     }
 
@@ -110,7 +105,6 @@ final class PlayerManager: ObservableObject {
 
     func togglePlayPause() {
         isPlaying ? pause() : resume()
-        showControls()
     }
 
     func resume() {
@@ -129,16 +123,6 @@ final class PlayerManager: ObservableObject {
         evaluate("seekTo(\(target))")
     }
 
-    func skip(by delta: Double) {
-        seek(to: currentTime + delta)
-        showControls()
-    }
-
-    /// Updates the displayed time while the scrubber is being dragged.
-    func scrub(to seconds: Double) {
-        currentTime = seconds
-    }
-
     func playNext() {
         guard !upNext.isEmpty else {
             isPlaying = false
@@ -151,7 +135,6 @@ final class PlayerManager: ObservableObject {
 
     func close() {
         evaluate("stopVideo()")
-        hideControlsTask?.cancel()
         withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
             isExpanded = false
             currentVideo = nil
@@ -166,39 +149,11 @@ final class PlayerManager: ObservableObject {
         withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
             isExpanded = true
         }
-        showControls()
     }
 
     func collapse() {
         withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
             isExpanded = false
-        }
-    }
-
-    // MARK: - Controls visibility
-
-    func showControls(autoHide: Bool = true) {
-        hideControlsTask?.cancel()
-        withAnimation(.easeOut(duration: 0.18)) {
-            areControlsVisible = true
-        }
-        guard autoHide else { return }
-        hideControlsTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 3_200_000_000)
-            guard !Task.isCancelled else { return }
-            guard let self, self.isPlaying else { return }
-            withAnimation(.easeIn(duration: 0.25)) {
-                self.areControlsVisible = false
-            }
-        }
-    }
-
-    func toggleControls() {
-        if areControlsVisible {
-            hideControlsTask?.cancel()
-            withAnimation(.easeIn(duration: 0.2)) { areControlsVisible = false }
-        } else {
-            showControls()
         }
     }
 
@@ -214,7 +169,7 @@ final class PlayerManager: ObservableObject {
             isPlayerReady = true
             if let pending = pendingVideoId {
                 pendingVideoId = nil
-                evaluate("loadVideo('\(pending)')")
+                evaluate("setVideo('\(pending)')")
             }
 
         case "state":
@@ -222,11 +177,10 @@ final class PlayerManager: ObservableObject {
             guard let state = event.state else { return }
             isPlaying = state == 1
             isBuffering = state == 3
-            if state == 1 { showControls() }
             if state == 0 { playNext() }
 
         case "time":
-            if !isScrubbing, let time = event.time {
+            if let time = event.time {
                 currentTime = time
             }
 
@@ -247,6 +201,10 @@ final class PlayerManager: ObservableObject {
         webView.loadHTMLString(html, baseURL: URL(string: "https://www.youtube.com"))
     }
 
+    /// A plain `youtube-nocookie.com/embed` iframe — the same embed that plays reliably in a
+    /// `WKWebView`. Control and state ride on the embed's `enablejsapi` postMessage protocol, so
+    /// nothing depends on loading YouTube's IFrame API script into a `loadHTMLString` document,
+    /// whose origin the API rejects (playback failed with error 152).
     private static let shellHTML = """
     <!DOCTYPE html>
     <html>
@@ -254,65 +212,70 @@ final class PlayerManager: ObservableObject {
       <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
       <style>
         html, body { margin: 0; padding: 0; background: #000; height: 100%; overflow: hidden; }
-        #player { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #frame { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
       </style>
     </head>
     <body>
-      <div id="player"></div>
-      <script src="https://www.youtube.com/iframe_api"></script>
+      <iframe id="frame"
+        src="https://www.youtube-nocookie.com/embed/__VIDEO_ID__?enablejsapi=1&playsinline=1&autoplay=1&rel=0&modestbranding=1&controls=1"
+        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen>
+      </iframe>
       <script>
-        var player;
-        var ticker;
+        var frame = document.getElementById('frame');
+        var handshake;
 
         function post(message) {
           try { window.webkit.messageHandlers.player.postMessage(message); } catch (e) {}
         }
 
-        function safeDuration() {
-          return (player && player.getDuration) ? player.getDuration() : 0;
+        function send(message) {
+          try { frame.contentWindow.postMessage(JSON.stringify(message), '*'); } catch (e) {}
         }
 
-        function startTicker() {
-          clearInterval(ticker);
-          ticker = setInterval(function () {
-            if (player && player.getCurrentTime) {
-              post({ type: 'time', time: player.getCurrentTime(), duration: safeDuration() });
+        function command(func, args) {
+          send({ event: 'command', func: func, args: args || [] });
+        }
+
+        function setVideo(id) {
+          frame.src = 'https://www.youtube-nocookie.com/embed/' + id +
+            '?enablejsapi=1&playsinline=1&autoplay=1&rel=0&modestbranding=1&controls=1';
+        }
+
+        // The embed only starts reporting state once we introduce ourselves; it can miss the
+        // first few messages while it boots, so repeat briefly.
+        frame.addEventListener('load', function () {
+          clearInterval(handshake);
+          var attempts = 0;
+          handshake = setInterval(function () {
+            send({ event: 'listening', id: 'frame', channel: 'widget' });
+            if (++attempts > 20) { clearInterval(handshake); }
+          }, 250);
+          post({ type: 'ready' });
+        });
+
+        window.addEventListener('message', function (event) {
+          var data;
+          try { data = JSON.parse(event.data); } catch (e) { return; }
+          if (!data) { return; }
+
+          if (data.event === 'onStateChange') {
+            post({ type: 'state', state: data.info });
+          } else if (data.event === 'infoDelivery' && data.info) {
+            var info = data.info;
+            if (typeof info.playerState === 'number') {
+              post({ type: 'state', state: info.playerState, duration: info.duration || 0 });
             }
-          }, 400);
-        }
-
-        function onYouTubeIframeAPIReady() {
-          player = new YT.Player('player', {
-            videoId: '__VIDEO_ID__',
-            playerVars: {
-              playsinline: 1,
-              controls: 0,
-              rel: 0,
-              modestbranding: 1,
-              fs: 0,
-              origin: 'https://www.youtube.com'
-            },
-            events: {
-              onReady: function () {
-                post({ type: 'ready', duration: safeDuration() });
-                startTicker();
-                player.playVideo();
-              },
-              onStateChange: function (event) {
-                post({ type: 'state', state: event.data, duration: safeDuration() });
-              },
-              onError: function (event) {
-                post({ type: 'error', state: event.data });
-              }
+            if (typeof info.currentTime === 'number') {
+              post({ type: 'time', time: info.currentTime, duration: info.duration || 0 });
             }
-          });
-        }
+          }
+        });
 
-        function loadVideo(id) { if (player && player.loadVideoById) { player.loadVideoById(id); } }
-        function resume() { if (player && player.playVideo) { player.playVideo(); } }
-        function pauseVideo() { if (player && player.pauseVideo) { player.pauseVideo(); } }
-        function seekTo(seconds) { if (player && player.seekTo) { player.seekTo(seconds, true); } }
-        function stopVideo() { if (player && player.stopVideo) { player.stopVideo(); } }
+        function resume() { command('playVideo'); }
+        function pauseVideo() { command('pauseVideo'); }
+        function seekTo(seconds) { command('seekTo', [seconds, true]); }
+        function stopVideo() { frame.src = 'about:blank'; }
       </script>
     </body>
     </html>

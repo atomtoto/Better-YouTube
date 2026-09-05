@@ -1,158 +1,97 @@
 import SwiftUI
 
-/// The full-screen player: video pinned at the top with custom transport controls, details and
-/// comments scrolling underneath — the layout both the YouTube app and Apple Music use.
+/// The full-screen player. The video itself is the shared surface drawn underneath this view, so
+/// everything here sits either above it (the header) or below it (the details).
+///
+/// The header deliberately sits *above* the video rather than overlaying it: the embed draws
+/// YouTube's own transport controls, and an overlay would swallow the taps meant for them.
 struct ExpandedPlayerView: View {
     let videoHeight: CGFloat
+    let headerHeight: CGFloat
+    @Binding var dragOffset: CGFloat
 
     @EnvironmentObject private var player: PlayerManager
 
     var body: some View {
         VStack(spacing: 0) {
-            // Sits exactly over the shared video surface drawn beneath this view.
-            PlayerControlsOverlay()
+            header
+                .frame(height: headerHeight)
+                .contentShape(Rectangle())
+                .gesture(dragGesture)
+
+            // The video shows through this gap; touches must reach it.
+            Color.clear
                 .frame(height: videoHeight)
+                .allowsHitTesting(false)
 
             if let video = player.currentVideo {
                 PlayerDetailsView(video: video)
                     .id(video.id)
             }
+
+            Spacer(minLength: 0)
         }
     }
-}
 
-/// Tap-to-reveal transport controls drawn on top of the video.
-private struct PlayerControlsOverlay: View {
-    @EnvironmentObject private var player: PlayerManager
-
-    var body: some View {
-        ZStack {
-            Color.black.opacity(player.areControlsVisible ? 0.35 : 0.001)
-                .contentShape(Rectangle())
-                .onTapGesture { player.toggleControls() }
-
-            if player.areControlsVisible {
-                controls
-                    .transition(.opacity)
+    private var header: some View {
+        HStack(spacing: 4) {
+            Button {
+                player.collapse()
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.headline)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Minimize player")
 
-            if player.isBuffering {
-                ProgressView()
-                    .controlSize(.large)
-                    .tint(.white)
-            }
-        }
-        .clipped()
-    }
+            Spacer()
 
-    private var controls: some View {
-        VStack {
-            HStack {
-                Button {
-                    player.collapse()
-                } label: {
-                    Image(systemName: "chevron.down")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
+            Capsule()
+                .fill(Color.secondary.opacity(0.35))
+                .frame(width: 36, height: 5)
+
+            Spacer()
+
+            Menu {
+                if let url = player.currentVideo?.watchURL {
+                    ShareLink(item: url) {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
+                    Link(destination: url) {
+                        Label("Open in YouTube", systemImage: "arrow.up.forward.app")
+                    }
                 }
-                .accessibilityLabel("Minimize player")
-
-                Spacer()
-
-                Button {
+                Button(role: .destructive) {
                     player.close()
                 } label: {
-                    Image(systemName: "xmark")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
+                    Label("Stop Playback", systemImage: "xmark")
                 }
-                .accessibilityLabel("Close player")
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.headline)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
-
-            Spacer()
-
-            HStack(spacing: 44) {
-                Button {
-                    player.skip(by: -10)
-                } label: {
-                    Image(systemName: "gobackward.10")
-                        .font(.title2)
-                        .foregroundStyle(.white)
-                }
-                .accessibilityLabel("Back 10 seconds")
-
-                Button {
-                    player.togglePlayPause()
-                } label: {
-                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 40))
-                        .foregroundStyle(.white)
-                        .frame(width: 60, height: 60)
-                }
-                .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
-
-                Button {
-                    player.skip(by: 10)
-                } label: {
-                    Image(systemName: "goforward.10")
-                        .font(.title2)
-                        .foregroundStyle(.white)
-                }
-                .accessibilityLabel("Forward 10 seconds")
-            }
-
-            Spacer()
-
-            scrubber
-                .padding(.horizontal, 14)
-                .padding(.bottom, 8)
+            .accessibilityLabel("More")
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 6)
+        .foregroundStyle(.primary)
     }
 
-    private var scrubber: some View {
-        VStack(spacing: 2) {
-            Slider(
-                value: Binding(
-                    get: { player.currentTime },
-                    set: { player.scrub(to: $0) }
-                ),
-                in: 0...max(player.duration, 1),
-                onEditingChanged: { isEditing in
-                    player.isScrubbing = isEditing
-                    if !isEditing {
-                        player.seek(to: player.currentTime)
-                    }
-                    player.showControls()
-                }
-            )
-            .tint(.red)
-
-            HStack {
-                Text(TimeFormatter.string(player.currentTime))
-                Spacer()
-                Text(TimeFormatter.string(player.duration))
+    /// Pull the header down to shrink back to the mini player.
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                dragOffset = max(0, value.translation.height)
             }
-            .font(.caption2.monospacedDigit())
-            .foregroundStyle(.white.opacity(0.85))
-        }
-    }
-}
-
-enum TimeFormatter {
-    static func string(_ seconds: Double) -> String {
-        guard seconds.isFinite, seconds >= 0 else { return "0:00" }
-        let total = Int(seconds.rounded())
-        let hours = total / 3600
-        let minutes = (total % 3600) / 60
-        let secs = total % 60
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, secs)
-        }
-        return String(format: "%d:%02d", minutes, secs)
+            .onEnded { value in
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+                    dragOffset = 0
+                }
+                if value.translation.height > 100 {
+                    player.collapse()
+                }
+            }
     }
 }
