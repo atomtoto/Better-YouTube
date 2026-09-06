@@ -11,6 +11,29 @@ struct PlayerEvent: Sendable {
     let state: Int?
 }
 
+/// Why playback isn't running.
+enum PlaybackIssue: Equatable {
+    /// YouTube's player refused the video, with its own error code.
+    case playerError(Int)
+    /// The page hosting the player failed to load.
+    case loadFailed(String)
+    /// The page loaded but never reported back.
+    case noResponse
+}
+
+/// Surfaces page-level load failures, which never reach the JavaScript bridge.
+final class PlayerNavigationBridge: NSObject, WKNavigationDelegate {
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        let message = error.localizedDescription
+        Task { @MainActor in PlayerManager.shared.handleLoadFailure(message) }
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        let message = error.localizedDescription
+        Task { @MainActor in PlayerManager.shared.handleLoadFailure(message) }
+    }
+}
+
 /// Bridges `window.webkit.messageHandlers.player` into `PlayerManager`.
 final class PlayerScriptBridge: NSObject, WKScriptMessageHandler {
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -47,12 +70,15 @@ final class PlayerManager: ObservableObject {
     @Published private(set) var isBuffering = false
     @Published private(set) var currentTime: Double = 0
     @Published private(set) var duration: Double = 0
-    /// Set when the embed reports a playback error, so the UI can say what happened.
-    @Published private(set) var errorCode: Int?
+    /// Set whenever playback fails to start, so the UI can say what happened instead of
+    /// showing a silent black rectangle.
+    @Published private(set) var issue: PlaybackIssue?
 
     let webView: WKWebView
 
     private let bridge = PlayerScriptBridge()
+    private let navigationBridge = PlayerNavigationBridge()
+    private var watchdog: Task<Void, Never>?
     /// The video that should be playing, and the one the web view actually has.
     private var desiredVideoId: String?
     private var loadedVideoId: String?
@@ -77,6 +103,7 @@ final class PlayerManager: ObservableObject {
         webView.isOpaque = false
 
         controller.add(bridge, name: "player")
+        webView.navigationDelegate = navigationBridge
     }
 
     // MARK: - Playback
@@ -89,7 +116,7 @@ final class PlayerManager: ObservableObject {
         currentTime = 0
         duration = 0
         isBuffering = true
-        errorCode = nil
+        issue = nil
 
         withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
             currentVideo = video
@@ -116,10 +143,30 @@ final class PlayerManager: ObservableObject {
             isLoadingShell = true
             loadedVideoId = desired
             loadShell(initialVideoId: desired)
+            startWatchdog()
         } else if loadedVideoId != desired {
             loadedVideoId = desired
             evaluate("setVideo('\(desired)')")
         }
+    }
+
+    /// If the page never reports back, say so rather than leaving a black player.
+    private func startWatchdog() {
+        watchdog?.cancel()
+        watchdog = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 8_000_000_000)
+            guard !Task.isCancelled, let self, !self.isShellLoaded else { return }
+            self.issue = .noResponse
+            self.isBuffering = false
+        }
+    }
+
+    /// Reported by the navigation delegate when the page itself fails to load.
+    func handleLoadFailure(_ message: String) {
+        guard !isShellLoaded else { return }
+        isLoadingShell = false
+        isBuffering = false
+        issue = .loadFailed(message)
     }
 
     /// Resolves a video ID (from a notification tap) and plays it.
@@ -194,11 +241,13 @@ final class PlayerManager: ObservableObject {
         case "ready":
             isShellLoaded = true
             isLoadingShell = false
+            watchdog?.cancel()
+            issue = nil
             sync()
 
         case "error":
-            errorCode = event.state
             isBuffering = false
+            if let code = event.state { issue = .playerError(code) }
 
         case "state":
             // YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
@@ -227,10 +276,8 @@ final class PlayerManager: ObservableObject {
         isShellLoaded = false
         let html = Self.shellHTML.replacingOccurrences(of: "__VIDEO_ID__", with: initialVideoId)
 
-        // loadSimulatedRequest gives the document the origin of the URL it names. loadHTMLString
-        // with a baseURL does not, and YouTube's embed rejects the resulting mismatched origin.
-        guard let url = URL(string: "https://www.youtube-nocookie.com/") else { return }
-        webView.loadSimulatedRequest(URLRequest(url: url), responseHTML: html)
+        // The base URL matches the iframe's host, exactly as in the version that played fine.
+        webView.loadHTMLString(html, baseURL: URL(string: "https://www.youtube-nocookie.com"))
     }
 
     /// A plain `youtube-nocookie.com/embed` iframe — the same embed that plays reliably in a
