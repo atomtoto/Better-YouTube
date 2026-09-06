@@ -22,6 +22,10 @@ struct PlayerDetailsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                if let code = player.errorCode {
+                    playbackErrorBanner(code: code)
+                }
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text(displayed.title)
                         .font(.headline)
@@ -51,6 +55,46 @@ struct PlayerDetailsView: View {
         }
         .scrollIndicators(.hidden)
         .task { await viewModel.loadAll() }
+    }
+
+    /// Surfaces what the embed reported rather than leaving a silent black player.
+    private func playbackErrorBanner(code: Int) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("This video didn't start", systemImage: "exclamationmark.triangle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.orange)
+
+            Text(Self.explanation(for: code))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Text("Player error \(code) · video \(displayed.id)")
+                .font(.caption2.monospaced())
+                .foregroundStyle(.tertiary)
+
+            if let url = displayed.watchURL {
+                Link("Open in YouTube", destination: url)
+                    .font(.subheadline.weight(.semibold))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .cardBackground()
+    }
+
+    private static func explanation(for code: Int) -> String {
+        switch code {
+        case 2:
+            return "YouTube rejected the video ID."
+        case 5:
+            return "The video can't play in this HTML5 player."
+        case 100:
+            return "The video was removed or made private."
+        case 101, 150:
+            return "The channel doesn't allow this video to be played outside YouTube."
+        default:
+            return "YouTube's player refused to start this video."
+        }
     }
 
     private var metadataLine: String {
