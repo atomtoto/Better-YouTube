@@ -76,6 +76,7 @@ struct LibraryView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .minimizesPlayerBarOnScroll()
         .navigationTitle("Library")
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
         .refreshable {

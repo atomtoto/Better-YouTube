@@ -165,6 +165,7 @@ struct SearchView: View {
                 }
                 .listStyle(.plain)
                 .scrollDismissesKeyboard(.interactively)
+                .minimizesPlayerBarOnScroll()
             }
         }
     }
@@ -199,6 +200,7 @@ struct SearchView: View {
         }
         .listStyle(.plain)
         .scrollDismissesKeyboard(.immediately)
+        .minimizesPlayerBarOnScroll()
     }
 }
 

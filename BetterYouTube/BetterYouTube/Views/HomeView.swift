@@ -40,6 +40,7 @@ struct HomeView: View {
             .padding(.vertical, 12)
         }
         .scrollIndicators(.hidden)
+        .minimizesPlayerBarOnScroll()
         .background(Color(uiColor: .systemBackground))
         .navigationTitle("Home")
         .toolbar {

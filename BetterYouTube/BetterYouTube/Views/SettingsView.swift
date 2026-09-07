@@ -41,6 +41,7 @@ struct SettingsView: View {
                 Text("Quota tip: each search costs 100 of the 10,000 daily API units, while browsing channels, playlists and video details costs 1 unit per request.")
             }
         }
+        .minimizesPlayerBarOnScroll()
         .navigationTitle("Settings")
         .onAppear {
             draftKey = apiKeyStore.apiKey

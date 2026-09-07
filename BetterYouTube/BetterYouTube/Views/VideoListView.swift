@@ -29,6 +29,7 @@ struct VideoListView: View {
                     .onDelete(perform: onDelete)
                 }
                 .listStyle(.plain)
+                .minimizesPlayerBarOnScroll()
             }
         }
         .navigationTitle(title)
@@ -75,6 +76,7 @@ struct SubscriptionsView: View {
                     .padding(Theme.Spacing.gutter)
                 }
                 .scrollIndicators(.hidden)
+                .minimizesPlayerBarOnScroll()
             }
         }
         .navigationTitle("Subscriptions")
@@ -117,6 +119,7 @@ struct PlaylistsView: View {
                     }
                 }
                 .listStyle(.plain)
+                .minimizesPlayerBarOnScroll()
             }
         }
         .navigationTitle("Playlists")
@@ -174,6 +177,7 @@ struct PlaylistDetailView: View {
                     }
                 }
                 .listStyle(.plain)
+                .minimizesPlayerBarOnScroll()
             }
         }
         .navigationTitle(playlist.title)

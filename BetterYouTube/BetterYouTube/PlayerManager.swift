@@ -52,6 +52,27 @@ final class PlayerScriptBridge: NSObject, WKScriptMessageHandler {
     }
 }
 
+/// Playback position, deliberately kept off `PlayerManager`: the embed reports it several times
+/// a second, and publishing it on the manager would re-render every view that watches the player
+/// at that rate — which is what made dragging the player down feel jerky. Only the hairline of
+/// progress in the docked bar observes this.
+@MainActor
+final class PlaybackProgress: ObservableObject {
+    @Published fileprivate(set) var currentTime: Double = 0
+    @Published fileprivate(set) var duration: Double = 0
+
+    /// How much of the video has played, 0...1.
+    var fraction: Double {
+        guard duration > 0 else { return 0 }
+        return min(1, max(0, currentTime / duration))
+    }
+
+    fileprivate func reset() {
+        currentTime = 0
+        duration = 0
+    }
+}
+
 /// Owns playback for the whole app: a single web view that outlives any screen, so the video
 /// keeps playing while you browse — the mini player in the YouTube app, the Now Playing bar in
 /// Apple Music.
@@ -68,8 +89,11 @@ final class PlayerManager: ObservableObject {
     @Published var isExpanded = false
     @Published private(set) var isPlaying = false
     @Published private(set) var isBuffering = false
-    @Published private(set) var currentTime: Double = 0
-    @Published private(set) var duration: Double = 0
+    /// True while the docked bar is shrunk to its pill, which is what scrolling down does — the
+    /// same gesture that minimizes the tab bar underneath it.
+    @Published private(set) var isBarCompact = false
+    /// Position and duration, published apart from everything else because they tick constantly.
+    let progress = PlaybackProgress()
     /// Set whenever playback fails to start, so the UI can say what happened instead of
     /// showing a silent black rectangle.
     @Published private(set) var issue: PlaybackIssue?
@@ -113,14 +137,15 @@ final class PlayerManager: ObservableObject {
         LibraryStore.shared.recordWatch(video)
 
         upNext = queue.filter { $0.id != video.id }
-        currentTime = 0
-        duration = 0
-        isBuffering = true
+        progress.reset()
+        setBuffering(true)
         issue = nil
+        scrollRun = 0
 
         withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
             currentVideo = video
             isExpanded = true
+            isBarCompact = false
         }
 
         desiredVideoId = video.id
@@ -157,7 +182,7 @@ final class PlayerManager: ObservableObject {
             try? await Task.sleep(nanoseconds: 8_000_000_000)
             guard !Task.isCancelled, let self, !self.isShellLoaded else { return }
             self.issue = .noResponse
-            self.isBuffering = false
+            self.setBuffering(false)
         }
     }
 
@@ -165,7 +190,7 @@ final class PlayerManager: ObservableObject {
     func handleLoadFailure(_ message: String) {
         guard !isShellLoaded else { return }
         isLoadingShell = false
-        isBuffering = false
+        setBuffering(false)
         issue = .loadFailed(message)
     }
 
@@ -191,8 +216,9 @@ final class PlayerManager: ObservableObject {
     }
 
     func seek(to seconds: Double) {
+        let duration = progress.duration
         let target = max(0, min(seconds, duration > 0 ? duration : seconds))
-        currentTime = target
+        progress.currentTime = target
         evaluate("seekTo(\(target))")
     }
 
@@ -211,16 +237,60 @@ final class PlayerManager: ObservableObject {
         withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
             isExpanded = false
             currentVideo = nil
+            isBarCompact = false
         }
         upNext = []
         isPlaying = false
-        currentTime = 0
-        duration = 0
+        progress.reset()
+        scrollRun = 0
     }
 
     func expand() {
+        scrollRun = 0
         withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
             isExpanded = true
+            isBarCompact = false
+        }
+    }
+
+    // MARK: - The size of the docked bar
+
+    /// How far you have to scroll in one direction before the bar changes size, so a jittery
+    /// finger doesn't flip it back and forth.
+    private static let compactThreshold: CGFloat = 28
+    /// Scroll travelled since the last change of direction.
+    private var scrollRun: CGFloat = 0
+
+    /// Fed by every screen's scroll view: scrolling down shrinks the bar to its pill, scrolling
+    /// back up — or reaching the top — brings it back, the way the tab bar behaves.
+    func scrollDidMove(from previous: CGFloat, to current: CGFloat) {
+        guard currentVideo != nil, !isExpanded else { return }
+
+        let delta = current - previous
+        guard abs(delta) > 0.5 else { return }
+
+        // Anywhere near the top the bar is always full size.
+        guard current > 24 else {
+            scrollRun = 0
+            setBarCompact(false)
+            return
+        }
+
+        if (delta > 0) != (scrollRun > 0) { scrollRun = 0 }
+        let limit = Self.compactThreshold * 1.5
+        scrollRun = max(-limit, min(limit, scrollRun + delta))
+
+        if scrollRun >= Self.compactThreshold {
+            setBarCompact(true)
+        } else if scrollRun <= -Self.compactThreshold {
+            setBarCompact(false)
+        }
+    }
+
+    private func setBarCompact(_ compact: Bool) {
+        guard isBarCompact != compact else { return }
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+            isBarCompact = compact
         }
     }
 
@@ -233,8 +303,8 @@ final class PlayerManager: ObservableObject {
     // MARK: - Events from the web player
 
     func handle(_ event: PlayerEvent) {
-        if let duration = event.duration, duration > 0 {
-            self.duration = duration
+        if let duration = event.duration, duration > 0, progress.duration != duration {
+            progress.duration = duration
         }
 
         switch event.type {
@@ -246,24 +316,35 @@ final class PlayerManager: ObservableObject {
             sync()
 
         case "error":
-            isBuffering = false
+            setBuffering(false)
             if let code = event.state { issue = .playerError(code) }
 
         case "state":
             // YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
             guard let state = event.state else { return }
-            isPlaying = state == 1
-            isBuffering = state == 3
+            setPlaying(state == 1)
+            setBuffering(state == 3)
             if state == 0 { playNext() }
 
         case "time":
-            if let time = event.time {
-                currentTime = time
+            // Ignore the sub-frame jitter the embed reports between real ticks.
+            if let time = event.time, abs(time - progress.currentTime) > 0.05 {
+                progress.currentTime = time
             }
 
         default:
             break
         }
+    }
+
+    /// The embed repeats its state with every position report, and assigning an unchanged
+    /// `@Published` value still redraws every view watching the player — several times a second.
+    private func setPlaying(_ playing: Bool) {
+        if isPlaying != playing { isPlaying = playing }
+    }
+
+    private func setBuffering(_ buffering: Bool) {
+        if isBuffering != buffering { isBuffering = buffering }
     }
 
     // MARK: - Web view plumbing

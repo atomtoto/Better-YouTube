@@ -49,6 +49,7 @@ struct ChannelView: View {
                     }
                 }
                 .listStyle(.plain)
+                .minimizesPlayerBarOnScroll()
             }
         }
         .navigationTitle(channel?.title ?? "Channel")
