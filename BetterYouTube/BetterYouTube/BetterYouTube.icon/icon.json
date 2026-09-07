@@ -18,11 +18,24 @@
           }
         },
         {
+          "hidden" : false,
+          "image-name" : "Rectangle 2.svg",
+          "name" : "Rectangle 2",
+          "position" : {
+            "scale" : 4,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        },
+        {
           "blend-mode" : "lighten",
           "fill" : {
             "automatic-gradient" : "display-p3:0.83529,0.22353,0.20000,1.00000"
           },
           "glass" : true,
+          "hidden" : true,
           "image-name" : "Rectangle 1 2.svg",
           "name" : "Rectangle 1 2",
           "position" : {
