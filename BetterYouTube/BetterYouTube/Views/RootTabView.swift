@@ -54,6 +54,19 @@ struct RootTabView: View {
             .tabItem { Label("Settings", systemImage: "gearshape.fill") }
             .tag(AppRouter.Tab.settings)
         }
+        .modifier(MinimizeTabBarOnScroll())
+    }
+}
+
+/// iOS 26 shrinks the floating tab bar as you scroll down, the way Apple's own apps do.
+private struct MinimizeTabBarOnScroll: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.tabBarMinimizeBehavior(.onScrollDown)
+        } else {
+            content
+        }
     }
 }
 

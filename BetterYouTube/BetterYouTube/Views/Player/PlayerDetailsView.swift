@@ -22,6 +22,10 @@ struct PlayerDetailsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                if let issue = player.issue {
+                    playbackIssueBanner(issue)
+                }
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text(displayed.title)
                         .font(.headline)
@@ -51,6 +55,60 @@ struct PlayerDetailsView: View {
         }
         .scrollIndicators(.hidden)
         .task { await viewModel.loadAll() }
+    }
+
+    /// Surfaces what actually went wrong rather than leaving a silent black player.
+    private func playbackIssueBanner(_ issue: PlaybackIssue) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("This video didn't start", systemImage: "exclamationmark.triangle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.orange)
+
+            Text(Self.explanation(for: issue))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Text(Self.detail(for: issue, videoId: displayed.id))
+                .font(.caption2.monospaced())
+                .foregroundStyle(.tertiary)
+                .textSelection(.enabled)
+
+            if let url = displayed.watchURL {
+                Link("Open in YouTube", destination: url)
+                    .font(.subheadline.weight(.semibold))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .cardBackground()
+    }
+
+    private static func explanation(for issue: PlaybackIssue) -> String {
+        switch issue {
+        case .playerError(let code):
+            switch code {
+            case 2: return "YouTube rejected the video ID."
+            case 5: return "The video can't play in this HTML5 player."
+            case 100: return "The video was removed or made private."
+            case 101, 150: return "The channel doesn't allow this video to play outside YouTube."
+            default: return "YouTube's player refused to start this video."
+            }
+        case .loadFailed:
+            return "The player page couldn't load — check the network connection."
+        case .noResponse:
+            return "The player page loaded but never started. This is a bug in the app, not in the video."
+        }
+    }
+
+    private static func detail(for issue: PlaybackIssue, videoId: String) -> String {
+        switch issue {
+        case .playerError(let code):
+            return "player error \(code) · video \(videoId)"
+        case .loadFailed(let message):
+            return "load failed: \(message) · video \(videoId)"
+        case .noResponse:
+            return "no handshake after 8s · video \(videoId)"
+        }
     }
 
     private var metadataLine: String {
