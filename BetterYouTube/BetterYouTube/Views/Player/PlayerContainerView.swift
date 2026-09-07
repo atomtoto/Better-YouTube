@@ -209,8 +209,12 @@ private struct PlayerMetrics {
     let barHeight: CGFloat = 62
     let barInset: CGFloat = 20
     let barCornerRadius: CGFloat = 26
-    /// Room left below the bar for the floating tab bar.
-    let tabBarClearance: CGFloat = 52
+    /// Room left below the full-width bar for the floating tab bar.
+    let tabBarClearance: CGFloat = 54
+    /// The pill has none: it drops into the tab bar's own row rather than hovering above it.
+    /// By the time the bar is compact the tab bar is minimized too — you scrolled down, which
+    /// is what shrinks both — so the space beside its pill is free.
+    let compactTabBarClearance: CGFloat = 0
     let artworkPadding: CGFloat = 8
     let headerHeight: CGFloat = 44
     /// The pill the bar shrinks to on scroll keeps the artwork and play/pause, nothing else.
@@ -223,7 +227,8 @@ private struct PlayerMetrics {
 }
 
 /// Interpolates the player between the three shapes it can take. The bar keeps its trailing edge
-/// as it shrinks, so the pill ends up in the bottom-right corner, clear of the minimized tab bar.
+/// as it shrinks and drops as it narrows, so the pill lands in the bottom-right corner — in the
+/// tab bar's own row, beside the pill the tab bar has minimized to by then.
 private struct PlayerLayout {
     let size: CGSize
     let metrics: PlayerMetrics
@@ -236,7 +241,7 @@ private struct PlayerLayout {
     func barFrame(at compactness: CGFloat) -> CGRect {
         let height = lerp(metrics.barHeight, metrics.compactBarHeight, compactness)
         let width = lerp(size.width - metrics.barInset * 2, compactBarWidth, compactness)
-        let bottom = size.height - metrics.tabBarClearance
+        let bottom = size.height - lerp(metrics.tabBarClearance, metrics.compactTabBarClearance, compactness)
         return CGRect(
             x: size.width - metrics.barInset - width,
             y: bottom - height,
