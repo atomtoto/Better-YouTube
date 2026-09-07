@@ -26,7 +26,12 @@ struct SearchView: View {
                 results
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(uiColor: .systemBackground))
+        // Tapping anywhere outside the field puts the keyboard away. Simultaneous so rows and
+        // buttons still receive their own taps.
+        .contentShape(Rectangle())
+        .simultaneousGesture(TapGesture().onEnded { isFieldFocused = false })
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) { searchField }
@@ -159,6 +164,7 @@ struct SearchView: View {
                     }
                 }
                 .listStyle(.plain)
+                .scrollDismissesKeyboard(.interactively)
             }
         }
     }

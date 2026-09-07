@@ -13,7 +13,7 @@ struct PlayerContainerView: View {
     private let miniBarInset: CGFloat = 20
     private let miniBarCornerRadius: CGFloat = 26
     /// Room left below the bar for the floating tab bar.
-    private let tabBarClearance: CGFloat = 58
+    private let tabBarClearance: CGFloat = 52
 
     private let artworkPadding: CGFloat = 8
     private let headerHeight: CGFloat = 44
