@@ -13,7 +13,7 @@ struct PlayerContainerView: View {
     private let miniBarInset: CGFloat = 20
     private let miniBarCornerRadius: CGFloat = 26
     /// Room left below the bar for the floating tab bar.
-    private let tabBarClearance: CGFloat = 46
+    private let tabBarClearance: CGFloat = 58
 
     private let artworkPadding: CGFloat = 8
     private let headerHeight: CGFloat = 44
@@ -160,26 +160,19 @@ private struct MiniPlayerControls: View {
             .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
 
             Button {
-                player.playNext()
+                player.close()
             } label: {
-                Image(systemName: "forward.fill")
-                    .font(.title3)
+                Image(systemName: "xmark")
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(.secondary)
                     .frame(width: 38, height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(player.upNext.isEmpty)
-            .accessibilityLabel("Next video")
+            .accessibilityLabel("Close player")
         }
         .padding(.trailing, 10)
         .overlay(alignment: .bottom) { progressLine }
-        .contextMenu {
-            Button(role: .destructive) {
-                player.close()
-            } label: {
-                Label("Stop Playback", systemImage: "xmark")
-            }
-        }
     }
 
     /// A hairline of progress, clipped to the bar so it follows the rounded corners.
