@@ -4,6 +4,9 @@ import SwiftUI
 /// and a full-screen player, moving one shared video surface between the two positions rather than
 /// rebuilding it — so the video never restarts.
 struct PlayerContainerView: View {
+    /// False on iOS 26, where the mini bar is the tab view's bottom accessory instead.
+    let drawsMiniPlayer: Bool
+
     @EnvironmentObject private var player: PlayerManager
     @State private var dragOffset: CGFloat = 0
 
@@ -17,6 +20,12 @@ struct PlayerContainerView: View {
 
     private let artworkPadding: CGFloat = 8
     private let headerHeight: CGFloat = 44
+
+    /// Nothing to draw when idle, nor when collapsed and the accessory owns the mini bar.
+    private var isVisible: Bool {
+        guard player.currentVideo != nil else { return false }
+        return player.isExpanded || drawsMiniPlayer
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -42,7 +51,7 @@ struct PlayerContainerView: View {
                     .ignoresSafeArea()
                     .allowsHitTesting(expanded)
 
-                if !expanded {
+                if !expanded && drawsMiniPlayer {
                     MiniPlayerBackground(cornerRadius: miniBarCornerRadius)
                         .frame(width: size.width - miniBarInset * 2, height: miniBarHeight)
                         .position(x: size.width / 2, y: miniBarCenterY)
@@ -66,7 +75,7 @@ struct PlayerContainerView: View {
                         dragOffset: $dragOffset
                     )
                     .frame(width: size.width, height: size.height)
-                } else {
+                } else if drawsMiniPlayer {
                     MiniPlayerControls(
                         leadingInset: artworkPadding * 2 + miniArtworkWidth,
                         cornerRadius: miniBarCornerRadius
@@ -77,8 +86,8 @@ struct PlayerContainerView: View {
             }
             .offset(y: dragOffset)
         }
-        .opacity(player.currentVideo == nil ? 0 : 1)
-        .allowsHitTesting(player.currentVideo != nil)
+        .opacity(isVisible ? 1 : 0)
+        .allowsHitTesting(isVisible)
     }
 
     /// Flick the mini bar up to go full screen, down to dismiss it.
@@ -188,5 +197,83 @@ private struct MiniPlayerControls: View {
         .padding(.horizontal, 14)
         .padding(.bottom, 3)
         .allowsHitTesting(false)
+    }
+}
+
+/// The mini player as iOS 26's tab view bottom accessory: it shares the tab bar's glass, and
+/// minimizes with it on scroll instead of floating on its own.
+///
+/// The system collapses the accessory into a compact pill (`.inline`) alongside the shrunken tab
+/// bar, so the channel name and close button drop out at that size — as they do in Apple Music.
+@available(iOS 26.0, *)
+struct MiniPlayerAccessory: View {
+    @EnvironmentObject private var player: PlayerManager
+    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
+
+    private var isCompact: Bool { placement == .inline }
+
+    var body: some View {
+        if let video = player.currentVideo {
+            HStack(spacing: 10) {
+                artwork(for: video)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(video.title)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                    if !isCompact {
+                        Text(video.channelTitle)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer(minLength: 4)
+
+                Button {
+                    player.togglePlayPause()
+                } label: {
+                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.title3)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
+
+                if !isCompact {
+                    Button {
+                        player.close()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.footnote.weight(.bold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 32, height: 36)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Close player")
+                }
+            }
+            .padding(.horizontal, 12)
+            .contentShape(Rectangle())
+            .onTapGesture { player.expand() }
+        }
+    }
+
+    /// The live video moves to the full-screen player while it is open, so fall back to the
+    /// thumbnail here — the surface can only live in one place at a time.
+    @ViewBuilder
+    private func artwork(for video: Video) -> some View {
+        if player.isExpanded {
+            ArtworkView(url: video.thumbnailURL, cornerRadius: 8)
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+        } else {
+            PlayerSurface(webView: player.webView)
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .allowsHitTesting(false)
+        }
     }
 }

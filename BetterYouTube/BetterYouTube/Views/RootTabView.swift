@@ -9,10 +9,12 @@ struct RootTabView: View {
     @State private var showsOnboarding = false
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            tabs
-            // Lives above every tab so playback survives navigation and tab switches.
-            PlayerContainerView()
+        Group {
+            if #available(iOS 26.0, *) {
+                modernShell
+            } else {
+                legacyShell
+            }
         }
         .sheet(isPresented: $showsOnboarding) {
             OnboardingView()
@@ -27,45 +29,79 @@ struct RootTabView: View {
         }
     }
 
-    private var tabs: some View {
-        TabView(selection: $router.selectedTab) {
-            NavigationStack(path: $router.homePath) {
-                HomeView()
-            }
-            .tabItem { Label("Home", systemImage: "play.circle.fill") }
-            .badge(notificationStore.unreadCount)
-            .tag(AppRouter.Tab.home)
+    /// On iOS 26 the mini player is the tab view's bottom accessory, so it shrinks and grows
+    /// with the floating tab bar instead of hovering independently. Marking Search as the
+    /// search tab is what pulls it out into its own button beside the minimized bar.
+    @available(iOS 26.0, *)
+    private var modernShell: some View {
+        ZStack(alignment: .bottom) {
+            TabView(selection: $router.selectedTab) {
+                Tab("Home", systemImage: "play.circle.fill", value: AppRouter.Tab.home) {
+                    NavigationStack(path: $router.homePath) {
+                        HomeView()
+                    }
+                }
+                .badge(notificationStore.unreadCount)
 
-            NavigationStack {
-                SearchView()
-            }
-            .tabItem { Label("Search", systemImage: "magnifyingglass") }
-            .tag(AppRouter.Tab.search)
+                Tab("Library", systemImage: "square.stack.fill", value: AppRouter.Tab.library) {
+                    NavigationStack {
+                        LibraryView()
+                    }
+                }
 
-            NavigationStack {
-                LibraryView()
-            }
-            .tabItem { Label("Library", systemImage: "square.stack.fill") }
-            .tag(AppRouter.Tab.library)
+                Tab("Settings", systemImage: "gearshape.fill", value: AppRouter.Tab.settings) {
+                    NavigationStack {
+                        SettingsView()
+                    }
+                }
 
-            NavigationStack {
-                SettingsView()
+                Tab("Search", systemImage: "magnifyingglass", value: AppRouter.Tab.search, role: .search) {
+                    NavigationStack {
+                        SearchView()
+                    }
+                }
             }
-            .tabItem { Label("Settings", systemImage: "gearshape.fill") }
-            .tag(AppRouter.Tab.settings)
+            .tabBarMinimizeBehavior(.onScrollDown)
+            .tabViewBottomAccessory {
+                MiniPlayerAccessory()
+            }
+
+            // Only the full-screen player: the mini bar is the accessory now.
+            PlayerContainerView(drawsMiniPlayer: false)
         }
-        .modifier(MinimizeTabBarOnScroll())
     }
-}
 
-/// iOS 26 shrinks the floating tab bar as you scroll down, the way Apple's own apps do.
-private struct MinimizeTabBarOnScroll: ViewModifier {
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.tabBarMinimizeBehavior(.onScrollDown)
-        } else {
-            content
+    private var legacyShell: some View {
+        ZStack(alignment: .bottom) {
+            TabView(selection: $router.selectedTab) {
+                NavigationStack(path: $router.homePath) {
+                    HomeView()
+                }
+                .tabItem { Label("Home", systemImage: "play.circle.fill") }
+                .badge(notificationStore.unreadCount)
+                .tag(AppRouter.Tab.home)
+
+                NavigationStack {
+                    SearchView()
+                }
+                .tabItem { Label("Search", systemImage: "magnifyingglass") }
+                .tag(AppRouter.Tab.search)
+
+                NavigationStack {
+                    LibraryView()
+                }
+                .tabItem { Label("Library", systemImage: "square.stack.fill") }
+                .tag(AppRouter.Tab.library)
+
+                NavigationStack {
+                    SettingsView()
+                }
+                .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+                .tag(AppRouter.Tab.settings)
+            }
+
+            // Lives above every tab so playback survives navigation and tab switches.
+            PlayerContainerView(drawsMiniPlayer: true)
         }
     }
 }
