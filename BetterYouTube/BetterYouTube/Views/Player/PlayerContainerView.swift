@@ -52,6 +52,7 @@ struct PlayerContainerView: View {
                 .opacity(Double(1 - expansion))
                 .onTapGesture { player.expand() }
                 .gesture(barDragGesture)
+                .contextMenu { PlayerActions(player: player) }
                 .allowsHitTesting(!player.isExpanded)
 
             // 2. The one and only video surface. It keeps its full-screen layout size in every
@@ -185,6 +186,34 @@ struct PlayerCollapseDrag {
     }
 }
 
+// MARK: - The player's menu
+
+/// What you can do to the playing video, wherever the player offers a menu: the expanded
+/// player's ellipsis, and a long press on the docked bar — which is how you close the bar once
+/// it has shrunk to its pill and left the close button behind.
+struct PlayerActions: View {
+    /// Handed in rather than read from the environment: this is built inside a menu, whose
+    /// content is a presentation of its own, and an `@EnvironmentObject` resolved in there has
+    /// no owner to find.
+    @ObservedObject var player: PlayerManager
+
+    var body: some View {
+        if let url = player.currentVideo?.watchURL {
+            ShareLink(item: url) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            Link(destination: url) {
+                Label("Open in YouTube", systemImage: "arrow.up.forward.app")
+            }
+        }
+        Button(role: .destructive) {
+            player.close()
+        } label: {
+            Label("Stop Playback", systemImage: "xmark")
+        }
+    }
+}
+
 // MARK: - Shrinking the bar on scroll
 
 extension View {
@@ -211,10 +240,10 @@ private struct PlayerMetrics {
     let barCornerRadius: CGFloat = 26
     /// Room left below the full-width bar for the floating tab bar.
     let tabBarClearance: CGFloat = 54
-    /// The pill has none: it drops into the tab bar's own row rather than hovering above it.
-    /// By the time the bar is compact the tab bar is minimized too — you scrolled down, which
-    /// is what shrinks both — so the space beside its pill is free.
-    let compactTabBarClearance: CGFloat = 0
+    /// The pill drops into the tab bar's own row rather than hovering above it, and a little
+    /// below its bottom edge to line up with the pill the tab bar minimizes to. By then the tab
+    /// bar is minimized too — the same scroll shrinks both — so the space beside it is free.
+    let compactTabBarClearance: CGFloat = -4
     let artworkPadding: CGFloat = 8
     let headerHeight: CGFloat = 44
     /// The pill the bar shrinks to on scroll keeps the artwork and play/pause, nothing else.
@@ -373,6 +402,7 @@ private struct MiniPlayerControls: View {
         .padding(.leading, artworkExtent + metrics.labelGap)
         .contentShape(Rectangle())
         .onTapGesture { player.expand() }
+        .contextMenu { PlayerActions(player: player) }
         .opacity(Double(1 - compactness))
         .allowsHitTesting(!isCompact)
     }

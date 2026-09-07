@@ -65,19 +65,7 @@ struct ExpandedPlayerView: View {
             Spacer()
 
             Menu {
-                if let url = player.currentVideo?.watchURL {
-                    ShareLink(item: url) {
-                        Label("Share", systemImage: "square.and.arrow.up")
-                    }
-                    Link(destination: url) {
-                        Label("Open in YouTube", systemImage: "arrow.up.forward.app")
-                    }
-                }
-                Button(role: .destructive) {
-                    player.close()
-                } label: {
-                    Label("Stop Playback", systemImage: "xmark")
-                }
+                PlayerActions(player: player)
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.headline)

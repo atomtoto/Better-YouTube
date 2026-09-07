@@ -13,6 +13,8 @@ struct SettingsView: View {
     @State private var isSigningIn = false
     @State private var authError: String?
     @State private var didSaveKey = false
+    /// The signed-in account's own YouTube channel, for the avatar and name at the top.
+    @State private var account: Channel?
 
     var body: some View {
         Form {
@@ -47,6 +49,28 @@ struct SettingsView: View {
             draftKey = apiKeyStore.apiKey
             draftClientId = auth.clientId
         }
+        .task(id: auth.isSignedIn) {
+            guard auth.isSignedIn else {
+                account = nil
+                return
+            }
+            account = try? await YouTubeAPIService.shared.myChannel()
+        }
+    }
+
+    /// The channel's own numbers once they arrive; until then — or for a Google account with no
+    /// channel of its own — what signing in bought you.
+    private var accountDetail: String {
+        var parts: [String] = []
+        if let subscribers = account?.subscriberCount {
+            parts.append("\(CountFormatter.abbreviated(subscribers)) subscribers")
+        }
+        if let videos = account?.videoCount {
+            parts.append("\(CountFormatter.abbreviated(videos)) videos")
+        }
+        return parts.isEmpty
+            ? "Subscriptions, playlists and likes are available in Library."
+            : parts.joined(separator: " · ")
     }
 
     // MARK: Sections
@@ -55,18 +79,21 @@ struct SettingsView: View {
     private var accountSection: some View {
         Section {
             if auth.isSignedIn {
-                HStack(spacing: 12) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.green)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Signed in with Google")
-                            .font(.subheadline.weight(.semibold))
-                        Text("Subscriptions, playlists and likes are available in Library.")
+                HStack(spacing: 14) {
+                    AvatarView(url: account?.thumbnailURL, size: 52)
+                        .artworkShadow()
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(account?.title ?? "Signed in with Google")
+                            .font(.headline)
+                            .lineLimit(1)
+                        Text(accountDetail)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .lineLimit(2)
                     }
                 }
+                .padding(.vertical, 4)
+
                 Button("Sign Out", role: .destructive) {
                     auth.signOut()
                 }

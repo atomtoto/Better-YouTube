@@ -11,8 +11,11 @@ struct RootTabView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             tabs
-            // Lives above every tab so playback survives navigation and tab switches.
+            // Lives above every tab so playback survives navigation and tab switches. It keeps
+            // its place when the keyboard comes up — in Search, that means the keyboard covers
+            // it rather than shoving it up the screen.
             PlayerContainerView()
+                .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .sheet(isPresented: $showsOnboarding) {
             OnboardingView()

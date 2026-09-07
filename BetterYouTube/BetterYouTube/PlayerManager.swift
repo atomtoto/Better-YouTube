@@ -255,9 +255,10 @@ final class PlayerManager: ObservableObject {
 
     // MARK: - The size of the docked bar
 
-    /// How far you have to scroll in one direction before the bar changes size, so a jittery
-    /// finger doesn't flip it back and forth.
-    private static let compactThreshold: CGFloat = 28
+    /// How far you have to scroll in one direction before the bar changes size. The tab bar
+    /// underneath reacts to the first few points of a scroll, and the two have to move together,
+    /// so this is only wide enough to ignore a jittery finger — not to add a delay of its own.
+    private static let compactThreshold: CGFloat = 6
     /// Scroll travelled since the last change of direction.
     private var scrollRun: CGFloat = 0
 
@@ -269,8 +270,8 @@ final class PlayerManager: ObservableObject {
         let delta = current - previous
         guard abs(delta) > 0.5 else { return }
 
-        // Anywhere near the top the bar is always full size.
-        guard current > 24 else {
+        // At the top the bar is always full size, as the tab bar is.
+        guard current > 0 else {
             scrollRun = 0
             setBarCompact(false)
             return
@@ -289,7 +290,11 @@ final class PlayerManager: ObservableObject {
 
     private func setBarCompact(_ compact: Bool) {
         guard isBarCompact != compact else { return }
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+        // `.snappy` is the system's own preset for chrome that jumps between two states, which
+        // is the closest we can get to the curve the tab bar minimizes on: its state isn't
+        // published, so the two are kept in step by reacting to the same scroll on the same
+        // frame rather than by sharing an animation.
+        withAnimation(.snappy) {
             isBarCompact = compact
         }
     }
