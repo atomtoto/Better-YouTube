@@ -43,7 +43,7 @@ enriched with a single batched `videos.list` call. Only the search box spends 10
 
 ## Getting started
 
-1. Open `BetterYouTube/BetterYouTube.xcodeproj` in Xcode 15+ and run on an iOS 16+ simulator or device.
+1. Open `BetterYouTube/BetterYouTube.xcodeproj` in Xcode 26+ and run on an iOS 26+ simulator or device.
 2. **API key** (required for browsing): in the Google Cloud Console, enable the *YouTube Data API v3*
    and create an **API key** credential. Paste it on first launch or in Settings.
 3. **Google sign-in** (optional, for your own library): in the same project, create an **OAuth 2.0
@@ -66,7 +66,7 @@ enriched with a single batched `videos.list` call. Only the search box spends 10
 
 ```
 BetterYouTube/
-  BetterYouTube.xcodeproj/       Xcode project (single iOS app target, iOS 16+)
+  BetterYouTube.xcodeproj/       Xcode project (single iOS app target, iOS 26+)
   BetterYouTube/
     BetterYouTubeApp.swift       App entry point
     Theme.swift                  Design tokens + shared artwork/avatar/section components

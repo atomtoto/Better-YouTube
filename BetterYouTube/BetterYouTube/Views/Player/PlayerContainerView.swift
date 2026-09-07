@@ -187,27 +187,16 @@ struct PlayerCollapseDrag {
 
 // MARK: - Shrinking the bar on scroll
 
-/// Shrinks the docked bar to its pill as you scroll down and brings it back when you scroll up,
-/// so it behaves like the tab bar it sits on. Attach it to a screen's scroll view.
-struct MinimizePlayerBarOnScroll: ViewModifier {
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if #available(iOS 18.0, *) {
-            content.onScrollGeometryChange(for: CGFloat.self) { geometry in
-                geometry.contentOffset.y + geometry.contentInsets.top
-            } action: { previous, current in
-                PlayerManager.shared.scrollDidMove(from: previous, to: current)
-            }
-        } else {
-            content
-        }
-    }
-}
-
 extension View {
-    /// See `MinimizePlayerBarOnScroll`.
+    /// Shrinks the docked bar to its pill as you scroll down and brings it back when you scroll
+    /// up, so it behaves like the tab bar it sits on — `tabBarMinimizeBehavior` is the tab bar's
+    /// half of the same idea. Attach it to a screen's scroll view.
     func minimizesPlayerBarOnScroll() -> some View {
-        modifier(MinimizePlayerBarOnScroll())
+        onScrollGeometryChange(for: CGFloat.self) { geometry in
+            geometry.contentOffset.y + geometry.contentInsets.top
+        } action: { previous, current in
+            PlayerManager.shared.scrollDidMove(from: previous, to: current)
+        }
     }
 }
 
@@ -328,22 +317,13 @@ private func lerp(_ from: CGFloat, _ to: CGFloat, _ progress: CGFloat) -> CGFloa
 
 // MARK: - Bar chrome
 
-/// Liquid Glass where the OS provides it, a material slab everywhere else.
+/// The bar's Liquid Glass.
 private struct MiniPlayerBackground: View {
     let cornerRadius: CGFloat
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-
-        if #available(iOS 26.0, *) {
-            Color.clear
-                .glassEffect(.regular, in: shape)
-        } else {
-            shape
-                .fill(.regularMaterial)
-                .overlay(shape.strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
-                .shadow(color: .black.opacity(0.16), radius: 10, y: 4)
-        }
+        Color.clear
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
