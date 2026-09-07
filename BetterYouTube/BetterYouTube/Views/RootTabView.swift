@@ -165,6 +165,7 @@ private struct FeatureRow: View {
     RootTabView()
         .environmentObject(APIKeyStore.shared)
         .environmentObject(LibraryStore.shared)
+        .environmentObject(WatchLaterStore.shared)
         .environmentObject(GoogleAuthService.shared)
         .environmentObject(RecentSearchStore.shared)
         .environmentObject(NotificationStore.shared)

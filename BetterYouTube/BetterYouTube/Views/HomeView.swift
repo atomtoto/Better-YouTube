@@ -108,6 +108,7 @@ struct HomeView: View {
 struct VideoContextMenu: ViewModifier {
     let video: Video
     @EnvironmentObject private var library: LibraryStore
+    @EnvironmentObject private var watchLater: WatchLaterStore
 
     func body(content: Content) -> some View {
         content.contextMenu {
@@ -121,11 +122,13 @@ struct VideoContextMenu: ViewModifier {
             }
 
             Button {
-                library.toggleWatchLater(video)
+                // Signed in this is a write to the account playlist, so it leaves the main
+                // thread; the list updates optimistically and rolls back if YouTube refuses.
+                Task { await watchLater.toggle(video) }
             } label: {
                 Label(
-                    library.isInWatchLater(video) ? "Remove from Watch Later" : "Add to Watch Later",
-                    systemImage: library.isInWatchLater(video) ? "clock.badge.xmark" : "clock"
+                    watchLater.contains(video) ? "Remove from Watch Later" : "Add to Watch Later",
+                    systemImage: watchLater.contains(video) ? "clock.badge.xmark" : "clock"
                 )
             }
 
@@ -148,6 +151,7 @@ extension View {
     NavigationStack { HomeView() }
         .environmentObject(APIKeyStore.shared)
         .environmentObject(LibraryStore.shared)
+        .environmentObject(WatchLaterStore.shared)
         .environmentObject(GoogleAuthService.shared)
         .environmentObject(NotificationStore.shared)
         .environmentObject(AppRouter.shared)

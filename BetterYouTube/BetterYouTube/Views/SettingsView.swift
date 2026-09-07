@@ -4,6 +4,7 @@ import UIKit
 struct SettingsView: View {
     @EnvironmentObject private var apiKeyStore: APIKeyStore
     @EnvironmentObject private var library: LibraryStore
+    @EnvironmentObject private var watchLater: WatchLaterStore
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var notificationStore: NotificationStore
     @EnvironmentObject private var notifications: NotificationService
@@ -19,6 +20,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             accountSection
+            watchLaterSection
             notificationsSection
             apiKeySection
 
@@ -75,6 +77,48 @@ struct SettingsView: View {
 
     // MARK: Sections
 
+    /// Only meaningful signed in: without an account there is no playlist, just this device's list.
+    @ViewBuilder
+    private var watchLaterSection: some View {
+        if auth.isSignedIn {
+            Section {
+                LabeledContent("Playlist", value: WatchLaterStore.playlistTitle)
+
+                let strays = watchLater.videosOnlyOnThisDevice.count
+                if strays > 0 {
+                    Button {
+                        Task { await watchLater.uploadVideosOnlyOnThisDevice() }
+                    } label: {
+                        HStack(spacing: 8) {
+                            if watchLater.isLoading {
+                                ProgressView().controlSize(.small)
+                            }
+                            Text(strays == 1
+                                 ? "Add 1 video kept on this device"
+                                 : "Add \(strays) videos kept on this device")
+                        }
+                    }
+                    .disabled(watchLater.isLoading)
+                }
+
+                if let message = watchLater.errorMessage {
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
+            } header: {
+                Text("Watch Later")
+            } footer: {
+                Text("""
+                YouTube's own Watch Later has been closed to apps since 2016, so this app keeps a \
+                private playlist of its own instead. It syncs across your devices and appears in \
+                the YouTube app like any other playlist. Adding or removing a video costs 50 of \
+                the 10,000 daily quota units, so roughly 200 changes a day.
+                """)
+            }
+        }
+    }
+
     @ViewBuilder
     private var accountSection: some View {
         Section {
@@ -96,6 +140,8 @@ struct SettingsView: View {
 
                 Button("Sign Out", role: .destructive) {
                     auth.signOut()
+                    // The next account has a playlist of its own; drop this one's.
+                    watchLater.reset()
                 }
             } else {
                 TextField("OAuth client ID (iOS)", text: $draftClientId)
@@ -133,8 +179,8 @@ struct SettingsView: View {
             open Google Auth Platform → Audience and add your own Google account under Test users — \
             while the consent screen is in Testing, every other account is refused with \
             "access_denied". Paste the client ID above to read your subscriptions, playlists and \
-            liked videos. Watch Later and watch history are not available through the API, so those \
-            lists stay on this device.
+            liked videos, and to keep your Watch Later as a playlist on your account. Watch history is \
+            not available through the API, so that list stays on this device.
             """)
         }
     }
@@ -231,6 +277,7 @@ struct SettingsView: View {
     NavigationStack { SettingsView() }
         .environmentObject(APIKeyStore.shared)
         .environmentObject(LibraryStore.shared)
+        .environmentObject(WatchLaterStore.shared)
         .environmentObject(GoogleAuthService.shared)
         .environmentObject(NotificationStore.shared)
         .environmentObject(NotificationService.shared)

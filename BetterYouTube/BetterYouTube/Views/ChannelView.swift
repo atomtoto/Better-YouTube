@@ -141,6 +141,7 @@ struct ChannelHeaderView: View {
         ))
     }
     .environmentObject(LibraryStore.shared)
+    .environmentObject(WatchLaterStore.shared)
         .environmentObject(NotificationStore.shared)
         .environmentObject(NotificationService.shared)
 }

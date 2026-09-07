@@ -207,5 +207,6 @@ struct SearchView: View {
 #Preview {
     NavigationStack { SearchView() }
         .environmentObject(LibraryStore.shared)
+        .environmentObject(WatchLaterStore.shared)
         .environmentObject(RecentSearchStore.shared)
 }

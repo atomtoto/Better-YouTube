@@ -34,6 +34,16 @@ struct Channel: Identifiable, Codable, Equatable, Hashable {
     var videoCount: Int?
 }
 
+/// A video as it sits inside a playlist.
+///
+/// The id here is the *playlist item's*, not the video's: it is the playlist's own handle on that
+/// row, and the only thing `playlistItems.delete` accepts. The same video in two playlists has two
+/// different item ids, which is why this can't just live on `Video`.
+struct PlaylistEntry: Identifiable, Codable, Equatable, Hashable {
+    let id: String
+    let video: Video
+}
+
 struct Playlist: Identifiable, Codable, Equatable, Hashable {
     let id: String
     let title: String

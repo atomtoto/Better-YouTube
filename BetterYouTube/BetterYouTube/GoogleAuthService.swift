@@ -109,7 +109,8 @@ final class WebAuthPresenter: NSObject, ASWebAuthenticationPresentationContextPr
 // MARK: - Service
 
 /// Google sign-in for installed apps: OAuth 2.0 authorization code flow with PKCE, no client secret.
-/// Grants read-only access to the signed-in user's subscriptions, playlists and liked videos.
+/// Reads the signed-in user's subscriptions, playlists and liked videos, and manages the one
+/// playlist the app keeps as its Watch Later — which is why the scope is read/write.
 @MainActor
 final class GoogleAuthService: ObservableObject {
     static let shared = GoogleAuthService()
@@ -120,7 +121,11 @@ final class GoogleAuthService: ObservableObject {
     }
 
     private static let clientIdKey = "google_oauth_client_id"
-    private static let scope = "https://www.googleapis.com/auth/youtube.readonly"
+    private static let grantedScopeKey = "google_oauth_granted_scope"
+    /// Read/write: the app creates and edits its own Watch Later playlist. `youtube.readonly`
+    /// would only let it read, and a token granted for that scope can never be upgraded in
+    /// place — see `discardTokensGrantedForAnotherScope`.
+    private static let scope = "https://www.googleapis.com/auth/youtube"
     private static let authEndpoint = "https://accounts.google.com/o/oauth2/v2/auth"
     private static let tokenEndpoint = "https://oauth2.googleapis.com/token"
 
@@ -134,6 +139,17 @@ final class GoogleAuthService: ObservableObject {
         self.clientId = UserDefaults.standard.string(forKey: Self.clientIdKey) ?? ""
         self.tokens = KeychainStore.load()
         self.isSignedIn = tokens != nil
+        discardTokensGrantedForAnotherScope()
+    }
+
+    /// A refresh token carries the scope it was granted with; asking for more later doesn't widen
+    /// it, the request simply comes back 403. So when the scope the app asks for has changed since
+    /// the token was issued — an update that added write access, say — the token is dropped and the
+    /// user signs in once more. Without this the app would look signed in and refuse every write.
+    private func discardTokensGrantedForAnotherScope() {
+        let granted = UserDefaults.standard.string(forKey: Self.grantedScopeKey)
+        guard tokens != nil, granted != Self.scope else { return }
+        signOut()
     }
 
     /// Google's iOS clients use the reversed client ID as their custom URL scheme.
@@ -192,12 +208,24 @@ final class GoogleAuthService: ObservableObject {
             clientId: trimmedClientId
         )
         KeychainStore.save(tokens)
+        UserDefaults.standard.set(Self.scope, forKey: Self.grantedScopeKey)
         self.tokens = tokens
     }
 
     func signOut() {
         KeychainStore.clear()
+        UserDefaults.standard.removeObject(forKey: Self.grantedScopeKey)
         tokens = nil
+        // Set outright rather than leaning on the observer: this also runs from `init`, where
+        // property observers stay quiet.
+        isSignedIn = false
+    }
+
+    /// Called when Google refuses a request for lack of scope. The stored token can't be widened,
+    /// so the only way forward is a fresh consent — the safety net for a token whose recorded
+    /// scope and real scope have drifted apart.
+    func signOutForInsufficientScope() {
+        signOut()
     }
 
     /// Returns a valid access token, refreshing it first when needed. `nil` means "not signed in".

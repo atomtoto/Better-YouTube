@@ -7,6 +7,7 @@ struct BetterYouTubeApp: App {
 
     @StateObject private var apiKeyStore = APIKeyStore.shared
     @StateObject private var library = LibraryStore.shared
+    @StateObject private var watchLater = WatchLaterStore.shared
     @StateObject private var auth = GoogleAuthService.shared
     @StateObject private var recentSearches = RecentSearchStore.shared
     @StateObject private var notificationStore = NotificationStore.shared
@@ -21,6 +22,7 @@ struct BetterYouTubeApp: App {
             RootTabView()
                 .environmentObject(apiKeyStore)
                 .environmentObject(library)
+                .environmentObject(watchLater)
                 .environmentObject(auth)
                 .environmentObject(recentSearches)
                 .environmentObject(notificationStore)

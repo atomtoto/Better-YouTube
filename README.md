@@ -24,11 +24,18 @@ The app talks to the public **YouTube Data API v3**. Two levels of access exist:
 | Access | Needs | Gives you |
 | --- | --- | --- |
 | API key | A key from the Google Cloud Console | Trending, search, video details, channels, comments, public playlists |
-| OAuth 2.0 sign-in | An iOS OAuth client ID | Your subscriptions, your playlists, your liked videos, your channel |
+| OAuth 2.0 sign-in | An iOS OAuth client ID | Your subscriptions, your playlists, your liked videos, your channel, and the app's own Watch Later playlist |
 
 **Not available at any level:** the account's **Watch Later** (`WL`) and **watch history** (`HL`)
-playlists — Google removed API access to both in 2016 — and the personalized home feed. That's why
-this app keeps its own on-device watch later / history lists.
+playlists — Google removed API access to both in 2016 — and the personalized home feed. No scope
+reopens them, and they are absent from the Data Portability API's YouTube export too.
+
+Watch history therefore stays on the device. **Watch Later works around it**: rather than reading
+`WL`, the app creates and manages a private playlist of its own ("Watch Later — Better YouTube")
+through the ordinary playlist endpoints. It is a real playlist, so it syncs across your devices and
+shows up in the YouTube app — which the on-device list never did. Signed out, the on-device list is
+still what you get. The catch is quota: `playlistItems.insert` and `.delete` cost **50 units** each,
+so about 200 changes a day.
 
 ### Quota
 
@@ -53,14 +60,16 @@ enriched with a single batched `videos.list` call. Only the search box spends 10
    - **Add yourself as a test user**, or sign-in fails with `Error 403: access_denied`. In
      *Google Auth Platform → Audience*, with publishing status **Testing**, only the accounts listed
      under *Test users* may grant consent — add the Google account you sign in with. Alternatively
-     switch the app to **In production** (with the `youtube.readonly` sensitive scope you'll then see
+     switch the app to **In production** (with the sensitive `youtube` scope you'll then see
      an "unverified app" interstitial you can pass via *Advanced*).
    - Note: while in Testing, Google expires refresh tokens after **7 days**, so you'll be asked to
      sign in again about once a week. Publishing the app removes that limit.
    - The flow is OAuth 2.0 with PKCE via `ASWebAuthenticationSession`, so no client secret is
      needed and no URL scheme has to be registered manually.
-   - Scope requested: `youtube.readonly`. Tokens are stored in the iOS keychain; the API key lives
-     in `UserDefaults`.
+   - Scope requested: `https://www.googleapis.com/auth/youtube` — read/write, because the app
+     creates and edits its own Watch Later playlist. A token granted for an earlier, narrower scope
+     can't be widened in place, so the app drops it and asks you to sign in once more when the
+     scope changes. Tokens are stored in the iOS keychain; the API key lives in `UserDefaults`.
 
 ## Project structure
 

@@ -193,4 +193,5 @@ struct PlaylistDetailView: View {
         VideoListView(title: "Favorites", videos: [.preview])
     }
     .environmentObject(LibraryStore.shared)
+    .environmentObject(WatchLaterStore.shared)
 }
