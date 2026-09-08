@@ -148,8 +148,10 @@ struct SettingsView: View {
             YouTube app like any other, at 50 of the 10,000 daily quota units per change, so \
             roughly 200 a day. To bring across what YouTube's list already holds, export it from \
             Google Takeout, unzip the archive, and import the CSV under “YouTube and YouTube \
-            Music” → “playlists”. Imported videos land on this device; the button above sends them \
-            up to the playlist.
+            Music” → “playlists” — Watch Later exports as “Vidéos de Watch later.csv”, named in \
+            your account's language. An import takes the \(WatchLaterStore.importLimit) most \
+            recently added and leaves the rest. Imported videos land on this device; the button \
+            above sends them up to the playlist.
             """)
         }
     }
@@ -160,6 +162,8 @@ struct SettingsView: View {
         var parts = [summary.added == 1 ? "Added 1 video" : "Added \(summary.added) videos"]
         if summary.alreadyThere > 0 { parts.append("\(summary.alreadyThere) already saved") }
         if summary.missing > 0 { parts.append("\(summary.missing) no longer on YouTube") }
+        // Say what was left behind, or a truncated import looks like a botched one.
+        if summary.skippedOlder > 0 { parts.append("\(summary.skippedOlder) older ones skipped") }
         return parts.joined(separator: " · ")
     }
 

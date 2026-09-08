@@ -76,25 +76,51 @@ enum RelativeDateFormatter {
 /// afterwards, so anything that merely *looks* like one — an eleven-letter word in a preamble —
 /// resolves to nothing and is reported as missing rather than silently believed.
 enum TakeoutPlaylistCSV {
-    /// Ids in the order the file lists them, without duplicates.
-    static func videoIDs(in text: String) -> [String] {
+    /// One line of the export: the video, and when it was added to the playlist if the file says.
+    struct Row: Equatable {
+        let id: String
+        let addedAt: Date?
+    }
+
+    /// The most recently added ids, newest first, at most `limit` of them.
+    ///
+    /// The export carries the date each video was added, so that is what decides — the file's own
+    /// order is never trusted when the dates are there. Only when a file carries no dates at all
+    /// does it fall back to position, taking the tail, since Takeout writes these oldest first.
+    static func mostRecentlyAdded(in rows: [Row], limit: Int) -> [String] {
+        let dated = rows.compactMap { row in row.addedAt.map { (row.id, $0) } }
+
+        guard !rows.isEmpty, dated.count == rows.count else {
+            return rows.suffix(limit).reversed().map(\.id)
+        }
+        return dated.sorted { $0.1 > $1.1 }.prefix(limit).map(\.0)
+    }
+
+    /// Rows in the order the file lists them, without duplicates.
+    static func rows(in text: String) -> [Row] {
         var seen = Set<String>()
-        var ids: [String] = []
+        var rows: [Row] = []
 
         for line in text.replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
             .split(separator: "\n", omittingEmptySubsequences: true) {
 
-            let field = line
-                .split(separator: ",", maxSplits: 1, omittingEmptySubsequences: false)[0]
-                .trimmingCharacters(in: .whitespaces)
-                .trimmingCharacters(in: CharacterSet(charactersIn: "\"\u{FEFF}"))
-                .trimmingCharacters(in: .whitespaces)
+            let fields = line.split(separator: ",", maxSplits: 1, omittingEmptySubsequences: false)
+            let field = Self.unwrap(fields[0])
 
             guard isVideoID(field), seen.insert(field).inserted else { continue }
-            ids.append(field)
+            let stamp = fields.count > 1 ? Self.unwrap(fields[1]) : ""
+            rows.append(Row(id: field, addedAt: YTDateParser.parse(stamp.isEmpty ? nil : stamp)))
         }
-        return ids
+        return rows
+    }
+
+    /// Strips the quoting, spacing and byte-order mark a CSV field can arrive wrapped in.
+    private static func unwrap(_ field: Substring) -> String {
+        field
+            .trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"\u{FEFF}"))
+            .trimmingCharacters(in: .whitespaces)
     }
 
     /// Eleven characters of YouTube's id alphabet, and nothing else.

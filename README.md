@@ -40,8 +40,11 @@ so about 200 changes a day.
 Whatever your real Watch Later already holds can be carried over once, through **Google Takeout**:
 export *YouTube and YouTube Music → playlists*, unzip, and import the CSV from Settings. The
 importer only looks for video IDs, so it works for any playlist in the export, whatever Google has
-renamed the files to this year. Imported videos land on the device; sending them up to the playlist
-is a separate, explicit step, because that part is what costs quota.
+renamed the files to this year (Watch Later comes out as `Vidéos de Watch later.csv`, in the
+account's own language). An import takes the **60 most recently added** — decided by the add date
+the export carries, not by the order of the lines — and reports how many older ones it left behind.
+Imported videos land on the device; sending them up to the playlist is a separate, explicit step,
+because that part is what costs quota.
 
 ### Quota
 

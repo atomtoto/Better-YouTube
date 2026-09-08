@@ -252,12 +252,20 @@ final class WatchLaterStore: ObservableObject {
         var alreadyThere = 0
         /// Ids the file listed that YouTube no longer serves — deleted or gone private.
         var missing = 0
+        /// Older entries left behind by the cap below.
+        var skippedOlder = 0
         var failure: String?
 
         var isEmpty: Bool { added == 0 && alreadyThere == 0 && missing == 0 }
     }
 
-    /// Reads a playlist CSV from a Google Takeout export into the on-device list.
+    /// How many of the export's videos an import takes. A Watch Later built over years is mostly
+    /// archaeology, and every one of them eventually costs 50 quota units to push to the playlist,
+    /// so the import keeps the recent end and says how much it left behind.
+    static let importLimit = 60
+
+    /// Reads a playlist CSV from a Google Takeout export into the on-device list, keeping the
+    /// `importLimit` most recently added.
     ///
     /// It lands on the device rather than in the account playlist on purpose: adding to a playlist
     /// costs 50 quota units a video, so a list of any size would blow through the day's 10,000 in
@@ -279,12 +287,16 @@ final class WatchLaterStore: ObservableObject {
             return ImportSummary(failure: "Couldn't read that file as text.")
         }
 
-        let ids = TakeoutPlaylistCSV.videoIDs(in: text)
-        guard !ids.isEmpty else {
+        let rows = TakeoutPlaylistCSV.rows(in: text)
+        guard !rows.isEmpty else {
             return ImportSummary(
                 failure: "No videos in that file. In the Takeout archive, look under “YouTube and YouTube Music” → “playlists” and pick the CSV for the playlist you want."
             )
         }
+
+        // Newest additions first, which is also the order they read in down the list.
+        let ids = TakeoutPlaylistCSV.mostRecentlyAdded(in: rows, limit: Self.importLimit)
+        let skippedOlder = rows.count - ids.count
 
         let known = Set(local.watchLater.map(\.id))
         let alreadyThere = ids.filter { known.contains($0) }.count
@@ -296,7 +308,8 @@ final class WatchLaterStore: ObservableObject {
             return ImportSummary(
                 added: videos.count,
                 alreadyThere: alreadyThere,
-                missing: wanted.count - videos.count
+                missing: wanted.count - videos.count,
+                skippedOlder: skippedOlder
             )
         } catch {
             return ImportSummary(failure: error.localizedDescription)
