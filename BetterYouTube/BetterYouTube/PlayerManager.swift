@@ -92,6 +92,9 @@ final class PlayerManager: ObservableObject {
     /// True while the docked bar is shrunk to its pill, which is what scrolling down does — the
     /// same gesture that minimizes the tab bar underneath it.
     @Published private(set) var isBarCompact = false
+    /// True while the video fills the screen on its own, which is what turning the phone on its
+    /// side does. The expanded player's chrome steps aside for it.
+    @Published private(set) var isFullScreen = false
     /// Position and duration, published apart from everything else because they tick constantly.
     let progress = PlaybackProgress()
     /// Set whenever playback fails to start, so the UI can say what happened instead of
@@ -111,6 +114,12 @@ final class PlayerManager: ObservableObject {
     /// YouTube refuses to start in a zero-sized, off-screen player, so nothing loads until the
     /// surface is really on screen.
     private var isSurfaceOnScreen = false
+    /// Whether the phone is on its side. Kept even with nothing playing, so a video started in
+    /// landscape opens full screen straight away.
+    private var isLandscape = false
+    /// Where the player was before landscape took it full screen, so turning the phone back puts
+    /// it where it was rather than always expanded.
+    private var wasExpandedBeforeFullScreen = false
 
     private init() {
         let configuration = WKWebViewConfiguration()
@@ -142,10 +151,12 @@ final class PlayerManager: ObservableObject {
         issue = nil
         scrollRun = 0
 
+        wasExpandedBeforeFullScreen = true
         withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
             currentVideo = video
             isExpanded = true
             isBarCompact = false
+            isFullScreen = isLandscape
         }
 
         desiredVideoId = video.id
@@ -238,6 +249,7 @@ final class PlayerManager: ObservableObject {
             isExpanded = false
             currentVideo = nil
             isBarCompact = false
+            isFullScreen = false
         }
         upNext = []
         isPlaying = false
@@ -250,6 +262,29 @@ final class PlayerManager: ObservableObject {
         withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
             isExpanded = true
             isBarCompact = false
+        }
+    }
+
+    // MARK: - Full screen
+
+    /// Turning the phone on its side plays the video full screen on its own — no button to find,
+    /// the way the YouTube app does it — and turning it back puts the player where it was.
+    /// Driven by the container, which is where the size class is known.
+    func setLandscape(_ landscape: Bool) {
+        guard isLandscape != landscape else { return }
+        isLandscape = landscape
+        guard currentVideo != nil else { return }
+
+        scrollRun = 0
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+            if landscape {
+                wasExpandedBeforeFullScreen = isExpanded
+                isExpanded = true
+                isBarCompact = false
+            } else {
+                isExpanded = wasExpandedBeforeFullScreen
+            }
+            isFullScreen = landscape
         }
     }
 
