@@ -37,6 +37,12 @@ shows up in the YouTube app — which the on-device list never did. Signed out, 
 still what you get. The catch is quota: `playlistItems.insert` and `.delete` cost **50 units** each,
 so about 200 changes a day.
 
+Whatever your real Watch Later already holds can be carried over once, through **Google Takeout**:
+export *YouTube and YouTube Music → playlists*, unzip, and import the CSV from Settings. The
+importer only looks for video IDs, so it works for any playlist in the export, whatever Google has
+renamed the files to this year. Imported videos land on the device; sending them up to the playlist
+is a separate, explicit step, because that part is what costs quota.
+
 ### Quota
 
 The default quota is **10,000 units per day**, and endpoints are not priced equally:
@@ -83,7 +89,7 @@ BetterYouTube/
     YouTubeAPIService.swift      API client (actor) with OAuth + API key support
     GoogleAuthService.swift      OAuth 2.0 PKCE sign-in, keychain token storage
     Persistence.swift            On-device library and recent searches
-    Utilities.swift              Duration, count and relative-date formatters
+    Utilities.swift              Duration, count and relative-date formatters, Takeout CSV reader
     ViewModels/                  One @MainActor view model per screen
     Views/                       SwiftUI screens
     Views/Components/            Reusable cards and rows

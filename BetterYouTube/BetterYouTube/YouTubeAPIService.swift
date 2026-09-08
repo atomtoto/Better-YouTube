@@ -203,6 +203,32 @@ actor YouTubeAPIService {
         }
     }
 
+    /// Full details for a list of ids, in the order given. Pages through in batches of 50, one
+    /// `videos.list` per batch — 1 quota unit each, so an imported Watch Later of 500 costs 10.
+    ///
+    /// Ids YouTube doesn't return are dropped: a video deleted or made private since it was saved,
+    /// which any old list has plenty of. The caller compares counts to report them.
+    func videos(ids: [String]) async throws -> [Video] {
+        var found: [String: Video] = [:]
+
+        for batch in stride(from: 0, to: ids.count, by: 50).map({ start in
+            Array(ids[start..<min(start + 50, ids.count)])
+        }) {
+            let response: YTListResponse<YTResourceItem> = try await request(
+                path: "videos",
+                query: [
+                    "part": "snippet,statistics,contentDetails",
+                    "id": batch.joined(separator: ",")
+                ]
+            )
+            for item in response.items where found[item.id] == nil {
+                found[item.id] = Video(resource: item)
+            }
+        }
+
+        return ids.compactMap { found[$0] }
+    }
+
     // MARK: - Public content
 
     func trendingVideos(regionCode: String? = nil, maxResults: Int = 25) async throws -> [Video] {

@@ -62,6 +62,16 @@ final class LibraryStore: ObservableObject {
         persist()
     }
 
+    /// Adds many at once, keeping the order they arrive in and skipping what is already there.
+    /// Written to disk once — `toggleWatchLater` in a loop would rewrite the file per video.
+    func addToWatchLater(_ videos: [Video]) {
+        let known = Set(watchLater.map(\.id))
+        let fresh = videos.filter { !known.contains($0.id) }
+        guard !fresh.isEmpty else { return }
+        watchLater.append(contentsOf: fresh)
+        persist()
+    }
+
     func recordWatch(_ video: Video) {
         history.removeAll { $0.id == video.id }
         history.insert(video, at: 0)
@@ -231,6 +241,65 @@ final class WatchLaterStore: ObservableObject {
                 errorMessage = error.localizedDescription
                 return
             }
+        }
+    }
+
+    // MARK: Importing a Takeout export
+
+    /// What an import did, in the terms the user cares about.
+    struct ImportSummary: Equatable {
+        var added = 0
+        var alreadyThere = 0
+        /// Ids the file listed that YouTube no longer serves — deleted or gone private.
+        var missing = 0
+        var failure: String?
+
+        var isEmpty: Bool { added == 0 && alreadyThere == 0 && missing == 0 }
+    }
+
+    /// Reads a playlist CSV from a Google Takeout export into the on-device list.
+    ///
+    /// It lands on the device rather than in the account playlist on purpose: adding to a playlist
+    /// costs 50 quota units a video, so a list of any size would blow through the day's 10,000 in
+    /// one go. Settings pushes them up afterwards, at whatever pace the quota allows.
+    func importTakeout(from url: URL) async -> ImportSummary {
+        isLoading = true
+        defer { isLoading = false }
+
+        // The picker hands back a security-scoped url: without this the read fails on device.
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+
+        guard let data = try? Data(contentsOf: url) else {
+            return ImportSummary(failure: "Couldn't read that file.")
+        }
+        // Takeout writes UTF-8; fall back to Latin-1 rather than refusing a file over one byte.
+        guard let text = String(data: data, encoding: .utf8)
+                ?? String(data: data, encoding: .isoLatin1) else {
+            return ImportSummary(failure: "Couldn't read that file as text.")
+        }
+
+        let ids = TakeoutPlaylistCSV.videoIDs(in: text)
+        guard !ids.isEmpty else {
+            return ImportSummary(
+                failure: "No videos in that file. In the Takeout archive, look under “YouTube and YouTube Music” → “playlists” and pick the CSV for the playlist you want."
+            )
+        }
+
+        let known = Set(local.watchLater.map(\.id))
+        let alreadyThere = ids.filter { known.contains($0) }.count
+        let wanted = ids.filter { !known.contains($0) }
+
+        do {
+            let videos = try await service.videos(ids: wanted)
+            local.addToWatchLater(videos)
+            return ImportSummary(
+                added: videos.count,
+                alreadyThere: alreadyThere,
+                missing: wanted.count - videos.count
+            )
+        } catch {
+            return ImportSummary(failure: error.localizedDescription)
         }
     }
 

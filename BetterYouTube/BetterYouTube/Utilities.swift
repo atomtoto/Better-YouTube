@@ -64,3 +64,46 @@ enum RelativeDateFormatter {
         return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
+
+/// Reads the video ids out of a playlist CSV exported from Google Takeout.
+///
+/// Deliberately a scanner rather than a CSV parser: only one column is ever wanted, and Google has
+/// changed the shape of this file more than once. So every line is examined, its first field taken,
+/// and kept if it looks like a video id — which carries it over headers, the metadata block some
+/// exports put on top, a UTF-8 BOM, CRLF endings, quoting and stray spaces alike.
+///
+/// It can be generous because it isn't the last word: ids are resolved against `videos.list`
+/// afterwards, so anything that merely *looks* like one — an eleven-letter word in a preamble —
+/// resolves to nothing and is reported as missing rather than silently believed.
+enum TakeoutPlaylistCSV {
+    /// Ids in the order the file lists them, without duplicates.
+    static func videoIDs(in text: String) -> [String] {
+        var seen = Set<String>()
+        var ids: [String] = []
+
+        for line in text.replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+            .split(separator: "\n", omittingEmptySubsequences: true) {
+
+            let field = line
+                .split(separator: ",", maxSplits: 1, omittingEmptySubsequences: false)[0]
+                .trimmingCharacters(in: .whitespaces)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "\"\u{FEFF}"))
+                .trimmingCharacters(in: .whitespaces)
+
+            guard isVideoID(field), seen.insert(field).inserted else { continue }
+            ids.append(field)
+        }
+        return ids
+    }
+
+    /// Eleven characters of YouTube's id alphabet, and nothing else.
+    private static func isVideoID(_ candidate: String) -> Bool {
+        guard candidate.count == 11 else { return false }
+        return candidate.allSatisfy { character in
+            character.isLetter && character.isASCII
+                || character.isNumber && character.isASCII
+                || character == "-" || character == "_"
+        }
+    }
+}
