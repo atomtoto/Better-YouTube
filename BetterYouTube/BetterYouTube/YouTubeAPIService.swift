@@ -3,6 +3,10 @@ import Foundation
 enum APIError: LocalizedError {
     case missingCredentials
     case notSignedIn
+    /// The sign-in predates the permission being asked for; only a fresh consent can widen it.
+    case insufficientScope
+    /// The resource is gone — a playlist deleted from YouTube, say.
+    case notFound
     case invalidURL
     case server(String)
     case http(Int)
@@ -15,6 +19,10 @@ enum APIError: LocalizedError {
             return "Add a YouTube Data API key in Settings, or sign in with Google, to load content."
         case .notSignedIn:
             return "Sign in with Google in Settings to see your subscriptions, playlists and likes."
+        case .insufficientScope:
+            return "This sign-in doesn't allow changes to your YouTube account. Sign in again from Settings to let the app manage its Watch Later playlist."
+        case .notFound:
+            return "That's no longer on YouTube."
         case .invalidURL:
             return "Could not build the request URL."
         case .server(let message):
@@ -70,6 +78,51 @@ actor YouTubeAPIService {
         query: [String: String],
         requiresAuth: Bool = false
     ) async throws -> T {
+        let data = try await perform(makeRequest(path: path, query: query, requiresAuth: requiresAuth))
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            throw APIError.decoding(error)
+        }
+    }
+
+    /// A write, with its JSON body. Writes always need OAuth — the API key alone can read the
+    /// public catalogue but never touch an account.
+    private func send<Body: Encodable, T: Decodable>(
+        _ method: String,
+        path: String,
+        query: [String: String],
+        body: Body
+    ) async throws -> T {
+        var urlRequest = try await makeRequest(path: path, query: query, requiresAuth: true)
+        urlRequest.httpMethod = method
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = try JSONEncoder().encode(body)
+
+        let data = try await perform(urlRequest)
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            throw APIError.decoding(error)
+        }
+    }
+
+    /// For the writes that answer `204 No Content` — decoding one of those would only ever fail.
+    private func sendDiscardingResponse(
+        _ method: String,
+        path: String,
+        query: [String: String]
+    ) async throws {
+        var urlRequest = try await makeRequest(path: path, query: query, requiresAuth: true)
+        urlRequest.httpMethod = method
+        _ = try await perform(urlRequest)
+    }
+
+    private func makeRequest(
+        path: String,
+        query: [String: String],
+        requiresAuth: Bool
+    ) async throws -> URLRequest {
         let token = await GoogleAuthService.shared.accessToken()
         if requiresAuth && token == nil { throw APIError.notSignedIn }
 
@@ -95,7 +148,10 @@ actor YouTubeAPIService {
         if let token {
             urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
+        return urlRequest
+    }
 
+    private func perform(_ urlRequest: URLRequest) async throws -> Data {
         let data: Data
         let response: URLResponse
         do {
@@ -107,17 +163,22 @@ actor YouTubeAPIService {
         guard let http = response as? HTTPURLResponse else { throw APIError.http(-1) }
 
         guard (200..<300).contains(http.statusCode) else {
-            if let body = try? decoder.decode(YTErrorResponse.self, from: data) {
-                throw APIError.server(body.error.message)
+            let message = (try? decoder.decode(YTErrorResponse.self, from: data))?.error.message
+            // A 403 for scope is not a failure to retry: the token was granted for less than the
+            // app now asks, and only signing in again can widen it. Drop it here so the UI stops
+            // claiming to be signed in with permissions it doesn't have.
+            if http.statusCode == 403, message?.localizedCaseInsensitiveContains("insufficient") == true {
+                await GoogleAuthService.shared.signOutForInsufficientScope()
+                throw APIError.insufficientScope
             }
+            // Distinct from any other failure: the thing asked for is gone, which callers holding
+            // a remembered id need to tell apart from "the request failed".
+            if http.statusCode == 404 { throw APIError.notFound }
+            if let message { throw APIError.server(message) }
             throw APIError.http(http.statusCode)
         }
 
-        do {
-            return try decoder.decode(T.self, from: data)
-        } catch {
-            throw APIError.decoding(error)
-        }
+        return data
     }
 
     /// Fills in duration/stats for videos that came from a cheap endpoint (1 quota unit per 50).
@@ -140,6 +201,32 @@ actor YouTubeAPIService {
         } catch {
             return videos
         }
+    }
+
+    /// Full details for a list of ids, in the order given. Pages through in batches of 50, one
+    /// `videos.list` per batch — 1 quota unit each, so an imported Watch Later of 500 costs 10.
+    ///
+    /// Ids YouTube doesn't return are dropped: a video deleted or made private since it was saved,
+    /// which any old list has plenty of. The caller compares counts to report them.
+    func videos(ids: [String]) async throws -> [Video] {
+        var found: [String: Video] = [:]
+
+        for batch in stride(from: 0, to: ids.count, by: 50).map({ start in
+            Array(ids[start..<min(start + 50, ids.count)])
+        }) {
+            let response: YTListResponse<YTResourceItem> = try await request(
+                path: "videos",
+                query: [
+                    "part": "snippet,statistics,contentDetails",
+                    "id": batch.joined(separator: ",")
+                ]
+            )
+            for item in response.items where found[item.id] == nil {
+                found[item.id] = Video(resource: item)
+            }
+        }
+
+        return ids.compactMap { found[$0] }
     }
 
     // MARK: - Public content
@@ -292,6 +379,93 @@ actor YouTubeAPIService {
             requiresAuth: true
         )
         return response.items.map(Playlist.init(resource:))
+    }
+
+    // MARK: - The app's own playlist (OAuth, read/write)
+    //
+    // The account's real Watch Later (`WL`) has been closed to the API since 2016 and no scope
+    // reopens it, so the app keeps a playlist of its own instead — a normal private playlist,
+    // which means it syncs across devices and shows up in the YouTube app like any other.
+    //
+    // Writes are expensive: `playlists.insert`, `playlistItems.insert` and `playlistItems.delete`
+    // are 50 quota units each, against 10,000 a day. Reading the list back is 1.
+
+    /// The playlist's videos *with* their item ids, which is what removing one needs.
+    func entries(inPlaylist playlistId: String, maxResults: Int = 50) async throws -> [PlaylistEntry] {
+        let response: YTListResponse<YTPlaylistItemResource> = try await request(
+            path: "playlistItems",
+            query: [
+                "part": "snippet,contentDetails",
+                "playlistId": playlistId,
+                "maxResults": "\(maxResults)"
+            ],
+            requiresAuth: true
+        )
+        let entries = response.items.compactMap { item -> PlaylistEntry? in
+            guard let video = Video(playlistItem: item) else { return nil }
+            return PlaylistEntry(id: item.id, video: video)
+        }
+        // One batched `videos.list` fills in durations and counts for the whole page (1 unit).
+        let enriched = await enrich(entries.map(\.video))
+        let byId = Dictionary(enriched.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return entries.map { PlaylistEntry(id: $0.id, video: byId[$0.video.id] ?? $0.video) }
+    }
+
+    /// Creates the app's playlist and returns its id. 50 quota units, once per account.
+    func createPlaylist(title: String, description: String) async throws -> String {
+        struct Body: Encodable {
+            struct Snippet: Encodable {
+                let title: String
+                let description: String
+            }
+            struct Status: Encodable {
+                let privacyStatus: String
+            }
+            let snippet: Snippet
+            let status: Status
+        }
+        struct Created: Decodable {
+            let id: String
+        }
+
+        let created: Created = try await send(
+            "POST",
+            path: "playlists",
+            query: ["part": "snippet,status"],
+            body: Body(
+                snippet: .init(title: title, description: description),
+                status: .init(privacyStatus: "private")
+            )
+        )
+        return created.id
+    }
+
+    /// Adds a video and returns the new item's id — keep it, it is the handle for removing it.
+    func addToPlaylist(playlistId: String, videoId: String) async throws -> String {
+        struct Body: Encodable {
+            struct ResourceId: Encodable {
+                let kind = "youtube#video"
+                let videoId: String
+            }
+            struct Snippet: Encodable {
+                let playlistId: String
+                let resourceId: ResourceId
+            }
+            let snippet: Snippet
+        }
+
+        let item: YTPlaylistItemResource = try await send(
+            "POST",
+            path: "playlistItems",
+            query: ["part": "snippet"],
+            body: Body(snippet: .init(playlistId: playlistId, resourceId: .init(videoId: videoId)))
+        )
+        return item.id
+    }
+
+    /// Removes one entry. Takes the *item* id from `entries(inPlaylist:)`, never a video id.
+    func removePlaylistItem(id: String) async throws {
+        try await sendDiscardingResponse("DELETE", path: "playlistItems", query: ["id": id])
     }
 
     func likedVideos(maxResults: Int = 50) async throws -> [Video] {

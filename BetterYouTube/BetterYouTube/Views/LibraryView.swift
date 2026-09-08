@@ -4,6 +4,7 @@ import SwiftUI
 struct LibraryView: View {
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var library: LibraryStore
+    @EnvironmentObject private var watchLater: WatchLaterStore
     @EnvironmentObject private var auth: GoogleAuthService
     @StateObject private var viewModel = LibraryViewModel()
 
@@ -41,17 +42,40 @@ struct LibraryView: View {
                 }
             }
 
+            // Watch Later stands apart from the rest: signed in it is a real playlist in the
+            // account, signed out it is this device's own list.
+            Section {
+                NavigationLink {
+                    VideoListView(
+                        title: "Watch Later",
+                        videos: watchLater.videos,
+                        onDelete: { offsets in
+                            Task { await watchLater.remove(atOffsets: offsets) }
+                        }
+                    )
+                } label: {
+                    LibraryRow(
+                        icon: "clock.fill",
+                        tint: .indigo,
+                        title: "Watch Later",
+                        count: watchLater.videos.count
+                    )
+                }
+            } header: {
+                Text(watchLater.isSynced ? "Watch Later · Synced with YouTube" : "Watch Later · On This Device")
+            } footer: {
+                if let message = watchLater.errorMessage {
+                    Text(message)
+                } else if watchLater.isSynced {
+                    Text("Kept in the “\(WatchLaterStore.playlistTitle)” playlist on your account — YouTube's own Watch Later is closed to apps.")
+                }
+            }
+
             Section("On This Device") {
                 NavigationLink {
                     VideoListView(title: "Favorites", videos: library.favorites, onDelete: library.removeFavorites)
                 } label: {
                     LibraryRow(icon: "heart.fill", tint: .pink, title: "Favorites", count: library.favorites.count)
-                }
-
-                NavigationLink {
-                    VideoListView(title: "Watch Later", videos: library.watchLater, onDelete: library.removeWatchLater)
-                } label: {
-                    LibraryRow(icon: "clock.fill", tint: .indigo, title: "Watch Later", count: library.watchLater.count)
                 }
 
                 NavigationLink {
@@ -76,12 +100,15 @@ struct LibraryView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .minimizesPlayerBarOnScroll()
         .navigationTitle("Library")
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
         .refreshable {
+            await watchLater.refresh()
             if auth.isSignedIn { await viewModel.load() }
         }
         .task(id: auth.isSignedIn) {
+            await watchLater.refresh()
             if auth.isSignedIn {
                 await viewModel.load()
             } else {
@@ -94,7 +121,7 @@ struct LibraryView: View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Your YouTube library", systemImage: "person.crop.circle.badge.plus")
                 .font(.headline)
-            Text("Sign in with Google from Settings to browse your subscriptions, playlists and liked videos. Watch Later and watch history stay on this device — YouTube's API has never exposed them.")
+            Text("Sign in with Google from Settings to browse your subscriptions, playlists and liked videos, and to keep Watch Later as a playlist on your account rather than only on this device. Watch history stays here either way — YouTube's API has never exposed it.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             NavigationLink {
@@ -140,6 +167,7 @@ private struct LibraryRow: View {
 #Preview {
     NavigationStack { LibraryView() }
         .environmentObject(LibraryStore.shared)
+        .environmentObject(WatchLaterStore.shared)
         .environmentObject(GoogleAuthService.shared)
         .environmentObject(NotificationStore.shared)
 }

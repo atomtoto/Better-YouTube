@@ -5,10 +5,15 @@ import SwiftUI
 ///
 /// The header deliberately sits *above* the video rather than overlaying it: the embed draws
 /// YouTube's own transport controls, and an overlay would swallow the taps meant for them.
+///
+/// Its layout is fixed to the full-screen metrics even while the player is being pulled down —
+/// the container fades and moves it as one piece, so none of this re-flows mid-drag.
 struct ExpandedPlayerView: View {
     let videoHeight: CGFloat
     let headerHeight: CGFloat
-    @Binding var dragOffset: CGFloat
+    /// How far the video travels to reach the docked bar.
+    let travel: CGFloat
+    @Binding var drag: PlayerDragState
 
     @EnvironmentObject private var player: PlayerManager
 
@@ -17,7 +22,7 @@ struct ExpandedPlayerView: View {
             header
                 .frame(height: headerHeight)
                 .contentShape(Rectangle())
-                .gesture(dragGesture)
+                .gesture(collapseDrag.gesture)
 
             // The video shows through this gap; touches must reach it.
             Color.clear
@@ -31,6 +36,12 @@ struct ExpandedPlayerView: View {
 
             Spacer(minLength: 0)
         }
+    }
+
+    /// The same pull-down the video surface answers to, so the gesture behaves identically
+    /// wherever it starts.
+    private var collapseDrag: PlayerCollapseDrag {
+        PlayerCollapseDrag(state: $drag, travel: travel) { player.collapse() }
     }
 
     private var header: some View {
@@ -54,19 +65,7 @@ struct ExpandedPlayerView: View {
             Spacer()
 
             Menu {
-                if let url = player.currentVideo?.watchURL {
-                    ShareLink(item: url) {
-                        Label("Share", systemImage: "square.and.arrow.up")
-                    }
-                    Link(destination: url) {
-                        Label("Open in YouTube", systemImage: "arrow.up.forward.app")
-                    }
-                }
-                Button(role: .destructive) {
-                    player.close()
-                } label: {
-                    Label("Stop Playback", systemImage: "xmark")
-                }
+                PlayerActions(player: player)
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.headline)
@@ -77,21 +76,5 @@ struct ExpandedPlayerView: View {
         }
         .padding(.horizontal, 6)
         .foregroundStyle(.primary)
-    }
-
-    /// Pull the header down to shrink back to the mini player.
-    private var dragGesture: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                dragOffset = max(0, value.translation.height)
-            }
-            .onEnded { value in
-                withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
-                    dragOffset = 0
-                }
-                if value.translation.height > 100 {
-                    player.collapse()
-                }
-            }
     }
 }

@@ -11,8 +11,11 @@ struct RootTabView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             tabs
-            // Lives above every tab so playback survives navigation and tab switches.
+            // Lives above every tab so playback survives navigation and tab switches. It keeps
+            // its place when the keyboard comes up — in Search, that means the keyboard covers
+            // it rather than shoving it up the screen.
             PlayerContainerView()
+                .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .sheet(isPresented: $showsOnboarding) {
             OnboardingView()
@@ -54,19 +57,9 @@ struct RootTabView: View {
             .tabItem { Label("Settings", systemImage: "gearshape.fill") }
             .tag(AppRouter.Tab.settings)
         }
-        .modifier(MinimizeTabBarOnScroll())
-    }
-}
-
-/// iOS 26 shrinks the floating tab bar as you scroll down, the way Apple's own apps do.
-private struct MinimizeTabBarOnScroll: ViewModifier {
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.tabBarMinimizeBehavior(.onScrollDown)
-        } else {
-            content
-        }
+        // Shrink the floating tab bar as you scroll down, the way Apple's own apps do. The
+        // player bar above it follows the same rule, see `minimizesPlayerBarOnScroll`.
+        .tabBarMinimizeBehavior(.onScrollDown)
     }
 }
 
@@ -172,6 +165,7 @@ private struct FeatureRow: View {
     RootTabView()
         .environmentObject(APIKeyStore.shared)
         .environmentObject(LibraryStore.shared)
+        .environmentObject(WatchLaterStore.shared)
         .environmentObject(GoogleAuthService.shared)
         .environmentObject(RecentSearchStore.shared)
         .environmentObject(NotificationStore.shared)

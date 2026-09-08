@@ -49,6 +49,7 @@ struct ChannelView: View {
                     }
                 }
                 .listStyle(.plain)
+                .minimizesPlayerBarOnScroll()
             }
         }
         .navigationTitle(channel?.title ?? "Channel")
@@ -140,6 +141,7 @@ struct ChannelHeaderView: View {
         ))
     }
     .environmentObject(LibraryStore.shared)
+    .environmentObject(WatchLaterStore.shared)
         .environmentObject(NotificationStore.shared)
         .environmentObject(NotificationService.shared)
 }

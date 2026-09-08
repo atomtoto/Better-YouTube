@@ -165,6 +165,7 @@ struct SearchView: View {
                 }
                 .listStyle(.plain)
                 .scrollDismissesKeyboard(.interactively)
+                .minimizesPlayerBarOnScroll()
             }
         }
     }
@@ -199,11 +200,13 @@ struct SearchView: View {
         }
         .listStyle(.plain)
         .scrollDismissesKeyboard(.immediately)
+        .minimizesPlayerBarOnScroll()
     }
 }
 
 #Preview {
     NavigationStack { SearchView() }
         .environmentObject(LibraryStore.shared)
+        .environmentObject(WatchLaterStore.shared)
         .environmentObject(RecentSearchStore.shared)
 }
