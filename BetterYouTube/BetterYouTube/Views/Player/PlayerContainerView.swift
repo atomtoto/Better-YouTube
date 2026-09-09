@@ -14,21 +14,35 @@ struct PlayerContainerView: View {
     @State private var drag = PlayerDragState()
     /// The separate flick that expands or dismisses the docked bar.
     @State private var barDragOffset: CGFloat = 0
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     private let metrics = PlayerMetrics()
+
+    /// The phone on its side, which is what puts the video full screen. A compact height is
+    /// exactly that: portrait and every iPad layout are regular.
+    private var isLandscape: Bool { verticalSizeClass == .compact }
 
     var body: some View {
         GeometryReader { proxy in
             let layout = PlayerLayout(
                 size: proxy.size,
                 metrics: metrics,
-                compactness: player.isBarCompact ? 1 : 0
+                compactness: player.isBarCompact ? 1 : 0,
+                isFullScreen: player.isFullScreen
             )
             playerBody(in: layout)
                 .offset(y: barDragOffset)
         }
+        // Full screen means the whole screen: the geometry above has to measure past the notch
+        // and the home indicator too, so the video reaches both edges.
+        .ignoresSafeArea(.container, edges: player.isFullScreen ? .all : [])
         .opacity(player.currentVideo == nil ? 0 : 1)
         .allowsHitTesting(player.currentVideo != nil)
+        .statusBarHidden(player.isFullScreen)
+        .persistentSystemOverlays(player.isFullScreen ? .hidden : .automatic)
+        .onChange(of: isLandscape, initial: true) { _, landscape in
+            player.setLandscape(landscape)
+        }
     }
 
     @ViewBuilder
@@ -40,8 +54,9 @@ struct PlayerContainerView: View {
         let center = layout.videoCenter(expansion: expansion)
 
         ZStack(alignment: .topLeading) {
-            // 1. Backdrops — drawn under the video surface.
-            Color(uiColor: .systemBackground)
+            // 1. Backdrops — drawn under the video surface. Black full screen, so the bars
+            //    beside a video that isn't the screen's shape read as part of the picture.
+            (player.isFullScreen ? Color.black : Color(uiColor: .systemBackground))
                 .opacity(Double(expansion))
                 .ignoresSafeArea()
                 .allowsHitTesting(player.isExpanded)
@@ -68,14 +83,18 @@ struct PlayerContainerView: View {
                         style: .continuous
                     )
                 )
-                .simultaneousGesture(collapseDrag(travel: layout.collapseTravel).gesture)
+                .simultaneousGesture(
+                    collapseDrag(travel: layout.collapseTravel).gesture,
+                    including: player.isFullScreen ? .subviews : .all
+                )
                 .scaleEffect(scale)
                 .position(x: center.x, y: center.y)
                 .allowsHitTesting(player.isExpanded)
 
             // 3. Chrome — drawn over the video. The details are mounted only while the player is
-            //    expanded, and follow the finger point for point as it pulls them away.
-            if player.isExpanded {
+            //    expanded, and follow the finger point for point as it pulls them away. Full
+            //    screen there is no chrome at all: the video has the screen to itself.
+            if player.isExpanded, !player.isFullScreen {
                 ExpandedPlayerView(
                     videoHeight: video.height,
                     headerHeight: metrics.headerHeight,
@@ -243,7 +262,7 @@ private struct PlayerMetrics {
     /// The pill drops into the tab bar's own row rather than hovering above it, and a little
     /// below its bottom edge to line up with the pill the tab bar minimizes to. By then the tab
     /// bar is minimized too — the same scroll shrinks both — so the space beside it is free.
-    let compactTabBarClearance: CGFloat = -4
+    let compactTabBarClearance: CGFloat = -6
     let artworkPadding: CGFloat = 8
     let headerHeight: CGFloat = 44
     /// The pill the bar shrinks to on scroll keeps the artwork and play/pause, nothing else.
@@ -263,6 +282,8 @@ private struct PlayerLayout {
     let metrics: PlayerMetrics
     /// 0 the full-width bar, 1 the compact pill.
     let compactness: CGFloat
+    /// Set in landscape, where the video has the screen to itself.
+    let isFullScreen: Bool
 
     var barFrame: CGRect { barFrame(at: compactness) }
     var dockedVideoFrame: CGRect { dockedVideoFrame(at: compactness) }
@@ -302,9 +323,28 @@ private struct PlayerLayout {
         lerp(metrics.barCornerRadius, metrics.compactBarHeight / 2, compactness)
     }
 
-    /// The video full screen, sitting under the header.
+    /// Where the video sits with the player open: under the header in portrait, alone on the
+    /// screen in landscape.
     var expandedVideoFrame: CGRect {
+        isFullScreen ? fullScreenVideoFrame : headedVideoFrame
+    }
+
+    /// The video across the width of the screen, sitting under the header.
+    private var headedVideoFrame: CGRect {
         CGRect(x: 0, y: metrics.headerHeight, width: size.width, height: size.width * 9 / 16)
+    }
+
+    /// The biggest 16:9 the screen holds, centred in it — height-bound in landscape, so the
+    /// video grows to the full height and leaves black to either side rather than being cropped.
+    private var fullScreenVideoFrame: CGRect {
+        let height = min(size.height, size.width * 9 / 16)
+        let width = height * 16 / 9
+        return CGRect(
+            x: (size.width - width) / 2,
+            y: (size.height - height) / 2,
+            width: width,
+            height: height
+        )
     }
 
     /// How far the video travels between the bar and full screen — and therefore how far the
