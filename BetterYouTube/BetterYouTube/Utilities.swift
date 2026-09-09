@@ -86,12 +86,13 @@ enum TakeoutPlaylistCSV {
     ///
     /// The export carries the date each video was added, so that is what decides — the file's own
     /// order is never trusted when the dates are there. Only when a file carries no dates at all
-    /// does it fall back to position, taking the tail, since Takeout writes these oldest first.
+    /// does it fall back to position, taking the head: a real export lists the newest first, so
+    /// the opening lines are already the wanted end, in the wanted order.
     static func mostRecentlyAdded(in rows: [Row], limit: Int) -> [String] {
         let dated = rows.compactMap { row in row.addedAt.map { (row.id, $0) } }
 
         guard !rows.isEmpty, dated.count == rows.count else {
-            return rows.suffix(limit).reversed().map(\.id)
+            return rows.prefix(limit).map(\.id)
         }
         return dated.sorted { $0.1 > $1.1 }.prefix(limit).map(\.0)
     }
