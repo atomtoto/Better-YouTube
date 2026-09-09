@@ -58,7 +58,8 @@ final class APIKeyStore: ObservableObject {
 ///
 /// Quota notes: `search.list` costs 100 units against the default 10,000/day, while
 /// `videos.list`, `channels.list` and `playlistItems.list` cost 1. Channel uploads therefore go
-/// through the channel's uploads playlist rather than a search query.
+/// through the channel's uploads playlist rather than a search query. What each call costs is
+/// counted in `QuotaTracker`, which is what Settings shows as the day's remaining quota.
 actor YouTubeAPIService {
     static let shared = YouTubeAPIService()
 
@@ -161,6 +162,16 @@ actor YouTubeAPIService {
         }
 
         guard let http = response as? HTTPURLResponse else { throw APIError.http(-1) }
+
+        // Charge the call. Every request in this file comes through here, and the API bills a
+        // rejected one like any other, so this is the one place the running total can be kept
+        // without a caller having to remember to.
+        let endpoint = urlRequest.url?.lastPathComponent ?? ""
+        let method = urlRequest.httpMethod ?? "GET"
+        await QuotaTracker.shared.record(
+            units: QuotaTracker.cost(endpoint: endpoint, method: method),
+            endpoint: endpoint
+        )
 
         guard (200..<300).contains(http.statusCode) else {
             let message = (try? decoder.decode(YTErrorResponse.self, from: data))?.error.message

@@ -9,13 +9,16 @@ app (Apple Music-style shelves, artwork cards, inset-grouped library, context me
   carousels
 - **Search** — debounced search for videos and channels, recent searches, browse categories
 - **Playback** — the official YouTube embedded player (WKWebView), so playback stays within
-  YouTube's Terms of Service
+  YouTube's Terms of Service. Turning the phone on its side hands the video to iOS's own
+  full-screen presentation — the system's controls, over the app — and turning it back puts the
+  player where it was
 - **Video detail** — stats, expandable description, comments, share sheet, quick actions
 - **Channels** — profile header plus latest uploads
 - **Library** —
   - *Signed in with Google*: your subscriptions, playlists and liked videos
   - *On this device*: favorites, watch later and watch history
-- **Settings** — Google sign-in, API key, library counts, quota guidance
+- **Settings** — Google sign-in, API key, library counts, and what is left of the day's API
+  quota
 
 ## What the YouTube API can and cannot do
 
@@ -52,6 +55,13 @@ The default quota is **10,000 units per day**, and endpoints are not priced equa
 
 - `search.list` — **100 units** per call
 - `videos.list`, `channels.list`, `playlistItems.list`, `subscriptions.list`, `commentThreads.list` — **1 unit**
+- `playlists.insert`, `playlistItems.insert`, `playlistItems.delete` — **50 units**
+
+Settings shows what is left of the day as a bar, with a breakdown of where the units went. No
+endpoint reports the remaining quota, so the app prices each call from the table above as it goes
+out and keeps the tally itself: it counts what *this device* spent, while the allowance belongs to
+the Cloud project behind the API key, so anything else using that key spends from the same pot
+without showing up. The count rolls over at midnight Pacific time, which is when Google refills it.
 
 Because of that, channel uploads are read through the channel's *uploads playlist*
 (`playlistItems.list`, 1 unit) rather than a channel search (100 units), and search results are

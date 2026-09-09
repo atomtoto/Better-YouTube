@@ -95,6 +95,10 @@ final class PlayerManager: ObservableObject {
     /// True while the video fills the screen on its own, which is what turning the phone on its
     /// side does. The expanded player's chrome steps aside for it.
     @Published private(set) var isFullScreen = false
+    /// True while *iOS* is the one showing the video full screen — its own full-screen
+    /// presentation over the app, with the system's controls — rather than the app laying the
+    /// video out edge to edge itself. `isFullScreen` is that fallback, and stays true underneath.
+    @Published private(set) var isSystemFullScreen = false
     /// Position and duration, published apart from everything else because they tick constantly.
     let progress = PlaybackProgress()
     /// Set whenever playback fails to start, so the UI can say what happened instead of
@@ -120,11 +124,21 @@ final class PlayerManager: ObservableObject {
     /// Where the player was before landscape took it full screen, so turning the phone back puts
     /// it where it was rather than always expanded.
     private var wasExpandedBeforeFullScreen = false
+    /// Set while the phone is on its side with a video that hasn't been handed to iOS yet.
+    private var wantsSystemFullScreen = false
+    /// The run of attempts to hand it over, cancelled as soon as one takes.
+    private var fullScreenRequest: Task<Void, Never>?
+    /// WebKit's own account of whether its full-screen window is up.
+    private var fullScreenObserver: NSKeyValueObservation?
 
     private init() {
         let configuration = WKWebViewConfiguration()
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
+        // Lets the page hand the video to the system's full-screen presentation, which is what
+        // turning the phone now does. Without it WebKit refuses the request and all the app can
+        // do is draw an imitation of full screen itself.
+        configuration.preferences.isElementFullscreenEnabled = true
 
         let controller = WKUserContentController()
         configuration.userContentController = controller
@@ -137,6 +151,14 @@ final class PlayerManager: ObservableObject {
 
         controller.add(bridge, name: "player")
         webView.navigationDelegate = navigationBridge
+
+        // Whatever opens or closes the system's full-screen window — a rotation, the embed's own
+        // full-screen button, the Done button over the video — WebKit reports it here, so the
+        // app's idea of the state never drifts from what is on screen.
+        fullScreenObserver = webView.observe(\.fullscreenState) { webView, _ in
+            let active = webView.fullscreenState == .inFullscreen
+            Task { @MainActor in PlayerManager.shared.setSystemFullScreen(active) }
+        }
     }
 
     // MARK: - Playback
@@ -161,6 +183,8 @@ final class PlayerManager: ObservableObject {
 
         desiredVideoId = video.id
         sync()
+        // Started with the phone already on its side: hand it over as soon as the embed is up.
+        if isLandscape { wantsSystemFullScreen = true }
     }
 
     /// Called by the surface once the web view is on screen with a real size.
@@ -244,6 +268,7 @@ final class PlayerManager: ObservableObject {
     }
 
     func close() {
+        exitSystemFullScreen()
         evaluate("stopVideo()")
         withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
             isExpanded = false
@@ -270,6 +295,10 @@ final class PlayerManager: ObservableObject {
     /// Turning the phone on its side plays the video full screen on its own — no button to find,
     /// the way the YouTube app does it — and turning it back puts the player where it was.
     /// Driven by the container, which is where the size class is known.
+    ///
+    /// Full screen means the system's own: the page is asked to hand the video to iOS, which
+    /// presents it over the app with the system's controls. The layout below is what is left if
+    /// that request is refused, and what the video comes back to when it is dismissed.
     func setLandscape(_ landscape: Bool) {
         guard isLandscape != landscape else { return }
         isLandscape = landscape
@@ -286,40 +315,94 @@ final class PlayerManager: ObservableObject {
             }
             isFullScreen = landscape
         }
+
+        if landscape {
+            requestSystemFullScreen()
+        } else {
+            exitSystemFullScreen()
+        }
+    }
+
+    private func requestSystemFullScreen() {
+        guard currentVideo != nil else { return }
+        wantsSystemFullScreen = true
+        startFullScreenRequest()
+    }
+
+    /// Asks the page to hand the video over, and keeps asking for a couple of seconds.
+    ///
+    /// Two reasons it takes more than one ask, and the same answer to both: the embed has no
+    /// video element to give until it has booted, and WebKit only grants full screen to a script
+    /// running under a user gesture — which a script the app evaluates has, and a timer inside
+    /// the page does not. So every attempt is a fresh call from here. The last one settles for
+    /// the lesser full screen if the better one never became available.
+    private func startFullScreenRequest() {
+        guard wantsSystemFullScreen, isShellLoaded, !isSystemFullScreen else { return }
+        fullScreenRequest?.cancel()
+        fullScreenRequest = Task { [weak self] in
+            let attempts = 8
+            for attempt in 0..<attempts {
+                if attempt > 0 {
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+                }
+                guard !Task.isCancelled, let self else { return }
+                guard self.wantsSystemFullScreen, !self.isSystemFullScreen else { return }
+                self.evaluate("enterFullScreen(\(attempt == attempts - 1))")
+            }
+        }
+    }
+
+    private func exitSystemFullScreen() {
+        wantsSystemFullScreen = false
+        fullScreenRequest?.cancel()
+        fullScreenRequest = nil
+        guard isShellLoaded else { return }
+        evaluate("exitFullScreen()")
+    }
+
+    /// Reported by the page, and by WebKit itself, whenever the system's full-screen window
+    /// opens or closes. Dismissing it by hand while the phone is still on its side leaves the
+    /// app's own landscape layout showing — the player doesn't snap back to portrait, and
+    /// nothing asks for full screen again until the phone is turned and turned back.
+    private func setSystemFullScreen(_ active: Bool) {
+        guard isSystemFullScreen != active else { return }
+        isSystemFullScreen = active
+        wantsSystemFullScreen = false
+        fullScreenRequest?.cancel()
+        fullScreenRequest = nil
     }
 
     // MARK: - The size of the docked bar
 
-    /// How far you have to scroll in one direction before the bar changes size. The tab bar
+    /// How far you have to scroll down before the bar shrinks to its pill. The tab bar
     /// underneath reacts to the first few points of a scroll, and the two have to move together,
     /// so this is only wide enough to ignore a jittery finger — not to add a delay of its own.
     private static let compactThreshold: CGFloat = 6
-    /// Scroll travelled since the last change of direction.
+    /// A scroll view settles a fraction of a point away from zero; anything inside this still
+    /// counts as the top.
+    private static let topTolerance: CGFloat = 0.5
+    /// Downward scroll travelled since the bar was last full size.
     private var scrollRun: CGFloat = 0
 
-    /// Fed by every screen's scroll view: scrolling down shrinks the bar to its pill, scrolling
-    /// back up — or reaching the top — brings it back, the way the tab bar behaves.
+    /// Fed by every screen's scroll view: scrolling down shrinks the bar to its pill, and
+    /// scrolling back to the *top* brings it back — which is the rule the tab bar underneath
+    /// follows. Scrolling up part-way leaves both of them small, so the two never disagree.
     func scrollDidMove(from previous: CGFloat, to current: CGFloat) {
         guard currentVideo != nil, !isExpanded else { return }
 
-        let delta = current - previous
-        guard abs(delta) > 0.5 else { return }
-
-        // At the top the bar is always full size, as the tab bar is.
-        guard current > 0 else {
+        // The top, and only the top, is what restores the bar.
+        guard current > Self.topTolerance else {
             scrollRun = 0
             setBarCompact(false)
             return
         }
 
-        if (delta > 0) != (scrollRun > 0) { scrollRun = 0 }
-        let limit = Self.compactThreshold * 1.5
-        scrollRun = max(-limit, min(limit, scrollRun + delta))
+        let delta = current - previous
+        guard delta > 0.5 else { return }
 
+        scrollRun = min(Self.compactThreshold, scrollRun + delta)
         if scrollRun >= Self.compactThreshold {
             setBarCompact(true)
-        } else if scrollRun <= -Self.compactThreshold {
-            setBarCompact(false)
         }
     }
 
@@ -354,16 +437,23 @@ final class PlayerManager: ObservableObject {
             watchdog?.cancel()
             issue = nil
             sync()
+            startFullScreenRequest()
 
         case "error":
             setBuffering(false)
             if let code = event.state { issue = .playerError(code) }
+
+        case "fullscreen":
+            setSystemFullScreen(event.state == 1)
 
         case "state":
             // YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
             guard let state = event.state else { return }
             setPlaying(state == 1)
             setBuffering(state == 3)
+            // Replaying the same video reloads nothing, so there is no `ready` to wait for; the
+            // moment it starts is the other chance to hand it over.
+            if state == 1 { startFullScreenRequest() }
             if state == 0 { playNext() }
 
         case "time":
@@ -418,12 +508,13 @@ final class PlayerManager: ObservableObject {
     <body>
       <iframe id="frame"
         src="https://www.youtube-nocookie.com/embed/__VIDEO_ID__?enablejsapi=1&playsinline=1&rel=0&modestbranding=1&controls=1"
-        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+        allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture"
         allowfullscreen>
       </iframe>
       <script>
         var frame = document.getElementById('frame');
         var handshake;
+        var watchedVideo;
 
         function post(message) {
           try { window.webkit.messageHandlers.player.postMessage(message); } catch (e) {}
@@ -438,14 +529,87 @@ final class PlayerManager: ObservableObject {
         }
 
         function setVideo(id) {
+          watchedVideo = null;
           frame.src = 'https://www.youtube-nocookie.com/embed/' + id +
             '?enablejsapi=1&playsinline=1&rel=0&modestbranding=1&controls=1';
         }
+
+        // Full screen, in the two forms iOS offers, best first.
+        //
+        // The embed's own video element, when it can be reached, goes to the *system's* video
+        // player: iOS draws the transport, the AirPlay and picture-in-picture buttons and the
+        // Done button itself, which is the full screen the phone gives every other video. When
+        // it can't be reached, the iframe goes into WebKit's element full screen instead —
+        // still a real full-screen window over the app, drawn by the system, but with the
+        // embed's own controls inside it.
+
+        function embedDocument() {
+          try { return frame.contentDocument || null; } catch (e) { return null; }
+        }
+
+        function videoElement() {
+          var doc = embedDocument();
+          return doc ? doc.querySelector('video') : null;
+        }
+
+        function reportFullScreen(active) {
+          post({ type: 'fullscreen', state: active ? 1 : 0 });
+        }
+
+        // The system player reports its own comings and goings on the video element; the app
+        // needs them to know when Done was tapped.
+        function watch(video) {
+          if (watchedVideo === video) { return; }
+          watchedVideo = video;
+          video.addEventListener('webkitbeginfullscreen', function () { reportFullScreen(true); });
+          video.addEventListener('webkitendfullscreen', function () { reportFullScreen(false); });
+        }
+
+        function enterElementFullScreen() {
+          var request = frame.requestFullscreen || frame.webkitRequestFullscreen;
+          if (!request) { return; }
+          try { request.call(frame); } catch (e) {}
+        }
+
+        // `mayFallBack` is the app's last ask of a run: settle for the iframe's full screen
+        // rather than leave the video where it is.
+        function enterFullScreen(mayFallBack) {
+          var video = videoElement();
+          if (video && typeof video.webkitEnterFullscreen === 'function') {
+            watch(video);
+            if (video.webkitDisplayingFullscreen) { return; }
+            try { video.webkitEnterFullscreen(); return; } catch (e) {}
+          }
+          // An embed we can't see into will never hand over its video element, so there is
+          // nothing to wait for. One we can see into is still booting, and the app asks again
+          // in a moment.
+          if (mayFallBack || !embedDocument()) { enterElementFullScreen(); }
+        }
+
+        function exitFullScreen() {
+          var video = watchedVideo || videoElement();
+          if (video && video.webkitDisplayingFullscreen) {
+            try { video.webkitExitFullscreen(); } catch (e) {}
+            return;
+          }
+          var exit = document.exitFullscreen || document.webkitExitFullscreen;
+          if (exit && (document.fullscreenElement || document.webkitFullscreenElement)) {
+            try { exit.call(document); } catch (e) {}
+          }
+        }
+
+        function fullScreenDidChange() {
+          reportFullScreen(!!(document.fullscreenElement || document.webkitFullscreenElement));
+        }
+
+        document.addEventListener('fullscreenchange', fullScreenDidChange);
+        document.addEventListener('webkitfullscreenchange', fullScreenDidChange);
 
         // The embed only starts reporting state once we introduce ourselves; it can miss the
         // first few messages while it boots, so repeat briefly.
         frame.addEventListener('load', function () {
           clearInterval(handshake);
+          watchedVideo = null;
           var attempts = 0;
           handshake = setInterval(function () {
             send({ event: 'listening', id: 'frame', channel: 'widget' });
@@ -481,7 +645,7 @@ final class PlayerManager: ObservableObject {
         function resume() { command('playVideo'); }
         function pauseVideo() { command('pauseVideo'); }
         function seekTo(seconds) { command('seekTo', [seconds, true]); }
-        function stopVideo() { frame.src = 'about:blank'; }
+        function stopVideo() { watchedVideo = null; frame.src = 'about:blank'; }
       </script>
     </body>
     </html>
