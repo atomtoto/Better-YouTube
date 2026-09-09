@@ -57,15 +57,15 @@ The default quota is **10,000 units per day**, and endpoints are not priced equa
 - `videos.list`, `channels.list`, `playlistItems.list`, `subscriptions.list`, `commentThreads.list` — **1 unit**
 - `playlists.insert`, `playlistItems.insert`, `playlistItems.delete` — **50 units**
 
+Because of that, channel uploads are read through the channel's *uploads playlist*
+(`playlistItems.list`, 1 unit) rather than a channel search (100 units), and search results are
+enriched with a single batched `videos.list` call. Only the search box spends 100-unit requests.
+
 Settings shows what is left of the day as a bar, with a breakdown of where the units went. No
 endpoint reports the remaining quota, so the app prices each call from the table above as it goes
 out and keeps the tally itself: it counts what *this device* spent, while the allowance belongs to
 the Cloud project behind the API key, so anything else using that key spends from the same pot
 without showing up. The count rolls over at midnight Pacific time, which is when Google refills it.
-
-Because of that, channel uploads are read through the channel's *uploads playlist*
-(`playlistItems.list`, 1 unit) rather than a channel search (100 units), and search results are
-enriched with a single batched `videos.list` call. Only the search box spends 100-unit requests.
 
 ## Getting started
 
@@ -102,6 +102,7 @@ BetterYouTube/
     YouTubeAPIService.swift      API client (actor) with OAuth + API key support
     GoogleAuthService.swift      OAuth 2.0 PKCE sign-in, keychain token storage
     Persistence.swift            On-device library and recent searches
+    QuotaTracker.swift           The day's quota spending, counted call by call
     Utilities.swift              Duration, count and relative-date formatters, Takeout CSV reader
     ViewModels/                  One @MainActor view model per screen
     Views/                       SwiftUI screens
