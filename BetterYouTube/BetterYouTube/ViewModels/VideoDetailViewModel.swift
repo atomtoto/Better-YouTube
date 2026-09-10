@@ -17,6 +17,9 @@ final class VideoDetailViewModel: ObservableObject {
     @Published var ratingError: String?
 
     private let service: YouTubeAPIService
+    /// What this session's likes have added to YouTube's own figure, so a refresh of the
+    /// details doesn't quietly undo the tap that was made while it was in flight.
+    private var likeCountAdjustment = 0
 
     init(video: Video, service: YouTubeAPIService = .shared) {
         self.video = video
@@ -72,6 +75,7 @@ final class VideoDetailViewModel: ObservableObject {
     /// Nudges the displayed count so the number agrees with the button. YouTube's own figure is
     /// cached and lags a tap by minutes, so waiting for it would look like nothing happened.
     private func adjustLikeCount(by delta: Int) {
+        likeCountAdjustment += delta
         guard let count = video.likeCount else { return }
         video.likeCount = max(0, count + delta)
     }
@@ -79,9 +83,11 @@ final class VideoDetailViewModel: ObservableObject {
     /// Feed and playlist entries arrive without statistics; fetch the full record.
     func refreshDetails() async {
         do {
-            if let updated = try await service.video(id: video.id) {
-                video = updated
-            }
+            guard var updated = try await service.video(id: video.id) else { return }
+            // This lands a moment after the screen opens, which is long enough for a like to
+            // have been tapped; YouTube's count won't carry it for minutes yet, so re-apply it.
+            updated.likeCount = updated.likeCount.map { max(0, $0 + likeCountAdjustment) }
+            video = updated
         } catch {
             errorMessage = error.localizedDescription
         }

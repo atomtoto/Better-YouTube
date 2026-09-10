@@ -66,7 +66,7 @@ struct HomeView: View {
             NotificationsView()
         }
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
-        .refreshable { await viewModel.load(isSignedIn: auth.isSignedIn, library: library) }
+        .refreshable { await viewModel.load(isSignedIn: auth.isSignedIn, library: library, force: true) }
         .task(id: auth.isSignedIn) {
             await viewModel.load(isSignedIn: auth.isSignedIn, library: library)
         }

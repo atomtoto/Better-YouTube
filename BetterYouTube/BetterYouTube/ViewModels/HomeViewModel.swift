@@ -23,6 +23,12 @@ final class HomeViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let service: YouTubeAPIService
+    /// When the feed was last filled, and for which sign-in state. Every tab switch re-runs the
+    /// view's `.task`, and one refresh reads a hundred channels — so a recent feed is shown
+    /// again rather than bought again. Pulling down forces it.
+    private var lastLoaded: Date?
+    private var lastLoadedSignedIn = false
+    private static let reloadInterval: TimeInterval = 15 * 60
 
     init(service: YouTubeAPIService = .shared) {
         self.service = service
@@ -34,8 +40,16 @@ final class HomeViewModel: ObservableObject {
 
     func avatar(for channelId: String) -> URL? { avatars[channelId] }
 
-    func load(isSignedIn: Bool, library: LibraryStore) async {
+    func load(isSignedIn: Bool, library: LibraryStore, force: Bool = false) async {
         guard !isLoading else { return }
+        if !force,
+           let lastLoaded,
+           lastLoadedSignedIn == isSignedIn,
+           !videos.isEmpty,
+           Date().timeIntervalSince(lastLoaded) < Self.reloadInterval {
+            return
+        }
+
         isLoading = true
         errorMessage = nil
 
@@ -66,6 +80,8 @@ final class HomeViewModel: ObservableObject {
         await loadRecommendations(library: library, subscriptions: subscriptions, affinity: affinity)
         await loadAvatars(for: recommended + subscriptionVideos, subscriptions: subscriptions)
 
+        lastLoaded = Date()
+        lastLoadedSignedIn = isSignedIn
         isLoading = false
     }
 
