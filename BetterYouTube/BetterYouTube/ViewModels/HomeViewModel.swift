@@ -3,12 +3,15 @@ import Foundation
 @MainActor
 final class HomeViewModel: ObservableObject {
     enum Feed: String, CaseIterable, Identifiable {
+        /// YouTube's own home page, read through the web session. Only offered once there is one.
+        case youTube
         case forYou
         case subscriptions
 
         var id: String { rawValue }
         var title: String {
             switch self {
+            case .youTube: return "YouTube"
             case .forYou: return "For You"
             case .subscriptions: return "Subscriptions"
             }
@@ -18,9 +21,16 @@ final class HomeViewModel: ObservableObject {
     @Published var feed: Feed = .forYou
     @Published private(set) var recommended: [Video] = []
     @Published private(set) var subscriptionVideos: [Video] = []
+    @Published private(set) var youTubeVideos: [Video] = []
     @Published private(set) var avatars: [String: URL] = [:]
     @Published private(set) var isLoading = false
+    @Published private(set) var isLoadingYouTube = false
+    /// Why YouTube's own feed is empty, in words the screen can show.
+    @Published private(set) var youTubeIssue: String?
     @Published var errorMessage: String?
+    /// Set the first time you choose a segment yourself, so the default below only ever applies
+    /// to a screen you haven't touched.
+    private(set) var hasPickedFeed = false
 
     private let service: YouTubeAPIService
     /// When the feed was last filled, and for which sign-in state. Every tab switch re-runs the
@@ -28,6 +38,7 @@ final class HomeViewModel: ObservableObject {
     /// again rather than bought again. Pulling down forces it.
     private var lastLoaded: Date?
     private var lastLoadedSignedIn = false
+    private var lastLoadedYouTube: Date?
     private static let reloadInterval: TimeInterval = 15 * 60
 
     init(service: YouTubeAPIService = .shared) {
@@ -35,10 +46,67 @@ final class HomeViewModel: ObservableObject {
     }
 
     var videos: [Video] {
-        feed == .forYou ? recommended : subscriptionVideos
+        switch feed {
+        case .youTube: return youTubeVideos
+        case .forYou: return recommended
+        case .subscriptions: return subscriptionVideos
+        }
     }
 
     func avatar(for channelId: String) -> URL? { avatars[channelId] }
+
+    /// Choosing a segment by hand, which also settles the default for good.
+    func select(_ feed: Feed) {
+        hasPickedFeed = true
+        self.feed = feed
+    }
+
+    /// With a youtube.com session on the device, the real feed is the one to open on — but only
+    /// until you pick something else, and never once the session is gone.
+    func adoptDefaultFeed(webSignedIn: Bool) {
+        if webSignedIn {
+            guard !hasPickedFeed else { return }
+            feed = .youTube
+        } else if feed == .youTube {
+            feed = .forYou
+            youTubeVideos = []
+            lastLoadedYouTube = nil
+        }
+    }
+
+    // MARK: - YouTube's own feed
+
+    /// Reads the ordering off YouTube's home page and fills it in from the Data API — one
+    /// `videos.list` for the lot, so about 1 quota unit a refresh.
+    ///
+    /// Loaded when its segment is chosen rather than with the rest: it drives a web view, which
+    /// is slower than the two API feeds and has no business holding them up.
+    func loadYouTubeFeed(force: Bool = false) async {
+        guard !isLoadingYouTube else { return }
+        if !force,
+           let lastLoadedYouTube,
+           !youTubeVideos.isEmpty,
+           Date().timeIntervalSince(lastLoadedYouTube) < Self.reloadInterval {
+            return
+        }
+
+        isLoadingYouTube = true
+        youTubeIssue = nil
+
+        do {
+            let ids = try await YouTubeFeedReader.shared.harvest()
+            let videos = try await service.videos(ids: ids)
+            youTubeVideos = videos
+            youTubeIssue = videos.isEmpty ? YouTubeFeedIssue.nothingFound.localizedDescription : nil
+            lastLoadedYouTube = videos.isEmpty ? nil : Date()
+            await loadAvatars(for: videos, subscriptions: [])
+        } catch {
+            youTubeIssue = error.localizedDescription
+            lastLoadedYouTube = nil
+        }
+
+        isLoadingYouTube = false
+    }
 
     func load(isSignedIn: Bool, library: LibraryStore, force: Bool = false) async {
         guard !isLoading else { return }

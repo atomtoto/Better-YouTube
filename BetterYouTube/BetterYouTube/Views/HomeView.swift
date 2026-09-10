@@ -5,46 +5,31 @@ struct HomeView: View {
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var notificationStore: NotificationStore
+    @EnvironmentObject private var webSession: YouTubeWebSession
     @StateObject private var viewModel = HomeViewModel()
 
     @State private var showsNotifications = false
 
+    /// YouTube's page in place of the app's cards: only on its own segment, and only when
+    /// Settings asks for that rendering.
+    private var showsYouTubePage: Bool {
+        viewModel.feed == .youTube && webSession.rendering == .youTubePage
+    }
+
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 24) {
-                Picker("Feed", selection: $viewModel.feed) {
-                    ForEach(HomeViewModel.Feed.allCases) { feed in
-                        Text(feed.title).tag(feed)
-                    }
+        Group {
+            if showsYouTubePage {
+                // The page scrolls itself, so the picker sits above it rather than inside it.
+                VStack(spacing: 12) {
+                    feedPicker
+                    YouTubeWebFeedView()
+                        .ignoresSafeArea(edges: .bottom)
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, Theme.Spacing.gutter)
-
-                if viewModel.isLoading && viewModel.videos.isEmpty {
-                    placeholderFeed
-                } else if viewModel.videos.isEmpty {
-                    emptyState
-                        .padding(.top, 40)
-                } else {
-                    ForEach(viewModel.videos) { video in
-                        Button {
-                            player.play(video, upNext: viewModel.videos.after(video))
-                        } label: {
-                            FeedVideoCard(video: video, avatarURL: viewModel.avatar(for: video.channelId))
-                        }
-                        .buttonStyle(.plain)
-                        .videoContextMenu(video)
-                    }
-
-                    if viewModel.feed == .forYou {
-                        feedSourceNote
-                    }
-                }
+                .padding(.top, 12)
+            } else {
+                cardFeed
             }
-            .padding(.vertical, 12)
         }
-        .scrollIndicators(.hidden)
-        .minimizesPlayerBarOnScroll()
         .background(Color(uiColor: .systemBackground))
         .navigationTitle("Home")
         .toolbar {
@@ -66,24 +51,109 @@ struct HomeView: View {
             NotificationsView()
         }
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
-        .refreshable { await viewModel.load(isSignedIn: auth.isSignedIn, library: library, force: true) }
+        .refreshable { await refresh(force: true) }
         .task(id: auth.isSignedIn) {
             await viewModel.load(isSignedIn: auth.isSignedIn, library: library)
+        }
+        .task(id: webSession.isSignedIn) {
+            viewModel.adoptDefaultFeed(webSignedIn: webSession.isSignedIn)
+        }
+        .task(id: viewModel.feed) {
+            guard viewModel.feed == .youTube else { return }
+            await viewModel.loadYouTubeFeed()
+        }
+    }
+
+    /// Pull-to-refresh refreshes what you are looking at.
+    private func refresh(force: Bool) async {
+        if viewModel.feed == .youTube {
+            await viewModel.loadYouTubeFeed(force: force)
+        } else {
+            await viewModel.load(isSignedIn: auth.isSignedIn, library: library, force: force)
         }
     }
 
     // MARK: Pieces
 
-    /// Where the feed comes from, at the foot of it. YouTube keeps its personalized home feed
-    /// out of the API entirely, and a feed that quietly pretends otherwise is worse than one
-    /// that says what it is.
-    private var feedSourceNote: some View {
-        Text("YouTube's personalized feed isn't open to apps. For You mixes YouTube's own charts for the categories you watch with new uploads from the channels you watch most.")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Spacing.gutter)
-            .padding(.top, 4)
+    /// The segmented control. YouTube's own feed is only on offer once there is a session to
+    /// read it with — signed out of that, Home is exactly what it was before.
+    private var feedPicker: some View {
+        Picker("Feed", selection: Binding(get: { viewModel.feed }, set: viewModel.select)) {
+            ForEach(HomeViewModel.Feed.allCases) { feed in
+                if feed != .youTube || webSession.isSignedIn {
+                    Text(feed.title).tag(feed)
+                }
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, Theme.Spacing.gutter)
+    }
+
+    private var cardFeed: some View {
+        ScrollView {
+            LazyVStack(spacing: 24) {
+                feedPicker
+
+                if isLoadingCurrentFeed && viewModel.videos.isEmpty {
+                    placeholderFeed
+                } else if viewModel.videos.isEmpty {
+                    currentEmptyState
+                        .padding(.top, 40)
+                } else {
+                    ForEach(viewModel.videos) { video in
+                        Button {
+                            player.play(video, upNext: viewModel.videos.after(video))
+                        } label: {
+                            FeedVideoCard(video: video, avatarURL: viewModel.avatar(for: video.channelId))
+                        }
+                        .buttonStyle(.plain)
+                        .videoContextMenu(video)
+                    }
+
+                    if let note = feedSourceNote {
+                        Text(note)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, Theme.Spacing.gutter)
+                            .padding(.top, 4)
+                    }
+                }
+            }
+            .padding(.vertical, 12)
+        }
+        .scrollIndicators(.hidden)
+        .minimizesPlayerBarOnScroll()
+    }
+
+    private var isLoadingCurrentFeed: Bool {
+        viewModel.feed == .youTube ? viewModel.isLoadingYouTube : viewModel.isLoading
+    }
+
+    @ViewBuilder
+    private var currentEmptyState: some View {
+        if viewModel.feed == .youTube {
+            EmptyStateView(
+                title: "Nothing read yet",
+                systemImage: "sparkles.tv",
+                message: viewModel.youTubeIssue ?? "Pull down to read YouTube's home page again."
+            )
+        } else {
+            emptyState
+        }
+    }
+
+    /// Where the feed comes from, at the foot of it. Neither of these two is what it might be
+    /// taken for, and a feed that quietly pretends otherwise is worse than one that says so.
+    private var feedSourceNote: String? {
+        switch viewModel.feed {
+        case .youTube:
+            return "The order comes from your YouTube home page, read in a signed-in web view. Everything shown about each video comes from the Data API."
+        case .forYou:
+            return "YouTube's personalized feed isn't open to apps. For You mixes YouTube's own charts for the categories you watch with new uploads from the channels you watch most."
+        case .subscriptions:
+            return nil
+        }
     }
 
     private var emptyState: some View {
@@ -171,4 +241,5 @@ extension View {
         .environmentObject(GoogleAuthService.shared)
         .environmentObject(NotificationStore.shared)
         .environmentObject(AppRouter.shared)
+        .environmentObject(YouTubeWebSession.shared)
 }

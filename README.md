@@ -84,8 +84,29 @@ the categories you actually watch, alternating with fresh uploads from the chann
 most. Half of it is YouTube's own ranking; half is the app's, and the foot of the feed says so.
 Signed out, or on a fresh install with nothing to go on, it is simply YouTube's chart.
 
-The one place YouTube's real suggestions appear is the player itself: the embed runs with `rel=1`,
-so its end screen is YouTube's own related videos rather than more from the same channel.
+The player carries YouTube's real suggestions too: the embed runs with `rel=1`, so its end screen is
+YouTube's own related videos rather than more from the same channel.
+
+### Your actual home feed, off the books
+
+Your personalized feed does exist in one place — YouTube's own web page, served to a signed-in
+session. **Settings → YouTube Home** signs you in to `youtube.com` in a web view and keeps that
+session's cookies on the device, in a data store of its own. Home then grows a third segment,
+**YouTube**, which reads the *order* of the videos on your home page and fetches everything it
+displays about them through the Data API — about one quota unit a refresh. What YouTube contributes
+is the ranking, which is the part no endpoint sells; what you see comes from the official API. A
+setting switches between the app's cards and YouTube's own page, and on that page a tap opens the
+video in the app's player rather than YouTube's.
+
+Be clear about what this is. It is outside what YouTube's terms allow an app to do: the default
+rendering reads a rendered page, which is automated extraction, where showing the page is only
+browsing. The risk sits on your Google account, not on anyone else. It is also brittle by nature —
+it leans on `watch?v=` links surviving a redesign, which is the most stable thing on the page but
+not a contract. Nothing here runs until you sign in: no session, no third segment, and signing out
+forgets both. The one thing the app misrepresents is its user-agent string, because `WKWebView`
+otherwise sends one Google refuses to accept a sign-in from.
+
+This does not touch playback, which stays on the official embed and inside the Terms.
 
 ## Getting started
 
@@ -123,6 +144,7 @@ BetterYouTube/
     GoogleAuthService.swift      OAuth 2.0 PKCE sign-in, keychain token storage
     Persistence.swift            On-device library and recent searches
     QuotaTracker.swift           The day's quota spending, counted call by call
+    YouTubeWebSession.swift      Optional youtube.com web session + home-feed reader
     Utilities.swift              Duration, count and relative-date formatters, Takeout CSV reader
     ViewModels/                  One @MainActor view model per screen
     Views/                       SwiftUI screens

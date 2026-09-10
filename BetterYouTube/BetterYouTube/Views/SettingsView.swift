@@ -10,6 +10,7 @@ struct SettingsView: View {
     @EnvironmentObject private var notificationStore: NotificationStore
     @EnvironmentObject private var notifications: NotificationService
     @EnvironmentObject private var quota: QuotaTracker
+    @EnvironmentObject private var webSession: YouTubeWebSession
 
     @State private var draftKey: String = ""
     @State private var draftClientId: String = ""
@@ -20,6 +21,7 @@ struct SettingsView: View {
     @State private var account: Channel?
     @State private var showsTakeoutImporter = false
     @State private var importSummary: WatchLaterStore.ImportSummary?
+    @State private var showsYouTubeSignIn = false
 
     var body: some View {
         Form {
@@ -28,6 +30,7 @@ struct SettingsView: View {
             notificationsSection
             apiKeySection
             quotaSection
+            youTubeHomeSection
 
             Section("On This Device") {
                 LabeledContent("Favorites", value: "\(library.favorites.count)")
@@ -63,6 +66,9 @@ struct SettingsView: View {
             case .failure(let error):
                 importSummary = .init(failure: error.localizedDescription)
             }
+        }
+        .sheet(isPresented: $showsYouTubeSignIn) {
+            YouTubeSignInView()
         }
         .onAppear {
             draftKey = apiKeyStore.apiKey
@@ -338,6 +344,48 @@ struct SettingsView: View {
         }
     }
 
+    /// The one part of the app that steps outside the Data API, and the section says so plainly.
+    /// Nothing here is on until you sign in: without a session the Home screen doesn't even offer
+    /// the segment.
+    @ViewBuilder
+    private var youTubeHomeSection: some View {
+        Section {
+            if webSession.isSignedIn {
+                Label("Signed in to youtube.com", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+
+                Picker("Show as", selection: $webSession.rendering) {
+                    ForEach(YouTubeWebSession.FeedRendering.allCases) { rendering in
+                        Text(rendering.title).tag(rendering)
+                    }
+                }
+
+                Button("Sign Out of youtube.com", role: .destructive) {
+                    Task { await webSession.signOut() }
+                }
+            } else {
+                Button {
+                    showsYouTubeSignIn = true
+                } label: {
+                    Label("Sign in to youtube.com", systemImage: "globe")
+                }
+            }
+        } header: {
+            Text("YouTube Home")
+        } footer: {
+            Text("""
+            Your real home feed exists only on YouTube's own page: the Data API dropped the \
+            personalized feed in 2016 and related videos in 2023. Signing in here opens \
+            youtube.com in a web view and keeps its cookies on this device, apart from the Google \
+            sign-in above — that one is a token scoped to the API, this one is a browser session. \
+            The app reads the order of the videos on your home page and fetches everything it \
+            shows about them through the API. That is outside what YouTube's terms allow apps to \
+            do, it can break whenever the page changes, and it is your account that carries the \
+            risk. Sign out here and the app forgets the session and the Home segment with it.
+            """)
+        }
+    }
+
     private func signIn() {
         isSigningIn = true
         authError = nil
@@ -434,4 +482,5 @@ private struct QuotaBar: View {
         .environmentObject(NotificationStore.shared)
         .environmentObject(NotificationService.shared)
         .environmentObject(QuotaTracker.shared)
+        .environmentObject(YouTubeWebSession.shared)
 }
