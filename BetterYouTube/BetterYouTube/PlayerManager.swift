@@ -495,6 +495,11 @@ final class PlayerManager: ObservableObject {
     /// `WKWebView`. Control and state ride on the embed's `enablejsapi` postMessage protocol, so
     /// nothing depends on loading YouTube's IFrame API script into a `loadHTMLString` document,
     /// whose origin the API rejects (playback failed with error 152).
+    ///
+    /// `rel=1` matters more than it looks: `rel=0` confines the end screen to more from the same
+    /// channel, while `rel=1` leaves YouTube's own related videos there. Since the Data API
+    /// retired every recommendation endpoint it had, that panel is the one place in the app
+    /// where YouTube's real suggestions show up.
     private static let shellHTML = """
     <!DOCTYPE html>
     <html>
@@ -507,7 +512,7 @@ final class PlayerManager: ObservableObject {
     </head>
     <body>
       <iframe id="frame"
-        src="https://www.youtube-nocookie.com/embed/__VIDEO_ID__?enablejsapi=1&playsinline=1&rel=0&modestbranding=1&controls=1"
+        src="https://www.youtube-nocookie.com/embed/__VIDEO_ID__?enablejsapi=1&playsinline=1&rel=1&modestbranding=1&controls=1"
         allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture"
         allowfullscreen>
       </iframe>
@@ -531,7 +536,7 @@ final class PlayerManager: ObservableObject {
         function setVideo(id) {
           watchedVideo = null;
           frame.src = 'https://www.youtube-nocookie.com/embed/' + id +
-            '?enablejsapi=1&playsinline=1&rel=0&modestbranding=1&controls=1';
+            '?enablejsapi=1&playsinline=1&rel=1&modestbranding=1&controls=1';
         }
 
         // Full screen, in the two forms iOS offers, best first.

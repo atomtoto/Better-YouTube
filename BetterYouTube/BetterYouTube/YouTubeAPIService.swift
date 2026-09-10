@@ -87,6 +87,39 @@ actor YouTubeAPIService {
         }
     }
 
+    /// Every item a list endpoint holds, not just the first page.
+    ///
+    /// `maxResults` tops out at 50 on every endpoint the app uses, so a list longer than that
+    /// comes back a page at a time behind a `nextPageToken` — which is why the account's
+    /// subscriptions used to stop at 50. One request per page, at the endpoint's usual price.
+    private func allPages<Item: Decodable>(
+        path: String,
+        query: [String: String],
+        requiresAuth: Bool = false,
+        limit: Int
+    ) async throws -> [Item] {
+        var items: [Item] = []
+        var pageToken: String?
+
+        while items.count < limit {
+            var page = query
+            page["maxResults"] = "\(min(50, limit - items.count))"
+            if let pageToken { page["pageToken"] = pageToken }
+
+            let response: YTListResponse<Item> = try await request(
+                path: path,
+                query: page,
+                requiresAuth: requiresAuth
+            )
+            items.append(contentsOf: response.items)
+
+            guard let next = response.nextPageToken, !response.items.isEmpty else { break }
+            pageToken = next
+        }
+
+        return items
+    }
+
     /// A write, with its JSON body. Writes always need OAuth — the API key alone can read the
     /// public catalogue but never touch an account.
     private func send<Body: Encodable, T: Decodable>(
@@ -192,26 +225,14 @@ actor YouTubeAPIService {
         return data
     }
 
-    /// Fills in duration/stats for videos that came from a cheap endpoint (1 quota unit per 50).
+    /// Fills in duration, stats and category for videos that came from a cheap endpoint.
+    /// One `videos.list` per 50 — 1 quota unit each — so a long list costs a handful of units
+    /// rather than leaving everything past the fiftieth without a duration.
     private func enrich(_ videos: [Video]) async -> [Video] {
         guard !videos.isEmpty else { return [] }
-        let ids = videos.prefix(50).map(\.id)
-        do {
-            let response: YTListResponse<YTResourceItem> = try await request(
-                path: "videos",
-                query: [
-                    "part": "snippet,statistics,contentDetails",
-                    "id": ids.joined(separator: ",")
-                ]
-            )
-            let detailed = Dictionary(
-                response.items.map { ($0.id, Video(resource: $0)) },
-                uniquingKeysWith: { first, _ in first }
-            )
-            return videos.map { detailed[$0.id] ?? $0 }
-        } catch {
-            return videos
-        }
+        guard let detailed = try? await self.videos(ids: videos.map(\.id)) else { return videos }
+        let byId = Dictionary(detailed.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return videos.map { byId[$0.id] ?? $0 }
     }
 
     /// Full details for a list of ids, in the order given. Pages through in batches of 50, one
@@ -242,17 +263,25 @@ actor YouTubeAPIService {
 
     // MARK: - Public content
 
-    func trendingVideos(regionCode: String? = nil, maxResults: Int = 25) async throws -> [Video] {
+    /// YouTube's own most-popular chart for a region, optionally narrowed to one of its
+    /// categories — the nearest thing the Data API has to a recommendation, and real YouTube
+    /// ranking rather than the app's guesswork. 1 unit.
+    func trendingVideos(
+        regionCode: String? = nil,
+        categoryId: String? = nil,
+        maxResults: Int = 25
+    ) async throws -> [Video] {
         let region = regionCode ?? Locale.current.region?.identifier ?? "US"
-        let response: YTListResponse<YTResourceItem> = try await request(
-            path: "videos",
-            query: [
-                "part": "snippet,statistics,contentDetails",
-                "chart": "mostPopular",
-                "regionCode": region,
-                "maxResults": "\(maxResults)"
-            ]
-        )
+        var query = [
+            "part": "snippet,statistics,contentDetails",
+            "chart": "mostPopular",
+            "regionCode": region,
+            "maxResults": "\(maxResults)"
+        ]
+        if let categoryId, !categoryId.isEmpty {
+            query["videoCategoryId"] = categoryId
+        }
+        let response: YTListResponse<YTResourceItem> = try await request(path: "videos", query: query)
         return response.items.map(Video.init(resource:))
     }
 
@@ -307,6 +336,32 @@ actor YouTubeAPIService {
             query: ["part": "snippet,statistics", "id": id]
         )
         return response.items.first.map(Channel.init(resource:))
+    }
+
+    // MARK: - Likes
+    //
+    // The real thing: `videos.rate` writes to the account, so the like lands on YouTube itself
+    // and turns up in Liked videos everywhere. It needs OAuth, and it costs 50 units — reading
+    // the current rating back costs 1.
+
+    /// What the signed-in account has rated this video. 1 unit.
+    func rating(videoId: String) async throws -> VideoRating {
+        let response: YTListResponse<YTRatingItem> = try await request(
+            path: "videos/getRating",
+            query: ["id": videoId],
+            requiresAuth: true
+        )
+        guard let raw = response.items.first?.rating else { return .none }
+        return VideoRating(rawValue: raw) ?? .unspecified
+    }
+
+    /// Likes a video on the account, or clears the rating with `.none`. 50 units.
+    func rate(videoId: String, rating: VideoRating) async throws {
+        try await sendDiscardingResponse(
+            "POST",
+            path: "videos/rate",
+            query: ["id": videoId, "rating": rating.rawValue]
+        )
     }
 
     func comments(videoId: String, maxResults: Int = 20) async throws -> [VideoComment] {
@@ -365,31 +420,32 @@ actor YouTubeAPIService {
         return response.items.first.map(Channel.init(resource:))
     }
 
-    func mySubscriptions(maxResults: Int = 50) async throws -> [Channel] {
-        let response: YTListResponse<YTSubscriptionItem> = try await request(
+    /// Every channel the account follows, however many that is — paged, at 1 unit per 50.
+    func mySubscriptions(limit: Int = 1000) async throws -> [Channel] {
+        let items: [YTSubscriptionItem] = try await allPages(
             path: "subscriptions",
             query: [
                 "part": "snippet",
                 "mine": "true",
-                "order": "alphabetical",
-                "maxResults": "\(maxResults)"
+                "order": "alphabetical"
             ],
-            requiresAuth: true
+            requiresAuth: true,
+            limit: limit
         )
-        return response.items.compactMap(Channel.init(subscription:))
+        return items.compactMap(Channel.init(subscription:))
     }
 
-    func myPlaylists(maxResults: Int = 50) async throws -> [Playlist] {
-        let response: YTListResponse<YTResourceItem> = try await request(
+    func myPlaylists(limit: Int = 200) async throws -> [Playlist] {
+        let items: [YTResourceItem] = try await allPages(
             path: "playlists",
             query: [
                 "part": "snippet,contentDetails",
-                "mine": "true",
-                "maxResults": "\(maxResults)"
+                "mine": "true"
             ],
-            requiresAuth: true
+            requiresAuth: true,
+            limit: limit
         )
-        return response.items.map(Playlist.init(resource:))
+        return items.map(Playlist.init(resource:))
     }
 
     // MARK: - The app's own playlist (OAuth, read/write)
@@ -402,21 +458,21 @@ actor YouTubeAPIService {
     // are 50 quota units each, against 10,000 a day. Reading the list back is 1.
 
     /// The playlist's videos *with* their item ids, which is what removing one needs.
-    func entries(inPlaylist playlistId: String, maxResults: Int = 50) async throws -> [PlaylistEntry] {
-        let response: YTListResponse<YTPlaylistItemResource> = try await request(
+    func entries(inPlaylist playlistId: String, limit: Int = 200) async throws -> [PlaylistEntry] {
+        let items: [YTPlaylistItemResource] = try await allPages(
             path: "playlistItems",
             query: [
                 "part": "snippet,contentDetails",
-                "playlistId": playlistId,
-                "maxResults": "\(maxResults)"
+                "playlistId": playlistId
             ],
-            requiresAuth: true
+            requiresAuth: true,
+            limit: limit
         )
-        let entries = response.items.compactMap { item -> PlaylistEntry? in
+        let entries = items.compactMap { item -> PlaylistEntry? in
             guard let video = Video(playlistItem: item) else { return nil }
             return PlaylistEntry(id: item.id, video: video)
         }
-        // One batched `videos.list` fills in durations and counts for the whole page (1 unit).
+        // `videos.list` fills in durations and counts, 50 at a time (1 unit each).
         let enriched = await enrich(entries.map(\.video))
         let byId = Dictionary(enriched.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         return entries.map { PlaylistEntry(id: $0.id, video: byId[$0.video.id] ?? $0.video) }
@@ -479,41 +535,60 @@ actor YouTubeAPIService {
         try await sendDiscardingResponse("DELETE", path: "playlistItems", query: ["id": id])
     }
 
-    func likedVideos(maxResults: Int = 50) async throws -> [Video] {
-        let response: YTListResponse<YTResourceItem> = try await request(
+    func likedVideos(limit: Int = 200) async throws -> [Video] {
+        let items: [YTResourceItem] = try await allPages(
             path: "videos",
             query: [
                 "part": "snippet,statistics,contentDetails",
-                "myRating": "like",
-                "maxResults": "\(maxResults)"
+                "myRating": "like"
             ],
-            requiresAuth: true
+            requiresAuth: true,
+            limit: limit
         )
-        return response.items.map(Video.init(resource:))
+        return items.map(Video.init(resource:))
     }
 
     /// Latest uploads across the channels the user follows, newest first.
     func subscriptionFeed(channelLimit: Int = 25, perChannel: Int = 3) async throws -> [Video] {
-        let channels = try await mySubscriptions(maxResults: channelLimit)
+        let channels = try await mySubscriptions(limit: channelLimit)
         return try await videos(fromChannels: channels.map(\.id), perChannel: perChannel)
     }
 
+    /// How many channels one feed reads. Each one costs a `playlistItems.list` of its own, so
+    /// this is the knob that decides what a feed refresh costs; the caller puts the channels it
+    /// cares about most at the front, because this takes them in order.
+    private static let feedChannelLimit = 100
+
     /// Recent uploads across an arbitrary set of channels, newest first.
     ///
-    /// Costs one `channels.list` call for the whole set plus one `playlistItems.list` per channel
-    /// (1 unit each) — the same feed via `search.list` would cost 100 units per channel.
+    /// Costs a `channels.list` per 50 channels plus one `playlistItems.list` each (1 unit
+    /// apiece) — the same feed via `search.list` would cost 100 units per channel.
     func videos(fromChannels channelIds: [String], perChannel: Int = 4, limit: Int = 40) async throws -> [Video] {
-        let ids = Array(Set(channelIds.filter { !$0.isEmpty })).prefix(50)
+        // Keep the caller's order while dropping duplicates. Running this through a `Set` used
+        // to leave the order to the hash seed, so which channels survived the cap changed from
+        // one launch to the next.
+        var seen = Set<String>()
+        let ids = Array(
+            channelIds
+                .filter { !$0.isEmpty && seen.insert($0).inserted }
+                .prefix(Self.feedChannelLimit)
+        )
         guard !ids.isEmpty else { return [] }
 
-        let response: YTListResponse<YTResourceItem> = try await request(
-            path: "channels",
-            query: ["part": "contentDetails", "id": ids.joined(separator: ",")]
-        )
-        let playlistIds = response.items.compactMap { item -> String? in
-            guard let uploads = item.contentDetails?.relatedPlaylists?.uploads else { return nil }
-            uploadsPlaylistCache[item.id] = uploads
-            return uploads
+        // `channels.list` takes at most 50 ids per call.
+        var playlistIds: [String] = []
+        for batch in stride(from: 0, to: ids.count, by: 50).map({ start in
+            Array(ids[start..<min(start + 50, ids.count)])
+        }) {
+            let response: YTListResponse<YTResourceItem> = try await request(
+                path: "channels",
+                query: ["part": "contentDetails", "id": batch.joined(separator: ",")]
+            )
+            for item in response.items {
+                guard let uploads = item.contentDetails?.relatedPlaylists?.uploads else { continue }
+                uploadsPlaylistCache[item.id] = uploads
+                playlistIds.append(uploads)
+            }
         }
 
         var videos: [Video] = []
@@ -533,24 +608,26 @@ actor YouTubeAPIService {
         return await enrich(Array(sorted.prefix(limit)))
     }
 
-    /// Channel avatars for feed rows — one batched call for up to 50 channels.
+    /// Channel avatars for feed rows — one batched call per 50 channels, 1 unit each.
     func channelAvatars(ids: [String]) async -> [String: URL] {
-        let unique = Array(Set(ids.filter { !$0.isEmpty })).prefix(50)
+        var seen = Set<String>()
+        let unique = ids.filter { !$0.isEmpty && seen.insert($0).inserted }
         guard !unique.isEmpty else { return [:] }
 
-        let response: YTListResponse<YTResourceItem>? = try? await request(
-            path: "channels",
-            query: ["part": "snippet", "id": unique.joined(separator: ",")]
-        )
-        guard let items = response?.items else { return [:] }
-
-        return Dictionary(
-            items.compactMap { item -> (String, URL)? in
-                guard let url = item.snippet?.thumbnails?.bestURL else { return nil }
-                return (item.id, url)
-            },
-            uniquingKeysWith: { first, _ in first }
-        )
+        var avatars: [String: URL] = [:]
+        for batch in stride(from: 0, to: unique.count, by: 50).map({ start in
+            Array(unique[start..<min(start + 50, unique.count)])
+        }) {
+            let response: YTListResponse<YTResourceItem>? = try? await request(
+                path: "channels",
+                query: ["part": "snippet", "id": batch.joined(separator: ",")]
+            )
+            for item in response?.items ?? [] {
+                guard let url = item.snippet?.thumbnails?.bestURL else { continue }
+                avatars[item.id] = url
+            }
+        }
+        return avatars
     }
 
     /// Playlist items without the enrichment pass, so batched callers enrich once at the end.

@@ -17,6 +17,8 @@ struct QuotaSpend: Identifiable {
         case "playlistItems": return "Playlist items"
         case "subscriptions": return "Subscriptions"
         case "commentThreads": return "Comments"
+        case "rate": return "Likes"
+        case "getRating": return "Like status"
         default: return endpoint.capitalized
         }
     }

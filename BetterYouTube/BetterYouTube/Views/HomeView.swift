@@ -35,6 +35,10 @@ struct HomeView: View {
                         .buttonStyle(.plain)
                         .videoContextMenu(video)
                     }
+
+                    if viewModel.feed == .forYou {
+                        feedSourceNote
+                    }
                 }
             }
             .padding(.vertical, 12)
@@ -69,6 +73,18 @@ struct HomeView: View {
     }
 
     // MARK: Pieces
+
+    /// Where the feed comes from, at the foot of it. YouTube keeps its personalized home feed
+    /// out of the API entirely, and a feed that quietly pretends otherwise is worse than one
+    /// that says what it is.
+    private var feedSourceNote: some View {
+        Text("YouTube's personalized feed isn't open to apps. For You mixes YouTube's own charts for the categories you watch with new uploads from the channels you watch most.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.Spacing.gutter)
+            .padding(.top, 4)
+    }
 
     private var emptyState: some View {
         EmptyStateView(

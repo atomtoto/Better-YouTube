@@ -12,7 +12,8 @@ app (Apple Music-style shelves, artwork cards, inset-grouped library, context me
   YouTube's Terms of Service. Turning the phone on its side hands the video to iOS's own
   full-screen presentation — the system's controls, over the app — and turning it back puts the
   player where it was
-- **Video detail** — stats, expandable description, comments, share sheet, quick actions
+- **Video detail** — stats, expandable description, comments, share sheet, and a thumbs-up that
+  is the real like on your YouTube account (the heart beside it is this device's own favourites)
 - **Channels** — profile header plus latest uploads
 - **Library** —
   - *Signed in with Google*: your subscriptions, playlists and liked videos
@@ -27,11 +28,14 @@ The app talks to the public **YouTube Data API v3**. Two levels of access exist:
 | Access | Needs | Gives you |
 | --- | --- | --- |
 | API key | A key from the Google Cloud Console | Trending, search, video details, channels, comments, public playlists |
-| OAuth 2.0 sign-in | An iOS OAuth client ID | Your subscriptions, your playlists, your liked videos, your channel, and the app's own Watch Later playlist |
+| OAuth 2.0 sign-in | An iOS OAuth client ID | Your subscriptions, your playlists, your liked videos, your channel, liking a video, and the app's own Watch Later playlist |
 
 **Not available at any level:** the account's **Watch Later** (`WL`) and **watch history** (`HL`)
 playlists — Google removed API access to both in 2016 — and the personalized home feed. No scope
 reopens them, and they are absent from the Data Portability API's YouTube export too.
+**Recommendations** went the same way: `activities.list?home=true` in 2016 and
+`search.list?relatedToVideoId` in August 2023, so no endpoint returns YouTube's suggestions
+either. What the app does instead is under [Recommendations](#recommendations).
 
 Watch history therefore stays on the device. **Watch Later works around it**: rather than reading
 `WL`, the app creates and manages a private playlist of its own ("Watch Later — Better YouTube")
@@ -54,8 +58,12 @@ because that part is what costs quota.
 The default quota is **10,000 units per day**, and endpoints are not priced equally:
 
 - `search.list` — **100 units** per call
-- `videos.list`, `channels.list`, `playlistItems.list`, `subscriptions.list`, `commentThreads.list` — **1 unit**
-- `playlists.insert`, `playlistItems.insert`, `playlistItems.delete` — **50 units**
+- `videos.list`, `channels.list`, `playlistItems.list`, `subscriptions.list`, `commentThreads.list`,
+  `videos.getRating` — **1 unit**
+- `playlists.insert`, `playlistItems.insert`, `playlistItems.delete`, `videos.rate` — **50 units**
+
+Lists longer than 50 come back a page at a time, and the app follows the `nextPageToken` until it
+has them all — so a 300-channel subscription list is six calls, not one truncated at fifty.
 
 Because of that, channel uploads are read through the channel's *uploads playlist*
 (`playlistItems.list`, 1 unit) rather than a channel search (100 units), and search results are
@@ -66,6 +74,18 @@ endpoint reports the remaining quota, so the app prices each call from the table
 out and keeps the tally itself: it counts what *this device* spent, while the allowance belongs to
 the Cloud project behind the API key, so anything else using that key spends from the same pot
 without showing up. The count rolls over at midnight Pacific time, which is when Google refills it.
+
+## Recommendations
+
+YouTube's own home feed is not open to apps, and neither are related videos. The two things the
+Data API still publishes are the **most-popular chart** — per region and per category — and the
+uploads of any channel you name, so **For You** is those two woven together: YouTube's chart for
+the categories you actually watch, alternating with fresh uploads from the channels you watch
+most. Half of it is YouTube's own ranking; half is the app's, and the foot of the feed says so.
+Signed out, or on a fresh install with nothing to go on, it is simply YouTube's chart.
+
+The one place YouTube's real suggestions appear is the player itself: the embed runs with `rel=1`,
+so its end screen is YouTube's own related videos rather than more from the same channel.
 
 ## Getting started
 

@@ -122,39 +122,62 @@ struct PlayerDetailsView: View {
         return parts.joined(separator: " · ")
     }
 
+    /// The thumbs-up is the real like — a `videos.rate` write to the account, which is what
+    /// puts the video in Liked videos here and in the YouTube app. The heart beside it is this
+    /// device's own favourites list, which is what the thumbs-up used to be: tapping it looked
+    /// like liking a video on YouTube and never left the phone.
     private var actionRow: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 10) {
-                PlayerActionPill(
-                    title: displayed.likeCount.map(CountFormatter.abbreviated) ?? "Like",
-                    systemImage: library.isFavorite(displayed) ? "hand.thumbsup.fill" : "hand.thumbsup",
-                    isActive: library.isFavorite(displayed)
-                ) {
-                    library.toggleFavorite(displayed)
-                }
-
-                PlayerActionPill(
-                    title: "Later",
-                    systemImage: library.isInWatchLater(displayed) ? "clock.fill" : "clock",
-                    isActive: library.isInWatchLater(displayed)
-                ) {
-                    library.toggleWatchLater(displayed)
-                }
-
-                if let url = displayed.watchURL {
-                    ShareLink(item: url) {
-                        Label("Share", systemImage: "square.and.arrow.up")
-                            .font(.subheadline.weight(.medium))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 9)
-                            .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView(.horizontal) {
+                HStack(spacing: 10) {
+                    PlayerActionPill(
+                        title: displayed.likeCount.map(CountFormatter.abbreviated) ?? "Like",
+                        systemImage: viewModel.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup",
+                        isActive: viewModel.isLiked,
+                        isBusy: viewModel.isRating
+                    ) {
+                        Task { await viewModel.toggleLike() }
                     }
-                    .buttonStyle(.plain)
+
+                    PlayerActionPill(
+                        title: "Favorite",
+                        systemImage: library.isFavorite(displayed) ? "heart.fill" : "heart",
+                        isActive: library.isFavorite(displayed)
+                    ) {
+                        library.toggleFavorite(displayed)
+                    }
+
+                    PlayerActionPill(
+                        title: "Later",
+                        systemImage: library.isInWatchLater(displayed) ? "clock.fill" : "clock",
+                        isActive: library.isInWatchLater(displayed)
+                    ) {
+                        library.toggleWatchLater(displayed)
+                    }
+
+                    if let url = displayed.watchURL {
+                        ShareLink(item: url) {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                                .font(.subheadline.weight(.medium))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 9)
+                                .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
+                .padding(.vertical, 2)
             }
-            .padding(.vertical, 2)
+            .scrollIndicators(.hidden)
+
+            // Nearly always "sign in with Google", which is the one thing worth saying here.
+            if let ratingError = viewModel.ratingError {
+                Text(ratingError)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .scrollIndicators(.hidden)
     }
 
     private var channelRow: some View {
@@ -256,11 +279,14 @@ private struct PlayerActionPill: View {
     let title: String
     let systemImage: String
     var isActive: Bool = false
+    /// Swaps the icon for a spinner while a write is in flight, so a tap that has to reach
+    /// YouTube and back still looks like it landed.
+    var isBusy: Bool = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Label(title, systemImage: systemImage)
+            pill
                 .font(.subheadline.weight(.medium))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
@@ -273,6 +299,19 @@ private struct PlayerActionPill: View {
                 .foregroundStyle(isActive ? Color.red : Color.primary)
         }
         .buttonStyle(.plain)
+        .disabled(isBusy)
+    }
+
+    private var pill: some View {
+        Label {
+            Text(title)
+        } icon: {
+            if isBusy {
+                ProgressView().controlSize(.small)
+            } else {
+                Image(systemName: systemImage)
+            }
+        }
     }
 }
 
