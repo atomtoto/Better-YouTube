@@ -58,8 +58,10 @@ struct HomeView: View {
         .task(id: webSession.isSignedIn) {
             viewModel.adoptDefaultFeed(webSignedIn: webSession.isSignedIn)
         }
-        .task(id: viewModel.feed) {
-            guard viewModel.feed == .youTube else { return }
+        // Keyed on the rendering too: switching back from YouTube's page to the cards has to
+        // fill them, and there is nothing to read while the page is showing itself.
+        .task(id: "\(viewModel.feed.rawValue)-\(webSession.rendering.rawValue)") {
+            guard viewModel.feed == .youTube, !showsYouTubePage else { return }
             await viewModel.loadYouTubeFeed()
         }
     }
