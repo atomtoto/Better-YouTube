@@ -48,7 +48,7 @@ struct RootTabView: View {
             NavigationStack {
                 LibraryView()
             }
-            .tabItem { Label("Library", systemImage: "square.stack.fill") }
+            .tabItem { Label("Library", systemImage: "rectangle.stack.badge.play.fill") }
             .tag(AppRouter.Tab.library)
 
             NavigationStack {
