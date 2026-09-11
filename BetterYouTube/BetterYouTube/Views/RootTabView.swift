@@ -48,7 +48,7 @@ struct RootTabView: View {
             NavigationStack {
                 LibraryView()
             }
-            .tabItem { Label("Library", systemImage: "square.stack.fill") }
+            .tabItem { Label("Library", systemImage: "rectangle.stack.badge.play.fill") }
             .tag(AppRouter.Tab.library)
 
             NavigationStack {
@@ -57,8 +57,9 @@ struct RootTabView: View {
             .tabItem { Label("Settings", systemImage: "gearshape.fill") }
             .tag(AppRouter.Tab.settings)
         }
-        // Shrink the floating tab bar as you scroll down, the way Apple's own apps do. The
-        // player bar above it follows the same rule, see `minimizesPlayerBarOnScroll`.
+        // Shrink the floating tab bar as you scroll down, the way Apple's own apps do — it
+        // comes back at the top of the scroll, not on the first flick upwards. The player bar
+        // above it follows the same rule, see `minimizesPlayerBarOnScroll`.
         .tabBarMinimizeBehavior(.onScrollDown)
     }
 }

@@ -14,6 +14,8 @@ struct BetterYouTubeApp: App {
     @StateObject private var notifications = NotificationService.shared
     @StateObject private var router = AppRouter.shared
     @StateObject private var player = PlayerManager.shared
+    @StateObject private var quota = QuotaTracker.shared
+    @StateObject private var webSession = YouTubeWebSession.shared
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -29,6 +31,8 @@ struct BetterYouTubeApp: App {
                 .environmentObject(notifications)
                 .environmentObject(router)
                 .environmentObject(player)
+                .environmentObject(quota)
+                .environmentObject(webSession)
                 .tint(.red)
         }
         .onChange(of: scenePhase) { phase in
