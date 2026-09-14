@@ -106,6 +106,12 @@ not a contract. Nothing here runs until you sign in: no session, no third segmen
 forgets both. The one thing the app misrepresents is its user-agent string, because `WKWebView`
 otherwise sends one Google refuses to accept a sign-in from.
 
+**Passkeys don't work for this sign-in.** `WKWebView` has no WebAuthn support at all — only Safari
+and `ASWebAuthenticationSession` do — so the app takes WebAuthn off the page rather than let Google
+offer a passkey that can never complete. Use a password and 2FA; an account with no password left on
+it can't open this session. The Google OAuth sign-in above is unaffected: it runs in
+`ASWebAuthenticationSession`, which is a real Safari session.
+
 This does not touch playback, which stays on the official embed and inside the Terms.
 
 ## Getting started
