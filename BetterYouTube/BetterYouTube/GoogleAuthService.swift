@@ -116,6 +116,17 @@ final class GoogleAuthService: ObservableObject {
     static let shared = GoogleAuthService()
 
     @Published private(set) var isSignedIn: Bool = false
+    /// Why the app signed itself out, when it wasn't you. Google rejecting a saved sign-in looks
+    /// from the outside like the app losing it at random, and the usual cause has a fix worth
+    /// naming. Cleared by the next successful sign-in.
+    @Published private(set) var lastSignOutReason: String?
+
+    /// What a rejected refresh token almost always means here.
+    private static let testingExpiryExplanation = """
+    Google stopped accepting the saved sign-in. While the OAuth consent screen is in Testing, \
+    refresh tokens expire after seven days — publishing the app under Google Auth Platform → \
+    Audience removes that limit. Sign in again to carry on.
+    """
     @Published var clientId: String {
         didSet { UserDefaults.standard.set(clientId, forKey: Self.clientIdKey) }
     }
@@ -210,12 +221,20 @@ final class GoogleAuthService: ObservableObject {
         KeychainStore.save(tokens)
         UserDefaults.standard.set(Self.scope, forKey: Self.grantedScopeKey)
         self.tokens = tokens
+        lastSignOutReason = nil
     }
 
     func signOut() {
+        signOut(reason: nil)
+    }
+
+    /// `reason` is set only when the app is the one ending the session, so Settings can say what
+    /// happened instead of leaving you to discover it.
+    private func signOut(reason: String?) {
         KeychainStore.clear()
         UserDefaults.standard.removeObject(forKey: Self.grantedScopeKey)
         tokens = nil
+        lastSignOutReason = reason
         // Set outright rather than leaning on the observer: this also runs from `init`, where
         // property observers stay quiet.
         isSignedIn = false
@@ -225,15 +244,29 @@ final class GoogleAuthService: ObservableObject {
     /// so the only way forward is a fresh consent — the safety net for a token whose recorded
     /// scope and real scope have drifted apart.
     func signOutForInsufficientScope() {
-        signOut()
+        signOut(reason: """
+        This sign-in was granted narrower permissions than the app now asks for, and a token's \
+        scope can't be widened in place. Sign in again to grant them.
+        """)
     }
 
     /// Returns a valid access token, refreshing it first when needed. `nil` means "not signed in".
     func accessToken() async -> String? {
         guard let current = tokens else { return nil }
         guard current.isExpired else { return current.accessToken }
-        guard let refreshToken = current.refreshToken else {
-            signOut()
+        return await renewAccessToken()
+    }
+
+    /// Refreshes whatever the stored token's expiry says — for a 401, which means Google has
+    /// stopped honouring an access token that still looks good from here.
+    func refreshedAccessToken() async -> String? {
+        guard tokens != nil else { return nil }
+        return await renewAccessToken()
+    }
+
+    private func renewAccessToken() async -> String? {
+        guard let refreshToken = tokens?.refreshToken else {
+            signOut(reason: Self.testingExpiryExplanation)
             return nil
         }
         do {
@@ -245,7 +278,7 @@ final class GoogleAuthService: ObservableObject {
             return refreshed.accessToken
         } catch AuthError.tokenRejected {
             // Revoked, or a Testing-mode refresh token past its 7-day life: ask for a fresh consent.
-            signOut()
+            signOut(reason: Self.testingExpiryExplanation)
             return nil
         } catch {
             // Transient failure (offline, 5xx): keep the session and retry on the next request.

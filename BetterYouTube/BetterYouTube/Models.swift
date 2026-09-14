@@ -217,9 +217,20 @@ struct YTCommentSnippet: Decodable {
 
 struct YTErrorResponse: Decodable {
     struct YTError: Decodable {
+        /// One machine-readable cause. `reason` is what tells a scope refusal apart from the
+        /// several other things Google answers 403 to — quota, disabled comments, a video that
+        /// won't be rated — which the prose in `message` does not.
+        struct Detail: Decodable {
+            let reason: String?
+        }
         let message: String
+        let errors: [Detail]?
     }
     let error: YTError
+
+    var reasons: Set<String> {
+        Set(error.errors?.compactMap(\.reason) ?? [])
+    }
 }
 
 // MARK: - Mapping

@@ -200,6 +200,19 @@ struct SettingsView: View {
                     watchLater.reset()
                 }
             } else {
+                // Google ending the session looks from here like the app dropping it for no
+                // reason, and the usual cause has a fix worth naming.
+                if let reason = auth.lastSignOutReason {
+                    Label {
+                        Text(reason)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "clock.badge.exclamationmark")
+                            .foregroundStyle(.orange)
+                    }
+                }
+
                 TextField("OAuth client ID (iOS)", text: $draftClientId)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()

@@ -47,6 +47,14 @@ private struct YouTubeWebPage: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let configuration = YouTubeWebSession.shared.configuration()
 
+        configuration.userContentController.addUserScript(
+            WKUserScript(
+                source: Coordinator.withoutWebAuthn,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false
+            )
+        )
+
         if interceptsVideoTaps {
             configuration.userContentController.add(context.coordinator, name: Coordinator.handler)
             configuration.userContentController.addUserScript(
@@ -79,6 +87,25 @@ private struct YouTubeWebPage: UIViewRepresentable {
         init(interceptsVideoTaps: Bool) {
             self.interceptsVideoTaps = interceptsVideoTaps
         }
+
+        /// Takes WebAuthn off the page, so signing in offers a password rather than a passkey.
+        ///
+        /// `WKWebView` has no passkey support: only Safari and `ASWebAuthenticationSession` can
+        /// complete one. But the interfaces a page tests for are present, so Google offers a
+        /// passkey, the request goes nowhere, and sign-in dead-ends with no way back. Hiding
+        /// them makes the page's own feature detection true, and Google falls straight through
+        /// to the password it can actually accept.
+        static let withoutWebAuthn = """
+        (function () {
+          try { delete window.PublicKeyCredential; } catch (e) {}
+          try {
+            Object.defineProperty(window, 'PublicKeyCredential', { value: undefined, configurable: true });
+          } catch (e) {}
+          try {
+            Object.defineProperty(navigator, 'credentials', { value: undefined, configurable: true });
+          } catch (e) {}
+        })();
+        """
 
         /// The mobile site routes in JavaScript, so most taps never become a navigation the
         /// delegate below would see. This catches the click first — capture phase, before

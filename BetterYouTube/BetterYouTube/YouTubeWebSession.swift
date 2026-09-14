@@ -166,6 +166,18 @@ final class YouTubeFeedReader {
 
     private init() {}
 
+    /// How many videos a harvest aims for, and how hard it works for them.
+    ///
+    /// A feed renders what it believes is on screen and loads the rest as you scroll, so the
+    /// number of videos this comes back with is decided by the height of the web view and by how
+    /// often it is scrolled — not by anything YouTube limits. At a phone-sized viewport the page
+    /// only ever held the three cards that fit in it.
+    private static let targetCount = 40
+    private static let passes = 8
+    /// Several screens tall, so the first look already holds a column of videos rather than the
+    /// two or three that fit on a phone.
+    private static let readerHeight: CGFloat = 2400
+
     /// The ids on the home page, in YouTube's order.
     func harvest() async throws -> [String] {
         guard YouTubeWebSession.shared.isSignedIn else { throw YouTubeFeedIssue.notSignedIn }
@@ -179,13 +191,28 @@ final class YouTubeFeedReader {
             throw YouTubeFeedIssue.consentNeeded
         }
 
-        // The feed hydrates after the load event, so give it a moment — and a few more if the
-        // first look comes back empty.
-        for attempt in 0..<4 {
-            try? await Task.sleep(nanoseconds: attempt == 0 ? 900_000_000 : 700_000_000)
-            if let ids = try? await videoIds(in: webView), !ids.isEmpty { return ids }
+        var ids: [String] = []
+        var seen = Set<String>()
+        // Passes that add nothing: two in a row and the page has no more to give.
+        var barren = 0
+
+        for pass in 0..<Self.passes {
+            // The feed hydrates after the load event, and again after every scroll.
+            try? await Task.sleep(nanoseconds: pass == 0 ? 1_200_000_000 : 700_000_000)
+
+            let found = (try? await videoIds(in: webView)) ?? []
+            let before = ids.count
+            for id in found where seen.insert(id).inserted { ids.append(id) }
+
+            if ids.count >= Self.targetCount { break }
+            barren = ids.count == before ? barren + 1 : 0
+            if barren >= 2, !ids.isEmpty { break }
+
+            _ = try? await webView.evaluateJavaScript(Self.scrollScript)
         }
-        throw YouTubeFeedIssue.nothingFound
+
+        guard !ids.isEmpty else { throw YouTubeFeedIssue.nothingFound }
+        return Array(ids.prefix(Self.targetCount))
     }
 
     private func videoIds(in webView: WKWebView) async throws -> [String] {
@@ -196,15 +223,23 @@ final class YouTubeFeedReader {
 
     /// A web view that isn't really on screen doesn't lay out, and a feed only renders what it
     /// believes is visible — the same lesson `PlayerHostView` learned about the player. So this
-    /// one goes into the window at full size, behind everything, fully transparent and deaf to
-    /// touches, and comes straight back out when the harvest is done.
+    /// one goes into the window behind everything, fully transparent and deaf to touches, and
+    /// comes straight back out when the harvest is done.
+    ///
+    /// It is deliberately far taller than the screen: the viewport is what decides how much of
+    /// the feed exists at all, and at the window's own height only three cards ever did.
     private func attachedWebView() -> WKWebView {
         let webView = self.webView ?? makeWebView()
         self.webView = webView
 
         if let window = YouTubeWebSession.keyWindow, webView.superview !== window {
             webView.removeFromSuperview()
-            webView.frame = window.bounds
+            webView.frame = CGRect(
+                x: 0,
+                y: 0,
+                width: window.bounds.width,
+                height: Self.readerHeight
+            )
             window.insertSubview(webView, at: 0)
         }
         return webView
@@ -261,6 +296,12 @@ final class YouTubeFeedReader {
       }
       return ids.join(',');
     })()
+    """
+
+    /// Asks for the next screenful. `true` at the end because `evaluateJavaScript` refuses to
+    /// bring back an undefined result.
+    private static let scrollScript = """
+    window.scrollTo(0, document.documentElement.scrollHeight); true
     """
 }
 

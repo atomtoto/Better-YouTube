@@ -185,7 +185,7 @@ actor YouTubeAPIService {
         return urlRequest
     }
 
-    private func perform(_ urlRequest: URLRequest) async throws -> Data {
+    private func perform(_ urlRequest: URLRequest, isRetry: Bool = false) async throws -> Data {
         let data: Data
         let response: URLResponse
         do {
@@ -207,11 +207,34 @@ actor YouTubeAPIService {
         )
 
         guard (200..<300).contains(http.statusCode) else {
-            let message = (try? decoder.decode(YTErrorResponse.self, from: data))?.error.message
+            let failure = try? decoder.decode(YTErrorResponse.self, from: data)
+            let message = failure?.error.message
+            let reasons = failure?.reasons ?? []
+
+            // Google stopped honouring the access token before it was due to expire — a password
+            // change, a grant revoked, a clock that drifted. Refreshing and going round once more
+            // is what the situation calls for; treating it as a dead session, which is what
+            // happened before, signed the account out over something a retry fixes.
+            if http.statusCode == 401,
+               !isRetry,
+               urlRequest.value(forHTTPHeaderField: "Authorization") != nil,
+               let token = await GoogleAuthService.shared.refreshedAccessToken() {
+                var retried = urlRequest
+                retried.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                return try await perform(retried, isRetry: true)
+            }
+
             // A 403 for scope is not a failure to retry: the token was granted for less than the
             // app now asks, and only signing in again can widen it. Drop it here so the UI stops
             // claiming to be signed in with permissions it doesn't have.
-            if http.statusCode == 403, message?.localizedCaseInsensitiveContains("insufficient") == true {
+            //
+            // Matched on the machine-readable reason rather than the prose. Google answers 403
+            // to plenty besides scope — quota spent, comments disabled, a video that can't be
+            // rated — and matching the word "insufficient" anywhere in a message signed the
+            // account out of the app over any of them that happened to use it.
+            if http.statusCode == 403, reasons.contains("insufficientPermissions")
+                || (reasons.isEmpty
+                    && message?.localizedCaseInsensitiveContains("insufficient authentication scopes") == true) {
                 await GoogleAuthService.shared.signOutForInsufficientScope()
                 throw APIError.insufficientScope
             }
