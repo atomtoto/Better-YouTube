@@ -130,8 +130,17 @@ This does not touch playback, which stays on the official embed and inside the T
      an "unverified app" interstitial you can pass via *Advanced*).
    - Note: while in Testing, Google expires refresh tokens after **7 days**, so you'll be asked to
      sign in again about once a week. Publishing the app removes that limit.
+   - **Tick the YouTube permission on the consent screen.** Google's consent screen has a tick box
+     per sensitive scope, and leaving it unticked still issues a valid token — one that 403s on
+     every request. The app checks what Google actually granted (the `scope` on the token
+     response) rather than what it asked for, and refuses a sign-in that came back without it,
+     so this fails loudly at the sheet instead of quietly a moment later.
    - The flow is OAuth 2.0 with PKCE via `ASWebAuthenticationSession`, so no client secret is
-     needed and no URL scheme has to be registered manually.
+     needed and no URL scheme has to be registered manually. That also rules out **passkeys**:
+     iOS only offers them in Safari itself, and the callback scheme is the reversed client ID —
+     entered at runtime, so it can't be declared in `Info.plist` and the flow can't move to
+     Safari. Sign in to Google in Safari with your passkey instead; the session is not ephemeral,
+     so the sheet borrows those cookies and asks for nothing.
    - Scope requested: `https://www.googleapis.com/auth/youtube` — read/write, because the app
      creates and edits its own Watch Later playlist. A token granted for an earlier, narrower scope
      can't be widened in place, so the app drops it and asks you to sign in once more when the

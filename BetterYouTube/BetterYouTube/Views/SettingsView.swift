@@ -250,6 +250,13 @@ struct SettingsView: View {
             "access_denied". Paste the client ID above to read your subscriptions, playlists and \
             liked videos, and to keep your Watch Later as a playlist on your account. Watch history is \
             not available through the API, so that list stays on this device.
+
+            On the consent screen, tick the YouTube permission before Continue: left unticked, \
+            Google issues a sign-in that can't do anything and the app has to throw it away.
+
+            Passkeys don't work in the sign-in sheet — iOS only offers them in Safari itself. \
+            Sign in to Google in Safari first, with your passkey, and this sheet borrows that \
+            session and won't ask for anything at all.
             """)
         }
     }
