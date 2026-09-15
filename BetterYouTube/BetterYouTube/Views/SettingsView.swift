@@ -502,10 +502,10 @@ struct SettingsView: View {
             .disabled(!hasDownloadSourceChanges)
 
             if didSaveDownloadSource {
+                // Which of the two shapes the address was read as is the one thing here that is
+                // easy to get wrong and impossible to see, so saving says so outright.
                 Label(
-                    downloadSettings.isConfigured
-                        ? "Saved"
-                        : "Downloading is off — that isn't an http or https address",
+                    downloadSourceStatus,
                     systemImage: downloadSettings.isConfigured
                         ? "checkmark.circle.fill"
                         : "exclamationmark.triangle.fill"
@@ -574,6 +574,17 @@ struct SettingsView: View {
     iCloud backups, and a downloaded video plays from the file everywhere in the app, with no \
     network at all.
     """
+
+    private var downloadSourceStatus: String {
+        guard downloadSettings.isConfigured else {
+            return downloadSettings.trimmedEndpoint.isEmpty
+                ? "Downloading is off"
+                : "Downloading is off — that isn't an http or https address"
+        }
+        return downloadSettings.usesTemplate
+            ? "Saved — the address is filled in and fetched directly"
+            : "Saved — the address is sent a POST and read for a media link"
+    }
 
     private var hasDownloadSourceChanges: Bool {
         draftEndpoint.trimmingCharacters(in: .whitespacesAndNewlines) != downloadSettings.endpoint
