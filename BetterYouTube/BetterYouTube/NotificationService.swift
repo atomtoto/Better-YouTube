@@ -91,6 +91,14 @@ final class NotificationService: NSObject, ObservableObject {
         try? await UNUserNotificationCenter.current().setBadgeCount(count)
     }
 
+    /// Drops everything queued and everything already delivered. For the reset in Settings: a
+    /// banner left in Notification Centre would open a video the app no longer knows.
+    func cancelAll() {
+        let centre = UNUserNotificationCenter.current()
+        centre.removeAllPendingNotificationRequests()
+        centre.removeAllDeliveredNotifications()
+    }
+
     private static func attachment(for video: Video) async -> UNNotificationAttachment? {
         guard let url = video.thumbnailURL else { return nil }
         guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }

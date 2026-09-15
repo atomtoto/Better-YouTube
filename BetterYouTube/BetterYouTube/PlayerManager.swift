@@ -185,6 +185,23 @@ final class PlayerManager: ObservableObject {
         sync()
         // Started with the phone already on its side: hand it over as soon as the embed is up.
         if isLandscape { wantsSystemFullScreen = true }
+
+        // Claim the audio session now, so leaving the app doesn't take the sound with it.
+        NowPlaying.shared.begin()
+        refreshNowPlaying()
+    }
+
+    /// Publishes the lock screen's copy of what is playing. Called when something *jumps* — the
+    /// video, the play state, the duration, a seek — and deliberately not on the position
+    /// ticking: the system extrapolates that from the playback rate, several times a second
+    /// more cheaply than this could hand it over.
+    private func refreshNowPlaying() {
+        NowPlaying.shared.update(
+            video: currentVideo,
+            isPlaying: isPlaying,
+            elapsed: progress.currentTime,
+            duration: progress.duration
+        )
     }
 
     /// Called by the surface once the web view is on screen with a real size.
@@ -243,11 +260,13 @@ final class PlayerManager: ObservableObject {
     func resume() {
         evaluate("resume()")
         isPlaying = true
+        refreshNowPlaying()
     }
 
     func pause() {
         evaluate("pauseVideo()")
         isPlaying = false
+        refreshNowPlaying()
     }
 
     func seek(to seconds: Double) {
@@ -255,6 +274,7 @@ final class PlayerManager: ObservableObject {
         let target = max(0, min(seconds, duration > 0 ? duration : seconds))
         progress.currentTime = target
         evaluate("seekTo(\(target))")
+        refreshNowPlaying()
     }
 
     func playNext() {
@@ -269,6 +289,7 @@ final class PlayerManager: ObservableObject {
 
     func close() {
         exitSystemFullScreen()
+        NowPlaying.shared.end()
         evaluate("stopVideo()")
         withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
             isExpanded = false
@@ -428,6 +449,8 @@ final class PlayerManager: ObservableObject {
     func handle(_ event: PlayerEvent) {
         if let duration = event.duration, duration > 0, progress.duration != duration {
             progress.duration = duration
+            // The scrubber on the lock screen has nothing to draw until this arrives.
+            refreshNowPlaying()
         }
 
         switch event.type {
@@ -470,7 +493,11 @@ final class PlayerManager: ObservableObject {
     /// The embed repeats its state with every position report, and assigning an unchanged
     /// `@Published` value still redraws every view watching the player — several times a second.
     private func setPlaying(_ playing: Bool) {
-        if isPlaying != playing { isPlaying = playing }
+        guard isPlaying != playing else { return }
+        isPlaying = playing
+        // The embed pausing or resuming on its own — an ad break, a tap on its own controls —
+        // has to reach the lock screen too, or its button ends up showing the opposite.
+        refreshNowPlaying()
     }
 
     private func setBuffering(_ buffering: Bool) {
@@ -520,6 +547,7 @@ final class PlayerManager: ObservableObject {
         var frame = document.getElementById('frame');
         var handshake;
         var watchedVideo;
+        var playing = false;
 
         function post(message) {
           try { window.webkit.messageHandlers.player.postMessage(message); } catch (e) {}
@@ -610,6 +638,15 @@ final class PlayerManager: ObservableObject {
         document.addEventListener('fullscreenchange', fullScreenDidChange);
         document.addEventListener('webkitfullscreenchange', fullScreenDidChange);
 
+        // Leaving the app hides this page, and the embed stops itself when that happens. The
+        // app holds an audio session that can carry the sound on, so ask the embed to keep
+        // going — twice, because the first ask can land while the page is still being put away.
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden || !playing) { return; }
+          command('playVideo');
+          setTimeout(function () { if (playing) { command('playVideo'); } }, 400);
+        });
+
         // The embed only starts reporting state once we introduce ourselves; it can miss the
         // first few messages while it boots, so repeat briefly.
         frame.addEventListener('load', function () {
@@ -630,6 +667,7 @@ final class PlayerManager: ObservableObject {
           if (!data) { return; }
 
           if (data.event === 'onStateChange') {
+            playing = data.info === 1;
             post({ type: 'state', state: data.info });
           } else if (data.event === 'onError') {
             post({ type: 'error', state: data.info });

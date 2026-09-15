@@ -18,8 +18,10 @@ app (Apple Music-style shelves, artwork cards, inset-grouped library, context me
 - **Library** —
   - *Signed in with Google*: your subscriptions, playlists and liked videos
   - *On this device*: favorites, watch later and watch history
-- **Settings** — Google sign-in, API key, library counts, and what is left of the day's API
-  quota
+- **Background playback** — the audio carries on when the app is backgrounded or the screen
+  locks, with title, artwork, scrubber and transport on the lock screen and in Control Centre
+- **Settings** — Google sign-in, API key, library counts, what is left of the day's API quota,
+  and a reset that puts the device back to a fresh install
 
 ## What the YouTube API can and cannot do
 

@@ -209,6 +209,18 @@ final class NotificationStore: ObservableObject {
         persist()
     }
 
+    /// The inbox, the opt-ins, the ledger of what has been seen — all of it. For the reset in
+    /// Settings. `hasBootstrapped` goes back to false on purpose: the next check should learn
+    /// what already exists rather than announce a back catalogue all at once.
+    func eraseEverything() {
+        items = []
+        channelOptIns = []
+        seenVideoIds = []
+        hasBootstrapped = false
+        mode = .off
+        persist()
+    }
+
     private func persist() {
         let snapshot = Snapshot(
             mode: mode,
