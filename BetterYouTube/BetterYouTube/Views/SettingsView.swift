@@ -9,6 +9,8 @@ struct SettingsView: View {
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var notificationStore: NotificationStore
     @EnvironmentObject private var notifications: NotificationService
+    @EnvironmentObject private var quota: QuotaTracker
+    @EnvironmentObject private var webSession: YouTubeWebSession
 
     @State private var draftKey: String = ""
     @State private var draftClientId: String = ""
@@ -19,6 +21,11 @@ struct SettingsView: View {
     @State private var account: Channel?
     @State private var showsTakeoutImporter = false
     @State private var importSummary: WatchLaterStore.ImportSummary?
+    @State private var showsYouTubeSignIn = false
+    @State private var isImportingBells = false
+    @State private var bellImport: NotificationStore.YouTubeImport?
+    @State private var showsResetConfirmation = false
+    @State private var isResetting = false
 
     var body: some View {
         Form {
@@ -26,6 +33,8 @@ struct SettingsView: View {
             watchLaterSection
             notificationsSection
             apiKeySection
+            quotaSection
+            youTubeHomeSection
 
             Section("On This Device") {
                 LabeledContent("Favorites", value: "\(library.favorites.count)")
@@ -37,6 +46,8 @@ struct SettingsView: View {
                 .disabled(library.history.isEmpty)
             }
 
+            resetSection
+
             Section {
                 LabeledContent("Version", value: "1.0")
                 Text("An unofficial client built on the public YouTube Data API v3. Not affiliated with YouTube or Google.")
@@ -44,8 +55,6 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             } header: {
                 Text("About")
-            } footer: {
-                Text("Quota tip: each search costs 100 of the 10,000 daily API units, while browsing channels, playlists and video details costs 1 unit per request.")
             }
         }
         .minimizesPlayerBarOnScroll()
@@ -64,9 +73,14 @@ struct SettingsView: View {
                 importSummary = .init(failure: error.localizedDescription)
             }
         }
+        .sheet(isPresented: $showsYouTubeSignIn) {
+            YouTubeSignInView()
+        }
         .onAppear {
             draftKey = apiKeyStore.apiKey
             draftClientId = auth.clientId
+            // Catches the day turning over while the app sat in the background.
+            quota.refresh()
         }
         .task(id: auth.isSignedIn) {
             guard auth.isSignedIn else {
@@ -156,6 +170,18 @@ struct SettingsView: View {
         }
     }
 
+    /// What came back from YouTube's notification inbox.
+    private static func describe(_ summary: NotificationStore.YouTubeImport) -> String {
+        if let failure = summary.failure { return failure }
+        guard summary.channels > 0 else { return "Nothing in YouTube's notifications yet." }
+        let channels = summary.channels == 1
+            ? "1 channel with the bell on"
+            : "\(summary.channels) channels with the bell on"
+        return summary.notifications == 0
+            ? "\(channels) · nothing new to add"
+            : "\(channels) · \(summary.notifications) added to the inbox"
+    }
+
     /// The result of an import, in the terms someone reading it cares about.
     private static func describe(_ summary: WatchLaterStore.ImportSummary) -> String {
         if let failure = summary.failure { return failure }
@@ -192,6 +218,19 @@ struct SettingsView: View {
                     watchLater.reset()
                 }
             } else {
+                // Google ending the session looks from here like the app dropping it for no
+                // reason, and the usual cause has a fix worth naming.
+                if let reason = auth.lastSignOutReason {
+                    Label {
+                        Text(reason)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "clock.badge.exclamationmark")
+                            .foregroundStyle(.orange)
+                    }
+                }
+
                 TextField("OAuth client ID (iOS)", text: $draftClientId)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -229,6 +268,13 @@ struct SettingsView: View {
             "access_denied". Paste the client ID above to read your subscriptions, playlists and \
             liked videos, and to keep your Watch Later as a playlist on your account. Watch history is \
             not available through the API, so that list stays on this device.
+
+            On the consent screen, tick the YouTube permission before Continue: left unticked, \
+            Google issues a sign-in that can't do anything and the app has to throw it away.
+
+            Passkeys don't work in the sign-in sheet — iOS only offers them in Safari itself. \
+            Sign in to Google in Safari first, with your passkey, and this sheet borrows that \
+            session and won't ask for anything at all.
             """)
         }
     }
@@ -271,6 +317,32 @@ struct SettingsView: View {
                 Label("Check for New Videos Now", systemImage: "arrow.clockwise")
             }
             .disabled(!notificationStore.isEnabled || !auth.isSignedIn)
+
+            // Only on offer with a web session: the bell lives on YouTube's pages and nowhere
+            // in the API.
+            if webSession.isSignedIn {
+                Button {
+                    isImportingBells = true
+                    Task {
+                        bellImport = await notificationStore.importFromYouTube()
+                        isImportingBells = false
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        if isImportingBells {
+                            ProgressView().controlSize(.small)
+                        }
+                        Label("Import YouTube's Notifications", systemImage: "bell.badge")
+                    }
+                }
+                .disabled(isImportingBells)
+
+                if let bellImport {
+                    Text(Self.describe(bellImport))
+                        .font(.footnote)
+                        .foregroundStyle(bellImport.failure == nil ? Color.secondary : Color.red)
+                }
+            }
         } header: {
             Text("Notifications")
         } footer: {
@@ -279,6 +351,13 @@ struct SettingsView: View {
             you locally — the Data API offers no push channel for personal accounts, so delivery \
             follows iOS's background-refresh schedule and the moment you open the app. Turn the \
             bell on from a channel page to pick individual channels.
+
+            Which channels you gave the bell to on YouTube isn't in the API either — a \
+            subscription says whether it covers uploads or everything, and nothing about the \
+            bell's three settings. With a YouTube Home session signed in, the button above reads \
+            your real notification inbox instead and takes the channels from it: a channel only \
+            appears there because its bell is on. One gap comes with that — a channel that hasn't \
+            uploaded recently has nothing in the inbox to be found by.
             """)
         }
     }
@@ -307,6 +386,120 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
+    private var quotaSection: some View {
+        Section {
+            QuotaGauge(quota: quota)
+
+            // Where it went, biggest first — a single search is worth a hundred of anything else,
+            // and that is only obvious once it is written down.
+            ForEach(quota.breakdown.prefix(4)) { spend in
+                LabeledContent(spend.title, value: spend.units.formatted())
+            }
+
+            if quota.used > 0 {
+                Button("Reset Counter", role: .destructive) {
+                    quota.reset()
+                }
+            }
+        } header: {
+            Text("API Quota")
+        } footer: {
+            Text("""
+            The Data API gives a Cloud project \(QuotaTracker.dailyLimit.formatted()) units a day \
+            and no way to ask what is left, so this is the app's own tally of what it has spent: \
+            a search costs 100 units, every other read 1, and each change to the Watch Later \
+            playlist 50. Anything else using the same API key spends from the same allowance \
+            without appearing here. Google refills it at midnight Pacific time.
+            """)
+        }
+    }
+
+    /// Back to a fresh install. The confirmation names what goes rather than asking "are you
+    /// sure" about an unnamed thing — the API key and both sign-ins are the parts people don't
+    /// expect to lose, and they are the tedious ones to set up again.
+    private var resetSection: some View {
+        Section {
+            Button("Reset App", role: .destructive) {
+                showsResetConfirmation = true
+            }
+            .disabled(isResetting)
+        } header: {
+            Text("Reset")
+        } footer: {
+            Text("""
+            Erases everything on this device: the API key and OAuth client ID, both sign-ins, \
+            your favorites, Watch Later, watch history and recent searches, the notification \
+            inbox and its channels, and the quota tally. Your YouTube account itself is \
+            untouched — playlists, subscriptions and likes all stay where they are.
+            """)
+        }
+        .confirmationDialog(
+            "Reset Better YouTube?",
+            isPresented: $showsResetConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Erase Everything", role: .destructive) {
+                isResetting = true
+                Task {
+                    await AppReset.eraseEverything()
+                    draftKey = ""
+                    draftClientId = ""
+                    account = nil
+                    bellImport = nil
+                    importSummary = nil
+                    didSaveKey = false
+                    isResetting = false
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This device goes back to a fresh install. Nothing changes on your YouTube account.")
+        }
+    }
+
+    /// The one part of the app that steps outside the Data API, and the section says so plainly.
+    /// Nothing here is on until you sign in: without a session the Home screen doesn't even offer
+    /// the segment.
+    @ViewBuilder
+    private var youTubeHomeSection: some View {
+        Section {
+            if webSession.isSignedIn {
+                Label("Signed in to youtube.com", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+
+                Picker("Show as", selection: $webSession.rendering) {
+                    ForEach(YouTubeWebSession.FeedRendering.allCases) { rendering in
+                        Text(rendering.title).tag(rendering)
+                    }
+                }
+
+                Button("Sign Out of youtube.com", role: .destructive) {
+                    Task { await webSession.signOut() }
+                }
+            } else {
+                Button {
+                    showsYouTubeSignIn = true
+                } label: {
+                    Label("Sign in to youtube.com", systemImage: "globe")
+                }
+            }
+        } header: {
+            Text("YouTube Home")
+        } footer: {
+            Text("""
+            Your real home feed exists only on YouTube's own page: the Data API dropped the \
+            personalized feed in 2016 and related videos in 2023. Signing in here opens \
+            youtube.com in a web view and keeps its cookies on this device, apart from the Google \
+            sign-in above — that one is a token scoped to the API, this one is a browser session. \
+            The app reads the order of the videos on your home page and fetches everything it \
+            shows about them through the API. That is outside what YouTube's terms allow apps to \
+            do, it can break whenever the page changes, and it is your account that carries the \
+            risk. Sign out here and the app forgets the session and the Home segment with it.
+            """)
+        }
+    }
+
     private func signIn() {
         isSigningIn = true
         authError = nil
@@ -321,6 +514,79 @@ struct SettingsView: View {
     }
 }
 
+/// The day's allowance at a glance: what is left in figures, and how much has gone as a bar.
+/// The bar warms from green through amber to red as the day's spending climbs, so the state
+/// reads before the numbers do.
+private struct QuotaGauge: View {
+    @ObservedObject var quota: QuotaTracker
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(quota.remaining, format: .number)
+                    .font(.system(.title, design: .rounded).weight(.semibold))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                Text("of \(QuotaTracker.dailyLimit.formatted()) units left")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+
+            QuotaBar(fraction: quota.fraction, tint: tint)
+
+            HStack(spacing: 8) {
+                Text("\(quota.used.formatted()) spent today")
+                Spacer(minLength: 0)
+                Text("Resets at \(quota.resetDate.formatted(date: .omitted, time: .shortened))")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 6)
+        .animation(.snappy, value: quota.used)
+    }
+
+    /// Green while there is room, amber once three quarters have gone, red at the end.
+    private var tint: Color {
+        switch quota.fraction {
+        case ..<0.75: return .green
+        case ..<0.9: return .orange
+        default: return .red
+        }
+    }
+}
+
+/// The bar itself: a capsule track with the spent share filled over it.
+private struct QuotaBar: View {
+    let fraction: Double
+    let tint: Color
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule(style: .continuous)
+                    .fill(Color(uiColor: .tertiarySystemFill))
+                Capsule(style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [tint.opacity(0.55), tint],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    // A few units in, the fill would be a sliver too thin to read as a shape;
+                    // give it at least its own height so it starts as a dot rather than a line.
+                    .frame(width: fraction > 0 ? max(10, proxy.size.width * fraction) : 0)
+            }
+        }
+        .frame(height: 10)
+        .accessibilityElement()
+        .accessibilityLabel("Quota spent")
+        .accessibilityValue("\(Int((fraction * 100).rounded())) percent")
+    }
+}
+
 #Preview {
     NavigationStack { SettingsView() }
         .environmentObject(APIKeyStore.shared)
@@ -329,4 +595,6 @@ struct SettingsView: View {
         .environmentObject(GoogleAuthService.shared)
         .environmentObject(NotificationStore.shared)
         .environmentObject(NotificationService.shared)
+        .environmentObject(QuotaTracker.shared)
+        .environmentObject(YouTubeWebSession.shared)
 }

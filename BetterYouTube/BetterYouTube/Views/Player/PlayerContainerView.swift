@@ -236,9 +236,9 @@ struct PlayerActions: View {
 // MARK: - Shrinking the bar on scroll
 
 extension View {
-    /// Shrinks the docked bar to its pill as you scroll down and brings it back when you scroll
-    /// up, so it behaves like the tab bar it sits on — `tabBarMinimizeBehavior` is the tab bar's
-    /// half of the same idea. Attach it to a screen's scroll view.
+    /// Shrinks the docked bar to its pill as you scroll down and brings it back once you reach
+    /// the top again, so it behaves like the tab bar it sits on — `tabBarMinimizeBehavior` is
+    /// the tab bar's half of the same idea. Attach it to a screen's scroll view.
     func minimizesPlayerBarOnScroll() -> some View {
         onScrollGeometryChange(for: CGFloat.self) { geometry in
             geometry.contentOffset.y + geometry.contentInsets.top

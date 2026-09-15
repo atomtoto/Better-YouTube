@@ -96,6 +96,14 @@ final class LibraryStore: ObservableObject {
         persist()
     }
 
+    /// Everything this device kept, gone. For the reset in Settings.
+    func eraseEverything() {
+        favorites = []
+        watchLater = []
+        history = []
+        persist()
+    }
+
     func clearHistory() {
         history.removeAll()
         persist()

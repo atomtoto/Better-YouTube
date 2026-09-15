@@ -133,6 +133,61 @@ final class NotificationStore: ObservableObject {
         return announced
     }
 
+    // MARK: YouTube's own notifications
+
+    /// What reading YouTube's notification inbox turned up.
+    struct YouTubeImport: Equatable {
+        var notifications = 0
+        var channels = 0
+        var failure: String?
+    }
+
+    /// Reads the account's real notification inbox through the web session, and takes two things
+    /// from it: the notifications themselves, and the channels behind them.
+    ///
+    /// The second is the answer to "which channels have the bell on", arrived at sideways. The
+    /// Data API cannot say: a subscription resource carries `contentDetails.activityType`, a
+    /// leftover from when the choice was uploads-or-everything, and nothing that maps to the
+    /// bell's three settings. But a channel only reaches this inbox *because* its bell is on, so
+    /// the channels that appear here are the ones you asked to hear about — with the one gap
+    /// that a channel which hasn't uploaded lately isn't in the list to be found.
+    func importFromYouTube() async -> YouTubeImport {
+        do {
+            let ids = try await YouTubeFeedReader.shared.harvest(from: YouTubeWebSession.notificationsURL)
+            let videos = try await YouTubeAPIService.shared.videos(ids: ids)
+            guard !videos.isEmpty else {
+                return YouTubeImport(failure: YouTubeFeedIssue.nothingFound.localizedDescription)
+            }
+
+            let channels = Set(videos.map(\.channelId).filter { !$0.isEmpty })
+            channelOptIns.formUnion(channels)
+            if mode == .off { mode = .selected }
+
+            // YouTube has already shown you these, so they land in the inbox read, and counted as
+            // seen — announcing them again as banners would be the app shouting yesterday's news.
+            let known = Set(items.map(\.id))
+            let imported = videos
+                .filter { !known.contains($0.id) }
+                .map { video -> NotificationItem in
+                    var item = NotificationItem(video: video)
+                    item.isRead = true
+                    return item
+                }
+
+            items.append(contentsOf: imported)
+            items.sort { $0.date > $1.date }
+            if items.count > 100 { items.removeLast(items.count - 100) }
+
+            seenVideoIds.formUnion(videos.map(\.id))
+            hasBootstrapped = true
+            persist()
+
+            return YouTubeImport(notifications: imported.count, channels: channels.count)
+        } catch {
+            return YouTubeImport(failure: error.localizedDescription)
+        }
+    }
+
     func markRead(_ item: NotificationItem) {
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[index].isRead = true
@@ -151,6 +206,18 @@ final class NotificationStore: ObservableObject {
 
     func clear() {
         items.removeAll()
+        persist()
+    }
+
+    /// The inbox, the opt-ins, the ledger of what has been seen — all of it. For the reset in
+    /// Settings. `hasBootstrapped` goes back to false on purpose: the next check should learn
+    /// what already exists rather than announce a back catalogue all at once.
+    func eraseEverything() {
+        items = []
+        channelOptIns = []
+        seenVideoIds = []
+        hasBootstrapped = false
+        mode = .off
         persist()
     }
 

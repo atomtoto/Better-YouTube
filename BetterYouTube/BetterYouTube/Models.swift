@@ -13,6 +13,9 @@ struct Video: Identifiable, Codable, Equatable, Hashable {
     var viewCount: Int?
     var likeCount: Int?
     var duration: String?
+    /// YouTube's own category for the video ("10" music, "20" gaming…). Only the endpoints that
+    /// return a full snippet carry it, and it is what the recommendations are narrowed by.
+    var categoryId: String?
 
     var watchURL: URL? { URL(string: "https://www.youtube.com/watch?v=\(id)") }
 
@@ -70,6 +73,17 @@ extension Array where Element == Video {
     }
 }
 
+/// What the signed-in account has rated a video — the real like on YouTube, not this device's
+/// favourites list.
+enum VideoRating: String, Codable, Equatable {
+    case like
+    case dislike
+    case none
+    /// What `videos.getRating` answers for a video the account has never rated in a session
+    /// that isn't signed in at all.
+    case unspecified
+}
+
 /// Search results can contain either a video or a channel.
 enum SearchResult: Identifiable, Hashable {
     case video(Video)
@@ -121,6 +135,7 @@ struct YTResourceId: Decodable {
 
 struct YTSnippet: Decodable {
     let title: String?
+    let categoryId: String?
     let description: String?
     let channelId: String?
     let channelTitle: String?
@@ -168,6 +183,12 @@ struct YTPlaylistItemResource: Decodable {
     let contentDetails: YTContentDetails?
 }
 
+/// One row of `videos.getRating`.
+struct YTRatingItem: Decodable {
+    let videoId: String
+    let rating: String
+}
+
 struct YTSubscriptionItem: Decodable {
     let id: String
     let snippet: YTSnippet?
@@ -196,9 +217,20 @@ struct YTCommentSnippet: Decodable {
 
 struct YTErrorResponse: Decodable {
     struct YTError: Decodable {
+        /// One machine-readable cause. `reason` is what tells a scope refusal apart from the
+        /// several other things Google answers 403 to — quota, disabled comments, a video that
+        /// won't be rated — which the prose in `message` does not.
+        struct Detail: Decodable {
+            let reason: String?
+        }
         let message: String
+        let errors: [Detail]?
     }
     let error: YTError
+
+    var reasons: Set<String> {
+        Set(error.errors?.compactMap(\.reason) ?? [])
+    }
 }
 
 // MARK: - Mapping
@@ -230,6 +262,7 @@ extension Video {
         self.viewCount = resource.statistics?.viewCount.flatMap { Int($0) }
         self.likeCount = resource.statistics?.likeCount.flatMap { Int($0) }
         self.duration = resource.contentDetails?.duration.map(ISO8601DurationFormatter.humanReadable)
+        self.categoryId = resource.snippet?.categoryId
     }
 
     init?(searchItem: YTSearchItem) {

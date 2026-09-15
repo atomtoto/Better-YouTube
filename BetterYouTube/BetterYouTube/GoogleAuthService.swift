@@ -11,6 +11,8 @@ enum AuthError: LocalizedError {
     case invalidClientId
     case cancelled
     case consentDenied(String?)
+    /// Signed in, but without the permission the app runs on.
+    case scopeDeclined
     case exchangeFailed(String)
     /// Google rejected the credentials themselves (expired or revoked refresh token).
     case tokenRejected(String)
@@ -23,6 +25,13 @@ enum AuthError: LocalizedError {
             return "That doesn't look like an iOS OAuth client ID (it should end in .apps.googleusercontent.com)."
         case .cancelled:
             return "Sign-in was cancelled."
+        case .scopeDeclined:
+            return """
+            Google signed you in without the YouTube permission, which leaves the app able to do \
+            nothing with the account. On the consent screen there is a tick box — "See, edit, and \
+            permanently delete your YouTube videos, ratings, comments and captions" — and it has \
+            to be ticked before Continue. Sign in again and tick it.
+            """
         case .consentDenied(let reason):
             if reason == "access_denied" {
                 return """
@@ -46,9 +55,20 @@ struct OAuthTokens: Codable {
     var accessToken: String
     var refreshToken: String?
     var expiresAt: Date
+    /// The scopes Google actually granted, space-separated, as it reports them back.
+    ///
+    /// Not the same thing as the scopes that were asked for. Google's consent screen puts a
+    /// tick box against each sensitive permission, and leaving one unticked still produces a
+    /// perfectly valid token — one that 403s on everything the app does with it.
+    var grantedScope: String?
 
     /// Treat tokens as expired a minute early so a request never races the expiry.
     var isExpired: Bool { Date() >= expiresAt.addingTimeInterval(-60) }
+
+    /// Whether Google handed over a particular permission.
+    func grants(_ scope: String) -> Bool {
+        grantedScope?.split(separator: " ").contains { $0 == scope } ?? false
+    }
 }
 
 /// Tokens live in the keychain rather than UserDefaults — they're credentials.
@@ -116,6 +136,17 @@ final class GoogleAuthService: ObservableObject {
     static let shared = GoogleAuthService()
 
     @Published private(set) var isSignedIn: Bool = false
+    /// Why the app signed itself out, when it wasn't you. Google rejecting a saved sign-in looks
+    /// from the outside like the app losing it at random, and the usual cause has a fix worth
+    /// naming. Cleared by the next successful sign-in.
+    @Published private(set) var lastSignOutReason: String?
+
+    /// What a rejected refresh token almost always means here.
+    private static let testingExpiryExplanation = """
+    Google stopped accepting the saved sign-in. While the OAuth consent screen is in Testing, \
+    refresh tokens expire after seven days — publishing the app under Google Auth Platform → \
+    Audience removes that limit. Sign in again to carry on.
+    """
     @Published var clientId: String {
         didSet { UserDefaults.standard.set(clientId, forKey: Self.clientIdKey) }
     }
@@ -125,7 +156,12 @@ final class GoogleAuthService: ObservableObject {
     /// Read/write: the app creates and edits its own Watch Later playlist. `youtube.readonly`
     /// would only let it read, and a token granted for that scope can never be upgraded in
     /// place — see `discardTokensGrantedForAnotherScope`.
-    private static let scope = "https://www.googleapis.com/auth/youtube"
+    ///
+    /// `force-ssl` rather than plain `youtube` because it is the wider of the two — "See, edit,
+    /// and permanently delete your YouTube videos, ratings, comments and captions" — and it is
+    /// the one every endpoint this app touches accepts. Ratings and comments are the places
+    /// where plain `youtube` can come back 403 for lack of permission.
+    private static let scope = "https://www.googleapis.com/auth/youtube.force-ssl"
     private static let authEndpoint = "https://accounts.google.com/o/oauth2/v2/auth"
     private static let tokenEndpoint = "https://oauth2.googleapis.com/token"
 
@@ -147,8 +183,13 @@ final class GoogleAuthService: ObservableObject {
     /// the token was issued — an update that added write access, say — the token is dropped and the
     /// user signs in once more. Without this the app would look signed in and refuse every write.
     private func discardTokensGrantedForAnotherScope() {
+        guard tokens != nil else { return }
+        // Membership, not equality: Google returns the granted scopes as a list, and hands back
+        // more than was asked for often enough (`openid`, a profile scope) that comparing the
+        // whole string would throw away a perfectly good sign-in on every launch.
         let granted = UserDefaults.standard.string(forKey: Self.grantedScopeKey)
-        guard tokens != nil, granted != Self.scope else { return }
+        let holdsScope = granted?.split(separator: " ").contains { $0 == Self.scope } ?? false
+        guard !holdsScope else { return }
         signOut()
     }
 
@@ -207,15 +248,31 @@ final class GoogleAuthService: ObservableObject {
             redirectURI: redirectURI,
             clientId: trimmedClientId
         )
+
+        // Google's consent screen puts a tick box against the YouTube permission, and leaving it
+        // unticked still issues a valid token — one that 403s on every call the app makes. The
+        // app used to record the scope it *asked* for and call itself signed in, so this showed
+        // up as being thrown out again seconds later with no way to tell why. Refuse it here,
+        // where the reason can still be explained.
+        guard tokens.grants(Self.scope) else { throw AuthError.scopeDeclined }
+
         KeychainStore.save(tokens)
-        UserDefaults.standard.set(Self.scope, forKey: Self.grantedScopeKey)
+        UserDefaults.standard.set(tokens.grantedScope, forKey: Self.grantedScopeKey)
         self.tokens = tokens
+        lastSignOutReason = nil
     }
 
     func signOut() {
+        signOut(reason: nil)
+    }
+
+    /// `reason` is set only when the app is the one ending the session, so Settings can say what
+    /// happened instead of leaving you to discover it.
+    private func signOut(reason: String?) {
         KeychainStore.clear()
         UserDefaults.standard.removeObject(forKey: Self.grantedScopeKey)
         tokens = nil
+        lastSignOutReason = reason
         // Set outright rather than leaning on the observer: this also runs from `init`, where
         // property observers stay quiet.
         isSignedIn = false
@@ -224,28 +281,55 @@ final class GoogleAuthService: ObservableObject {
     /// Called when Google refuses a request for lack of scope. The stored token can't be widened,
     /// so the only way forward is a fresh consent — the safety net for a token whose recorded
     /// scope and real scope have drifted apart.
-    func signOutForInsufficientScope() {
-        signOut()
+    /// Whether the stored sign-in actually carries the permission the app asks for. When it
+    /// does, a refusal for lack of permission is not something signing in again can mend, and
+    /// the app must not throw the session away over it — that was a loop with no exit.
+    var holdsRequestedScope: Bool {
+        tokens?.grants(Self.scope) ?? false
+    }
+
+    /// `endpoint` is named in the message on purpose: a refusal says which call was refused, and
+    /// without that the only way to find out is to guess.
+    func signOutForInsufficientScope(endpoint: String) {
+        signOut(reason: """
+        Google refused “\(endpoint)” for lack of permission, and a token's scope can't be widened \
+        in place. This almost always means the YouTube tick box on the consent screen — "See, \
+        edit, and permanently delete your YouTube videos, ratings, comments and captions" — was \
+        left unticked. Sign in again and tick it before Continue.
+        """)
     }
 
     /// Returns a valid access token, refreshing it first when needed. `nil` means "not signed in".
     func accessToken() async -> String? {
         guard let current = tokens else { return nil }
         guard current.isExpired else { return current.accessToken }
-        guard let refreshToken = current.refreshToken else {
-            signOut()
+        return await renewAccessToken()
+    }
+
+    /// Refreshes whatever the stored token's expiry says — for a 401, which means Google has
+    /// stopped honouring an access token that still looks good from here.
+    func refreshedAccessToken() async -> String? {
+        guard tokens != nil else { return nil }
+        return await renewAccessToken()
+    }
+
+    private func renewAccessToken() async -> String? {
+        guard let refreshToken = tokens?.refreshToken else {
+            signOut(reason: Self.testingExpiryExplanation)
             return nil
         }
         do {
             var refreshed = try await refresh(refreshToken: refreshToken)
-            // Google omits the refresh token on refresh responses; keep the original.
+            // Google omits the refresh token on refresh responses; keep the original. It can
+            // leave out the scope too, which doesn't mean the grant shrank.
             if refreshed.refreshToken == nil { refreshed.refreshToken = refreshToken }
+            if refreshed.grantedScope == nil { refreshed.grantedScope = tokens?.grantedScope }
             KeychainStore.save(refreshed)
             tokens = refreshed
             return refreshed.accessToken
         } catch AuthError.tokenRejected {
             // Revoked, or a Testing-mode refresh token past its 7-day life: ask for a fresh consent.
-            signOut()
+            signOut(reason: Self.testingExpiryExplanation)
             return nil
         } catch {
             // Transient failure (offline, 5xx): keep the session and retry on the next request.
@@ -279,11 +363,15 @@ final class GoogleAuthService: ObservableObject {
         let accessToken: String
         let refreshToken: String?
         let expiresIn: Int
+        /// What Google actually granted, which is not always what was asked for — see
+        /// `OAuthTokens.grantedScope`.
+        let scope: String?
 
         enum CodingKeys: String, CodingKey {
             case accessToken = "access_token"
             case refreshToken = "refresh_token"
             case expiresIn = "expires_in"
+            case scope
         }
     }
 
@@ -332,7 +420,8 @@ final class GoogleAuthService: ObservableObject {
         return OAuthTokens(
             accessToken: decoded.accessToken,
             refreshToken: decoded.refreshToken,
-            expiresAt: Date().addingTimeInterval(TimeInterval(decoded.expiresIn))
+            expiresAt: Date().addingTimeInterval(TimeInterval(decoded.expiresIn)),
+            grantedScope: decoded.scope
         )
     }
 
