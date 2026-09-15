@@ -20,6 +20,12 @@ struct RootTabView: View {
         .sheet(isPresented: $showsOnboarding) {
             OnboardingView()
         }
+        .sheet(item: $router.pendingDownloadConfig) { link in
+            DownloadConfigImportView(link: link)
+        }
+        .onOpenURL { url in
+            router.open(url)
+        }
         .onAppear {
             showsOnboarding = !apiKeyStore.hasKey && !auth.isSignedIn
         }

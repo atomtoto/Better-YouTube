@@ -19,8 +19,8 @@ app (Apple Music-style shelves, artwork cards, inset-grouped library, context me
   - *Signed in with Google*: your subscriptions, playlists and liked videos
   - *On this device*: favorites, watch later and watch history
 - **Downloads** — videos kept in a `Downloads` folder on the device and played from the file
-  wherever they turn up in the app, with no network at all. Needs a resolver you run — see
-  [Downloads](#downloads)
+  wherever they turn up in the app, with no network at all. Needs a resolver, and
+  [one is included](#one-is-included) — see [Downloads](#downloads)
 - **Background playback** — the audio carries on when the app is backgrounded or the screen
   locks, with title, artwork, scrubber and transport on the lock screen and in Control Centre
 - **Settings** — Google sign-in, API key, library counts, what is left of the day's API quota,
@@ -197,11 +197,35 @@ rather than handed to the downloader, which is a worse place to find out about i
 A token can be set for a service that isn't open to the internet. One typed with its own scheme
 (`Api-Key abc123`) is sent as it stands; a bare one is sent as `Bearer`.
 
-Known resolvers this fits: **yt-dlp** behind a small HTTP wrapper of your own — the one that is
-actually maintained against YouTube's changes, and so the one worth building on — or a
-self-hosted [**cobalt**](https://github.com/imputnet/cobalt), whose `POST /` answers
-`{"status": "tunnel", "url", "filename"}` and drops straight in. If you self-host cobalt, set its
-`API_URL` to the address you reach it on, or it hands back links pointing at its own localhost.
+### One is included
+
+`resolver/` is a working one: about 300 lines of Python standard library around **yt-dlp**, with a
+`docker compose up` and a test suite that runs offline. That split is deliberate — yt-dlp is the
+only part that needs keeping current, and it is maintained by people who do it full time, so the
+container refreshes it on every start.
+
+It answers in two ways, and the difference is what it costs you to run. When YouTube offers the
+wanted height **already joined** — in practice 360p, sometimes 720p — the answer is YouTube's own
+CDN URL and the phone fetches it from Google: this server moves no video at all. Above that
+YouTube keeps video and audio apart and the app plays a single file, so the answer is a link back
+to the resolver, which re-resolves and pipes both through ffmpeg into a fragmented MP4 as it goes.
+Nothing is staged on disk, and `ALLOW_MUX=0` refuses that path entirely if you would rather never
+carry a byte of video. Details in [`resolver/README.md`](resolver/README.md).
+
+Other resolvers fit too: a self-hosted [**cobalt**](https://github.com/imputnet/cobalt), whose
+`POST /` answers `{"status": "tunnel", "url", "filename"}`, drops straight in — set its `API_URL`
+to the address you reach it on, or it hands back links pointing at its own localhost.
+
+### Setting one up on somebody else's phone
+
+Typing a URL into a phone is the worst part of this, so it can be skipped. **Settings → Downloads
+→ Share Setup** turns the current configuration into a `betteryoutube://` link and a QR code:
+point another phone's camera at it and it is configured. The access token is left out unless you
+ask for it, because a QR code gets photographed and forwarded far more casually than a password.
+
+A link is never applied on its own. Opening one shows which host it points at, says that every
+download will go through it, and waits — a link is something anyone can send you, and accepting
+one quietly would let a stranger route your downloads through their server.
 
 Be clear about what this is, the same way the home feed above is. Downloading a video is outside
 what YouTube's terms allow, whoever fetches it; keeping a personal copy of something you can
@@ -244,6 +268,7 @@ menu, and the Downloads screen says so rather than offering a button that can't 
 ## Project structure
 
 ```
+resolver/                        A yt-dlp resolver: server.py, Dockerfile, compose, tests
 BetterYouTube/
   BetterYouTube.xcodeproj/       Xcode project (single iOS app target, iOS 26+)
   BetterYouTube/
@@ -258,6 +283,7 @@ BetterYouTube/
     DownloadService.swift        The configured resolver, and reading its reply
     DownloadManager.swift        The background download queue
     LocalPlayback.swift          AVPlayer half of the player, for downloaded files
+    DownloadConfigLink.swift     betteryoutube:// setup links, and their QR codes
     YouTubeWebSession.swift      Optional youtube.com web session + home-feed reader
     Utilities.swift              Duration, count and relative-date formatters, Takeout CSV reader
     ViewModels/                  One @MainActor view model per screen

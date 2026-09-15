@@ -52,6 +52,7 @@
 		61855544A58CD804FE142178 /* LocalPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F212278CDA1C2466E2A0C880 /* LocalPlayback.swift */; };
 		77E26E4559CB67E2D529AD5D /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E53F5E3377E0D4B22DB8C3CF /* DownloadsView.swift */; };
 		A8AA70CD423FD5DCC238368F /* LocalPlayerSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 989F6E87E9B3CF0057F0FCC7 /* LocalPlayerSurface.swift */; };
+		C6BACBED1D1C50E9026BAEAC /* DownloadConfigLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ECDDB993DD4C6CDAA43CDB3 /* DownloadConfigLink.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -102,6 +103,7 @@
 		F212278CDA1C2466E2A0C880 /* LocalPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LocalPlayback.swift; path = LocalPlayback.swift; sourceTree = "<group>"; };
 		E53F5E3377E0D4B22DB8C3CF /* DownloadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DownloadsView.swift; path = DownloadsView.swift; sourceTree = "<group>"; };
 		989F6E87E9B3CF0057F0FCC7 /* LocalPlayerSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LocalPlayerSurface.swift; path = LocalPlayerSurface.swift; sourceTree = "<group>"; };
+		6ECDDB993DD4C6CDAA43CDB3 /* DownloadConfigLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DownloadConfigLink.swift; path = DownloadConfigLink.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -169,6 +171,7 @@
 		CE882751F8B3EE4485706ED4 /* BetterYouTube */ = {
 			isa = PBXGroup;
 			children = (
+				6ECDDB993DD4C6CDAA43CDB3 /* DownloadConfigLink.swift */,
 				F212278CDA1C2466E2A0C880 /* LocalPlayback.swift */,
 				3EDBA542F6162FE9537251BC /* DownloadManager.swift */,
 				D29E2556D0A833F15A04D6B0 /* DownloadService.swift */,
@@ -318,6 +321,7 @@
 				61855544A58CD804FE142178 /* LocalPlayback.swift in Sources */,
 				77E26E4559CB67E2D529AD5D /* DownloadsView.swift in Sources */,
 				A8AA70CD423FD5DCC238368F /* LocalPlayerSurface.swift in Sources */,
+				C6BACBED1D1C50E9026BAEAC /* DownloadConfigLink.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

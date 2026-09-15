@@ -1,0 +1,28 @@
+services:
+  resolver:
+    build: .
+    # Or, without cloning anything: image: python:3.12-slim with server.py mounted. Building is
+    # simpler and gets you ffmpeg.
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # The address the PHONE reaches this on — not the container's own. Without it, downloads
+      # that need joining are handed links pointing at localhost, which the phone cannot reach.
+      # Behind a reverse proxy or a tunnel, this is the public https address.
+      PUBLIC_URL: "${PUBLIC_URL:-http://localhost:8080}"
+
+      # Leave empty and anyone who can reach the port can use it. Set it, and put the same value
+      # in the app's Settings → Downloads → token field.
+      RESOLVER_TOKEN: "${RESOLVER_TOKEN:-}"
+
+      # A ceiling regardless of what the app asks for. 1080 is a sensible default; 720 keeps the
+      # muxed path cheaper, since that is the one whose bytes go through this server.
+      MAX_HEIGHT: "${MAX_HEIGHT:-1080}"
+
+      # 0 refuses anything needing ffmpeg, so this server only ever answers questions and never
+      # carries video. Downloads are then capped at whatever YouTube offers already joined.
+      ALLOW_MUX: "${ALLOW_MUX:-1}"
+
+      # 0 skips the yt-dlp update on boot.
+      UPDATE_YTDLP: "${UPDATE_YTDLP:-1}"

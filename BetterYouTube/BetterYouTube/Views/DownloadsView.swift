@@ -132,30 +132,50 @@ struct DownloadsView: View {
                 message: "Hold any video and choose Download. It lands in the Downloads folder and plays from there wherever you find it again — including with no network."
             )
         } else {
-            VStack(spacing: 14) {
-                Image(systemName: "arrow.down.circle")
-                    .font(.system(size: 44))
-                    .foregroundStyle(.tertiary)
-                Text("Downloads are off")
-                    .font(.headline)
-                Text("""
-                The app plays video through YouTube's own embed, which never exposes a media file — \
-                so it has no way to fetch one on its own. Point it at a download service you run \
-                and everything here starts working.
-                """)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            ScrollView {
+                VStack(spacing: 16) {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.system(size: 44))
+                        .foregroundStyle(.tertiary)
+                    Text("Downloads are off")
+                        .font(.title3.bold())
+                    Text("""
+                    The app plays video through YouTube's own embed, which never hands over a media \
+                    file, so it can't fetch one by itself. It needs a small service — a resolver — \
+                    to ask. There isn't one built in, because which one to trust isn't the app's \
+                    choice to make.
+                    """)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
 
-                NavigationLink {
-                    SettingsView()
-                } label: {
-                    Text("Open Settings")
-                        .font(.subheadline.weight(.semibold))
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label {
+                            Text("**Somebody sent you a link or a QR code?** Open it, or scan it with the camera. That is the whole setup.")
+                        } icon: {
+                            Image(systemName: "qrcode.viewfinder")
+                        }
+                        Label {
+                            Text("**Running it yourself?** The `resolver` folder in this project is a `docker compose up`, then paste the address into Settings.")
+                        } icon: {
+                            Image(systemName: "server.rack")
+                        }
+                    }
+                    .font(.footnote)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .cardBackground()
+
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Text("Open Settings")
+                            .font(.subheadline.weight(.semibold))
+                    }
                 }
+                .padding(Theme.Spacing.gutter * 2)
+                .frame(maxWidth: .infinity)
             }
-            .padding(Theme.Spacing.gutter * 2)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
@@ -375,4 +395,167 @@ struct DownloadedBadge: View {
         .environmentObject(DownloadSettings.shared)
         .environmentObject(LibraryStore.shared)
         .environmentObject(WatchLaterStore.shared)
+}
+
+// MARK: - Setting a service up by link
+
+/// What a configuration link opens: what it points at, and a choice about it.
+///
+/// Deliberately a decision rather than a notification. A link is something anyone can send, and
+/// accepting one silently would mean a message from a stranger could route every video you
+/// download through their server. So the host is the largest thing on the sheet, and nothing is
+/// saved until the button is pressed.
+struct DownloadConfigImportView: View {
+    let link: DownloadConfigLink
+    @EnvironmentObject private var settings: DownloadSettings
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                Image(systemName: "arrow.down.circle")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.tint)
+
+                VStack(spacing: 8) {
+                    Text("Use this download service?")
+                        .font(.title3.bold())
+                        .multilineTextAlignment(.center)
+
+                    Text(link.displayHost)
+                        .font(.headline.monospaced())
+                        .multilineTextAlignment(.center)
+                        .textSelection(.enabled)
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Label(
+                        "Every video you download will be fetched through this server, which will see which videos they are.",
+                        systemImage: "eye"
+                    )
+                    if !link.token.isEmpty {
+                        Label("The link carries an access token, which will be saved too.", systemImage: "key")
+                    }
+                    if link.isInsecure {
+                        Label(
+                            "This address is plain http, so nothing sent to it is encrypted.",
+                            systemImage: "exclamationmark.triangle"
+                        )
+                        .foregroundStyle(.orange)
+                    }
+                    if settings.isConfigured {
+                        Label("This replaces the service already set up.", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .cardBackground()
+
+                Text("Only accept this from someone you trust.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+
+                Spacer()
+
+                Button {
+                    settings.endpoint = link.endpoint
+                    settings.token = link.token
+                    dismiss()
+                } label: {
+                    Text("Use This Service")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(Theme.Spacing.gutter)
+            .navigationTitle("Downloads")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+/// The other end of the same link: hand your own setup to someone else.
+///
+/// The token is left out unless it is asked for. A QR code ends up photographed, shown on a
+/// screen and shared onwards far more casually than a password ever is, and most of the time the
+/// address alone is what the other person needs.
+struct DownloadConfigShareView: View {
+    @EnvironmentObject private var settings: DownloadSettings
+    @Environment(\.dismiss) private var dismiss
+    @State private var includesToken = false
+
+    private var link: DownloadConfigLink {
+        DownloadConfigLink(
+            endpoint: settings.trimmedEndpoint,
+            token: includesToken ? settings.token : ""
+        )
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 18) {
+                    if let url = link.url {
+                        QRCodeView(text: url.absoluteString)
+                            .artworkShadow()
+
+                        Text("Point a camera at this to set up the same service on another phone.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+
+                        if !settings.token.isEmpty {
+                            Toggle("Include the access token", isOn: $includesToken)
+                                .font(.subheadline)
+                                .padding(.horizontal, 4)
+                        }
+
+                        Text(url.absoluteString)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.tertiary)
+                            .textSelection(.enabled)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 4)
+
+                        ShareLink(item: url) {
+                            Label("Share Link", systemImage: "square.and.arrow.up")
+                                .font(.subheadline.weight(.semibold))
+                        }
+
+                        if includesToken {
+                            Label(
+                                "Anyone who gets this can use your resolver. Send it the way you'd send a password.",
+                                systemImage: "exclamationmark.triangle.fill"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                            .multilineTextAlignment(.center)
+                        }
+                    } else {
+                        Text("Set a download service up first and there will be something to share.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .padding(Theme.Spacing.gutter)
+            }
+            .navigationTitle("Share Setup")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
 }

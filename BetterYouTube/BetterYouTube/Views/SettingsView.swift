@@ -34,6 +34,7 @@ struct SettingsView: View {
     @State private var draftToken: String = ""
     @State private var didSaveDownloadSource = false
     @State private var showsRemoveDownloadsConfirmation = false
+    @State private var showsDownloadShare = false
 
     var body: some View {
         Form {
@@ -537,6 +538,14 @@ struct SettingsView: View {
                 )
             )
 
+            if downloadSettings.isConfigured {
+                Button {
+                    showsDownloadShare = true
+                } label: {
+                    Label("Share Setup", systemImage: "qrcode")
+                }
+            }
+
             if !downloadStore.records.isEmpty {
                 Button("Remove All Downloads", role: .destructive) {
                     showsRemoveDownloadsConfirmation = true
@@ -557,6 +566,9 @@ struct SettingsView: View {
         } message: {
             Text("The files go from this device. Nothing changes on your YouTube account.")
         }
+        .sheet(isPresented: $showsDownloadShare) {
+            DownloadConfigShareView()
+        }
     }
 
     /// Kept out of the view builder: it is three paragraphs, and inlining it buries the section.
@@ -573,6 +585,9 @@ struct SettingsView: View {
     Files land in Downloads, which the Files app shows under “Better YouTube”. They stay out of \
     iCloud backups, and a downloaded video plays from the file everywhere in the app, with no \
     network at all.
+
+    Once it works, Share Setup hands the same service to another phone as a link or a QR \
+    code, so nobody else has to type any of this.
     """
 
     private var downloadSourceStatus: String {
