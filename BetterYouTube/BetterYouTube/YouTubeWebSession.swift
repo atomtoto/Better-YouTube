@@ -12,6 +12,8 @@ enum YouTubeFeedIssue: LocalizedError, Equatable {
     case nothingFound
     case loadFailed(String)
     case timedOut
+    /// Another page is being read on the one web view there is.
+    case busy
 
     var errorDescription: String? {
         switch self {
@@ -24,7 +26,9 @@ enum YouTubeFeedIssue: LocalizedError, Equatable {
         case .loadFailed(let message):
             return message
         case .timedOut:
-            return "YouTube's home page didn't finish loading."
+            return "YouTube's page didn't finish loading."
+        case .busy:
+            return "Still reading the last page from YouTube. Try again in a moment."
         }
     }
 }
@@ -68,6 +72,9 @@ final class YouTubeWebSession: ObservableObject {
     }
 
     static let homeURL = URL(string: "https://m.youtube.com/")!
+    /// The account's own notification inbox — the bell's actual output, which the Data API has
+    /// no endpoint for.
+    static let notificationsURL = URL(string: "https://m.youtube.com/feed/notifications")!
 
     /// A full mobile Safari string. `WKWebView` otherwise sends a user agent that omits
     /// `Version/… Safari/…`, which is exactly how Google recognises an embedded web view and
@@ -161,6 +168,7 @@ final class YouTubeFeedReader {
     static let shared = YouTubeFeedReader()
 
     private var webView: WKWebView?
+    private var isHarvesting = false
     private let bridge = FeedReaderNavigationBridge()
     fileprivate var loadContinuation: CheckedContinuation<Void, Error>?
 
@@ -178,14 +186,20 @@ final class YouTubeFeedReader {
     /// two or three that fit on a phone.
     private static let readerHeight: CGFloat = 2400
 
-    /// The ids on the home page, in YouTube's order.
-    func harvest() async throws -> [String] {
+    /// The video ids on one of YouTube's own pages, in the order it puts them in — the home feed
+    /// by default, or the notification inbox.
+    func harvest(from url: URL = YouTubeWebSession.homeURL) async throws -> [String] {
         guard YouTubeWebSession.shared.isSignedIn else { throw YouTubeFeedIssue.notSignedIn }
+        // One web view, one page at a time: the home feed and the inbox would otherwise take
+        // each other's load out from under them.
+        guard !isHarvesting else { throw YouTubeFeedIssue.busy }
+        isHarvesting = true
+        defer { isHarvesting = false }
 
         let webView = attachedWebView()
         defer { webView.removeFromSuperview() }
 
-        try await waitForLoad(YouTubeWebSession.homeURL, in: webView)
+        try await waitForLoad(url, in: webView)
 
         if webView.url?.host?.contains("consent.") == true {
             throw YouTubeFeedIssue.consentNeeded

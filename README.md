@@ -112,6 +112,16 @@ not a contract. Nothing here runs until you sign in: no session, no third segmen
 forgets both. The one thing the app misrepresents is its user-agent string, because `WKWebView`
 otherwise sends one Google refuses to accept a sign-in from.
 
+**The bell, and the notifications behind it.** Which channels you gave the bell to is not in the
+Data API: a subscription resource carries `contentDetails.activityType` — a leftover from when the
+choice was uploads-or-everything — and nothing that maps to the bell's three settings. Neither is
+there a push channel for a personal account, so real-time notifications are out at any price; the
+app polls instead. What the web session can reach is the account's own notification inbox, and
+**Settings → Notifications → Import YouTube's Notifications** reads it: the notifications go into
+the app's inbox, already read, and the channels behind them become the app's per-channel opt-ins.
+A channel reaches that inbox only because its bell is on, which is what makes the list right — with
+the one gap that a channel which hasn't uploaded lately isn't in it to be found.
+
 **Passkeys don't work for this sign-in.** `WKWebView` has no WebAuthn support at all — only Safari
 and `ASWebAuthenticationSession` do — so the app takes WebAuthn off the page rather than let Google
 offer a passkey that can never complete. Use a password and 2FA; an account with no password left on

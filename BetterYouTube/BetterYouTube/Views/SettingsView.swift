@@ -22,6 +22,8 @@ struct SettingsView: View {
     @State private var showsTakeoutImporter = false
     @State private var importSummary: WatchLaterStore.ImportSummary?
     @State private var showsYouTubeSignIn = false
+    @State private var isImportingBells = false
+    @State private var bellImport: NotificationStore.YouTubeImport?
 
     var body: some View {
         Form {
@@ -164,6 +166,18 @@ struct SettingsView: View {
         }
     }
 
+    /// What came back from YouTube's notification inbox.
+    private static func describe(_ summary: NotificationStore.YouTubeImport) -> String {
+        if let failure = summary.failure { return failure }
+        guard summary.channels > 0 else { return "Nothing in YouTube's notifications yet." }
+        let channels = summary.channels == 1
+            ? "1 channel with the bell on"
+            : "\(summary.channels) channels with the bell on"
+        return summary.notifications == 0
+            ? "\(channels) · nothing new to add"
+            : "\(channels) · \(summary.notifications) added to the inbox"
+    }
+
     /// The result of an import, in the terms someone reading it cares about.
     private static func describe(_ summary: WatchLaterStore.ImportSummary) -> String {
         if let failure = summary.failure { return failure }
@@ -299,6 +313,32 @@ struct SettingsView: View {
                 Label("Check for New Videos Now", systemImage: "arrow.clockwise")
             }
             .disabled(!notificationStore.isEnabled || !auth.isSignedIn)
+
+            // Only on offer with a web session: the bell lives on YouTube's pages and nowhere
+            // in the API.
+            if webSession.isSignedIn {
+                Button {
+                    isImportingBells = true
+                    Task {
+                        bellImport = await notificationStore.importFromYouTube()
+                        isImportingBells = false
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        if isImportingBells {
+                            ProgressView().controlSize(.small)
+                        }
+                        Label("Import YouTube's Notifications", systemImage: "bell.badge")
+                    }
+                }
+                .disabled(isImportingBells)
+
+                if let bellImport {
+                    Text(Self.describe(bellImport))
+                        .font(.footnote)
+                        .foregroundStyle(bellImport.failure == nil ? Color.secondary : Color.red)
+                }
+            }
         } header: {
             Text("Notifications")
         } footer: {
@@ -307,6 +347,13 @@ struct SettingsView: View {
             you locally — the Data API offers no push channel for personal accounts, so delivery \
             follows iOS's background-refresh schedule and the moment you open the app. Turn the \
             bell on from a channel page to pick individual channels.
+
+            Which channels you gave the bell to on YouTube isn't in the API either — a \
+            subscription says whether it covers uploads or everything, and nothing about the \
+            bell's three settings. With a YouTube Home session signed in, the button above reads \
+            your real notification inbox instead and takes the channels from it: a channel only \
+            appears there because its bell is on. One gap comes with that — a channel that hasn't \
+            uploaded recently has nothing in the inbox to be found by.
             """)
         }
     }
