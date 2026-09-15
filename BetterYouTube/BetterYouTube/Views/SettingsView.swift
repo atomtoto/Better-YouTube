@@ -11,6 +11,9 @@ struct SettingsView: View {
     @EnvironmentObject private var notifications: NotificationService
     @EnvironmentObject private var quota: QuotaTracker
     @EnvironmentObject private var webSession: YouTubeWebSession
+    @EnvironmentObject private var downloadSettings: DownloadSettings
+    @EnvironmentObject private var downloadStore: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
 
     @State private var draftKey: String = ""
     @State private var draftClientId: String = ""
@@ -27,6 +30,12 @@ struct SettingsView: View {
     @State private var showsResetConfirmation = false
     @State private var isResetting = false
 
+    @State private var draftEndpoint: String = ""
+    @State private var draftToken: String = ""
+    @State private var didSaveDownloadSource = false
+    @State private var showsRemoveDownloadsConfirmation = false
+    @State private var showsDownloadShare = false
+
     var body: some View {
         Form {
             accountSection
@@ -35,6 +44,7 @@ struct SettingsView: View {
             apiKeySection
             quotaSection
             youTubeHomeSection
+            downloadsSection
 
             Section("On This Device") {
                 LabeledContent("Favorites", value: "\(library.favorites.count)")
@@ -79,6 +89,8 @@ struct SettingsView: View {
         .onAppear {
             draftKey = apiKeyStore.apiKey
             draftClientId = auth.clientId
+            draftEndpoint = downloadSettings.endpoint
+            draftToken = downloadSettings.token
             // Catches the day turning over while the app sat in the background.
             quota.refresh()
         }
@@ -430,8 +442,9 @@ struct SettingsView: View {
             Text("""
             Erases everything on this device: the API key and OAuth client ID, both sign-ins, \
             your favorites, Watch Later, watch history and recent searches, the notification \
-            inbox and its channels, and the quota tally. Your YouTube account itself is \
-            untouched — playlists, subscriptions and likes all stay where they are.
+            inbox and its channels, the quota tally, and every downloaded video along with the \
+            download service's address. Your YouTube account itself is untouched — playlists, \
+            subscriptions and likes all stay where they are.
             """)
         }
         .confirmationDialog(
@@ -445,6 +458,9 @@ struct SettingsView: View {
                     await AppReset.eraseEverything()
                     draftKey = ""
                     draftClientId = ""
+                    draftEndpoint = ""
+                    draftToken = ""
+                    didSaveDownloadSource = false
                     account = nil
                     bellImport = nil
                     importSummary = nil
@@ -456,6 +472,138 @@ struct SettingsView: View {
         } message: {
             Text("This device goes back to a fresh install. Nothing changes on your YouTube account.")
         }
+    }
+
+    /// Downloading, and the one thing about it worth being plain about: the app cannot do it
+    /// alone, and this is where you say what should do it for it.
+    ///
+    /// No service ships with the app and none is suggested. Playback goes through YouTube's own
+    /// embed, which never exposes a media file, so a download needs something that can resolve one
+    /// — and which resolver to trust is the owner's call, not the app's. Running your own is also
+    /// the only version that keeps working: a public instance goes dark, throttles you, or starts
+    /// keeping a record of what you watch, while one on your own machine you can fix the day it
+    /// breaks.
+    @ViewBuilder
+    private var downloadsSection: some View {
+        Section {
+            TextField("https://…", text: $draftEndpoint)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(.URL)
+
+            SecureField("Bearer token (optional)", text: $draftToken)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+
+            Button("Save Download Service") {
+                downloadSettings.endpoint = draftEndpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+                downloadSettings.token = draftToken.trimmingCharacters(in: .whitespacesAndNewlines)
+                didSaveDownloadSource = true
+            }
+            .disabled(!hasDownloadSourceChanges)
+
+            if didSaveDownloadSource {
+                // Which of the two shapes the address was read as is the one thing here that is
+                // easy to get wrong and impossible to see, so saving says so outright.
+                Label(
+                    downloadSourceStatus,
+                    systemImage: downloadSettings.isConfigured
+                        ? "checkmark.circle.fill"
+                        : "exclamationmark.triangle.fill"
+                )
+                .font(.footnote)
+                .foregroundStyle(downloadSettings.isConfigured ? Color.green : Color.orange)
+            }
+
+            Picker("Quality", selection: $downloadSettings.quality) {
+                ForEach(DownloadQuality.allCases) { quality in
+                    Text(quality.title).tag(quality)
+                }
+            }
+
+            Toggle("Download over Wi-Fi Only", isOn: $downloadSettings.wifiOnly)
+
+            Picker("Storage Limit", selection: $downloadSettings.storageLimitGB) {
+                Text("No limit").tag(0)
+                ForEach([2, 4, 8, 16, 32, 64], id: \.self) { size in
+                    Text("\(size) GB").tag(size)
+                }
+            }
+
+            LabeledContent(
+                "Storage Used",
+                value: ByteCountFormatter.string(
+                    fromByteCount: downloadStore.bytesOnDisk(),
+                    countStyle: .file
+                )
+            )
+
+            if downloadSettings.isConfigured {
+                Button {
+                    showsDownloadShare = true
+                } label: {
+                    Label("Share Setup", systemImage: "qrcode")
+                }
+            }
+
+            if !downloadStore.records.isEmpty {
+                Button("Remove All Downloads", role: .destructive) {
+                    showsRemoveDownloadsConfirmation = true
+                }
+            }
+        } header: {
+            Text("Downloads")
+        } footer: {
+            Text(Self.downloadsFooter)
+        }
+        .confirmationDialog(
+            "Remove all downloads?",
+            isPresented: $showsRemoveDownloadsConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Remove All", role: .destructive) { downloadManager.removeAll() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The files go from this device. Nothing changes on your YouTube account.")
+        }
+        .sheet(isPresented: $showsDownloadShare) {
+            DownloadConfigShareView()
+        }
+    }
+
+    /// Kept out of the view builder: it is three paragraphs, and inlining it buries the section.
+    private static let downloadsFooter = """
+    Playback goes through YouTube's own embed, which never hands over a media file, so the app has \
+    no way to fetch one by itself. Point this at a resolver you run and Download appears on every \
+    video; leave it empty and downloading stays off.
+
+    Two shapes work. An address carrying {id}, {videoId} or {url} is filled in and fetched \
+    directly, so https://box.local/yt/{id}.mp4 is a complete setup. Anything else is sent a POST \
+    of url, videoId, quality and maxHeight, and its reply is read for a media link — url, \
+    downloadUrl, link, or the first entry of urls, formats or streams.
+
+    Files land in Downloads, which the Files app shows under “Better YouTube”. They stay out of \
+    iCloud backups, and a downloaded video plays from the file everywhere in the app, with no \
+    network at all.
+
+    Once it works, Share Setup hands the same service to another phone as a link or a QR \
+    code, so nobody else has to type any of this.
+    """
+
+    private var downloadSourceStatus: String {
+        guard downloadSettings.isConfigured else {
+            return downloadSettings.trimmedEndpoint.isEmpty
+                ? "Downloading is off"
+                : "Downloading is off — that isn't an http or https address"
+        }
+        return downloadSettings.usesTemplate
+            ? "Saved — the address is filled in and fetched directly"
+            : "Saved — the address is sent a POST and read for a media link"
+    }
+
+    private var hasDownloadSourceChanges: Bool {
+        draftEndpoint.trimmingCharacters(in: .whitespacesAndNewlines) != downloadSettings.endpoint
+            || draftToken.trimmingCharacters(in: .whitespacesAndNewlines) != downloadSettings.token
     }
 
     /// The one part of the app that steps outside the Data API, and the section says so plainly.
@@ -597,4 +745,7 @@ private struct QuotaBar: View {
         .environmentObject(NotificationService.shared)
         .environmentObject(QuotaTracker.shared)
         .environmentObject(YouTubeWebSession.shared)
+        .environmentObject(DownloadStore.shared)
+        .environmentObject(DownloadManager.shared)
+        .environmentObject(DownloadSettings.shared)
 }

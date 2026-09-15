@@ -16,6 +16,8 @@ struct ExpandedPlayerView: View {
     @Binding var drag: PlayerDragState
 
     @EnvironmentObject private var player: PlayerManager
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -65,7 +67,7 @@ struct ExpandedPlayerView: View {
             Spacer()
 
             Menu {
-                PlayerActions(player: player)
+                PlayerActions(player: player, downloads: downloads, downloadManager: downloadManager)
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.headline)

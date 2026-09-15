@@ -197,9 +197,17 @@ struct VideoContextMenu: ViewModifier {
     let video: Video
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var watchLater: WatchLaterStore
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
 
     func body(content: Content) -> some View {
         content.contextMenu {
+            // The one place every video in the app can be downloaded from. Home, search, a
+            // channel, Watch Later, a playlist and the up-next queue all long-press into this,
+            // so there is no screen where the option is missing and none where it had to be
+            // added by hand.
+            DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
+
             Button {
                 library.toggleFavorite(video)
             } label: {

@@ -20,6 +20,12 @@ struct RootTabView: View {
         .sheet(isPresented: $showsOnboarding) {
             OnboardingView()
         }
+        .sheet(item: $router.pendingDownloadConfig) { link in
+            DownloadConfigImportView(link: link)
+        }
+        .onOpenURL { url in
+            router.open(url)
+        }
         .onAppear {
             showsOnboarding = !apiKeyStore.hasKey && !auth.isSignedIn
         }
@@ -172,4 +178,10 @@ private struct FeatureRow: View {
         .environmentObject(NotificationStore.shared)
         .environmentObject(NotificationService.shared)
         .environmentObject(AppRouter.shared)
+        .environmentObject(PlayerManager.shared)
+        .environmentObject(QuotaTracker.shared)
+        .environmentObject(YouTubeWebSession.shared)
+        .environmentObject(DownloadStore.shared)
+        .environmentObject(DownloadManager.shared)
+        .environmentObject(DownloadSettings.shared)
 }

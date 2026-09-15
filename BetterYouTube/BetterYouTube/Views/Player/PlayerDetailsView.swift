@@ -8,6 +8,8 @@ struct PlayerDetailsView: View {
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
     @StateObject private var viewModel: VideoDetailViewModel
     @State private var isDescriptionExpanded = false
 
@@ -24,6 +26,12 @@ struct PlayerDetailsView: View {
             VStack(alignment: .leading, spacing: 18) {
                 if let issue = player.issue {
                     playbackIssueBanner(issue)
+                }
+
+                if player.isLocal {
+                    Label("Playing from your downloads", systemImage: "arrow.down.circle.fill")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -146,6 +154,12 @@ struct PlayerDetailsView: View {
                     ) {
                         library.toggleFavorite(displayed)
                     }
+
+                    PlayerDownloadPill(
+                        video: displayed,
+                        store: downloads,
+                        manager: downloadManager
+                    )
 
                     PlayerActionPill(
                         title: "Later",
@@ -272,6 +286,54 @@ struct PlayerDetailsView: View {
                 }
             }
         }
+    }
+}
+
+/// The download button in the player, in whichever of its four states the video is in.
+///
+/// It reports progress rather than just "working": a download is the one action in this app that
+/// takes minutes, and a pill that only span would leave no way to tell a slow one from a stuck one.
+private struct PlayerDownloadPill: View {
+    let video: Video
+    @ObservedObject var store: DownloadStore
+    @ObservedObject var manager: DownloadManager
+
+    var body: some View {
+        switch store.state(for: video.id) {
+        case .none:
+            PlayerActionPill(title: "Download", systemImage: "arrow.down.circle") {
+                manager.download(video)
+            }
+
+        case .ready:
+            PlayerActionPill(
+                title: "Downloaded",
+                systemImage: "arrow.down.circle.fill",
+                isActive: true
+            ) {
+                manager.remove(video.id)
+            }
+
+        case .failed:
+            PlayerActionPill(title: "Retry", systemImage: "exclamationmark.arrow.circlepath") {
+                manager.retry(video.id)
+            }
+
+        case .paused:
+            PlayerActionPill(title: "Paused", systemImage: "pause.circle") {
+                manager.resume(video.id)
+            }
+
+        case .some:
+            PlayerActionPill(title: progressTitle, systemImage: "stop.circle", isBusy: false) {
+                manager.pause(video.id)
+            }
+        }
+    }
+
+    private var progressTitle: String {
+        guard let fraction = manager.progress[video.id], fraction > 0 else { return "Downloading" }
+        return "\(Int((fraction * 100).rounded()))%"
     }
 }
 

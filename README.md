@@ -18,6 +18,9 @@ app (Apple Music-style shelves, artwork cards, inset-grouped library, context me
 - **Library** —
   - *Signed in with Google*: your subscriptions, playlists and liked videos
   - *On this device*: favorites, watch later and watch history
+- **Downloads** — videos kept in a `Downloads` folder on the device and played from the file
+  wherever they turn up in the app, with no network at all. Needs a resolver, and
+  [one is included](#one-is-included) — see [Downloads](#downloads)
 - **Background playback** — the audio carries on when the app is backgrounded or the screen
   locks, with title, artwork, scrubber and transport on the lock screen and in Control Centre
 - **Settings** — Google sign-in, API key, library counts, what is left of the day's API quota,
@@ -132,6 +135,104 @@ it can't open this session. The Google OAuth sign-in above is unaffected: it run
 
 This does not touch playback, which stays on the official embed and inside the Terms.
 
+## Downloads
+
+Downloaded videos land in a **`Downloads` folder** in the app's documents — which the Files app
+shows under *Better YouTube*, so they are real files you can see, copy out and delete — and the
+app plays them **from the file wherever the video appears**. Tap something in Watch Later, in your
+history, in a search result or in the up-next queue, and if it has been downloaded it plays from
+disk. Nothing has to be opened from the Downloads screen, and nothing is different about it when
+it does: the same mini player, the same lock-screen controls, the same landscape full screen.
+
+**Download** sits in the long-press menu on every video in the app, and as a pill in the player.
+There is one Downloads screen, under Library, for the folder as a whole.
+
+What makes it dependable is that the app isn't the one doing the work. Transfers go through a
+**background `URLSession`**, so iOS owns them: they carry on with the app backgrounded, survive
+the app being killed, and relaunch it when they finish. An interrupted one leaves resume data and
+carries on from the bytes it already has rather than starting again. The queue runs two at a time,
+retries a dropped connection twice, and writes its state to a manifest as it goes — so a download
+is never quietly lost, only ever finished, paused or failed with a reason and a Try Again button.
+
+Settings holds a quality, a Wi-Fi-only switch, a ceiling on the folder's size, and what it weighs
+today. Downloads are excluded from iCloud backups: they are the largest thing this app will ever
+write and none of it is worth backing up.
+
+### The part the app can't do: a resolver
+
+**No download service ships with the app, and none is suggested.** Playback goes through YouTube's
+own embed, which never exposes a media file, so the app has no way to reach one by itself. To
+download anything you point **Settings → Downloads** at a resolver **you run**, and the app treats
+it as an ordinary HTTP API.
+
+That is a deliberate line rather than an omission. Getting at YouTube's media means defeating the
+rotating signature cipher and throttling parameter that exist to stop exactly that, which is
+circumvention — and it is also the code that breaks every few weeks when Google rotates them. A
+download button built on it works the week it ships and then rots silently, which is the opposite
+of what a download is for. A resolver of your own, on the other hand, is one you can fix the day it
+breaks; a stranger's public instance is one that goes dark, throttles you, or keeps a record of
+what you watch.
+
+Two shapes work, told apart by the address alone:
+
+| Address | What the app does |
+| --- | --- |
+| Contains `{id}`, `{videoId}` or `{url}` | Fills it in and fetches it as the media file directly. `https://box.local/yt/{id}.mp4` is a complete configuration. |
+| Anything else | `POST`s `{"url", "videoId", "quality", "maxHeight"}` and reads a media link out of the reply. |
+
+The request says the wanted height under every name the common resolvers read it by
+(`quality`, `videoQuality`, `maxHeight`), since they ignore fields they don't know and the
+alternative is a quality setting that is silently disregarded. The reply is read just as
+generously: `url`, `downloadUrl`, `link`, `media`, a `urls` or `tunnel` array, or the first entry
+of `formats`, `streams` or `medias`, one level inside `data` or `result` if that is where they
+sit. A reply that says it failed — `status: "error"`, or an `error` of its own — is reported in
+the service's own words rather than as a generic failure.
+
+Two shapes are refused on purpose. A reply carrying the video and the audio as **separate
+streams** for the client to join is one the app can't use — it plays a single file — and taking
+the first of the two would download a silent video rather than fail, so it says what happened and
+what to change instead. And a media link that isn't absolute `http(s)` is dropped at the resolver
+rather than handed to the downloader, which is a worse place to find out about it.
+
+A token can be set for a service that isn't open to the internet. One typed with its own scheme
+(`Api-Key abc123`) is sent as it stands; a bare one is sent as `Bearer`.
+
+### One is included
+
+`resolver/` is a working one: about 300 lines of Python standard library around **yt-dlp**, with a
+`docker compose up` and a test suite that runs offline. That split is deliberate — yt-dlp is the
+only part that needs keeping current, and it is maintained by people who do it full time, so the
+container refreshes it on every start.
+
+It answers in two ways, and the difference is what it costs you to run. When YouTube offers the
+wanted height **already joined** — in practice 360p, sometimes 720p — the answer is YouTube's own
+CDN URL and the phone fetches it from Google: this server moves no video at all. Above that
+YouTube keeps video and audio apart and the app plays a single file, so the answer is a link back
+to the resolver, which re-resolves and pipes both through ffmpeg into a fragmented MP4 as it goes.
+Nothing is staged on disk, and `ALLOW_MUX=0` refuses that path entirely if you would rather never
+carry a byte of video. Details in [`resolver/README.md`](resolver/README.md).
+
+Other resolvers fit too: a self-hosted [**cobalt**](https://github.com/imputnet/cobalt), whose
+`POST /` answers `{"status": "tunnel", "url", "filename"}`, drops straight in — set its `API_URL`
+to the address you reach it on, or it hands back links pointing at its own localhost.
+
+### Setting one up on somebody else's phone
+
+Typing a URL into a phone is the worst part of this, so it can be skipped. **Settings → Downloads
+→ Share Setup** turns the current configuration into a `betteryoutube://` link and a QR code:
+point another phone's camera at it and it is configured. The access token is left out unless you
+ask for it, because a QR code gets photographed and forwarded far more casually than a password.
+
+A link is never applied on its own. Opening one shows which host it points at, says that every
+download will go through it, and waits — a link is something anyone can send you, and accepting
+one quietly would let a stranger route your downloads through their server.
+
+Be clear about what this is, the same way the home feed above is. Downloading a video is outside
+what YouTube's terms allow, whoever fetches it; keeping a personal copy of something you can
+already watch is the ordinary case for it, and the risk sits on your account and your resolver,
+not on anyone else. Nothing here runs until you fill that field in: no service, no Download in any
+menu, and the Downloads screen says so rather than offering a button that can't work.
+
 ## Getting started
 
 1. Open `BetterYouTube/BetterYouTube.xcodeproj` in Xcode 26+ and run on an iOS 26+ simulator or device.
@@ -167,6 +268,7 @@ This does not touch playback, which stays on the official embed and inside the T
 ## Project structure
 
 ```
+resolver/                        A yt-dlp resolver: server.py, Dockerfile, compose, tests
 BetterYouTube/
   BetterYouTube.xcodeproj/       Xcode project (single iOS app target, iOS 26+)
   BetterYouTube/
@@ -177,6 +279,11 @@ BetterYouTube/
     GoogleAuthService.swift      OAuth 2.0 PKCE sign-in, keychain token storage
     Persistence.swift            On-device library and recent searches
     QuotaTracker.swift           The day's quota spending, counted call by call
+    DownloadStore.swift          The Downloads folder, its manifest and what is in it
+    DownloadService.swift        The configured resolver, and reading its reply
+    DownloadManager.swift        The background download queue
+    LocalPlayback.swift          AVPlayer half of the player, for downloaded files
+    DownloadConfigLink.swift     betteryoutube:// setup links, and their QR codes
     YouTubeWebSession.swift      Optional youtube.com web session + home-feed reader
     Utilities.swift              Duration, count and relative-date formatters, Takeout CSV reader
     ViewModels/                  One @MainActor view model per screen
@@ -192,4 +299,6 @@ for every push and pull request, so compile errors surface without a local Mac.
 ## Notes
 
 - Unofficial client; not affiliated with YouTube or Google.
-- Playback uses the YouTube IFrame embed rather than extracting stream URLs.
+- Streaming playback uses the YouTube IFrame embed rather than extracting stream URLs. The app
+  never resolves a media URL itself — downloading goes through a resolver you configure and run,
+  and does nothing at all until you do. See [Downloads](#downloads).

@@ -46,6 +46,13 @@
 		F9A34079A47F4D73B5FCCF81 /* VideoCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200946DDA34EED92264FD752 /* VideoCardView.swift */; };
 		FA2F4E3FA41EB5FAAA3CD491 /* NotificationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EC14D7ABDA495DEE45A4CFE /* NotificationStore.swift */; };
 		FB8E1F0DC99B3252C39A41C1 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07915B6C44135B78F0C9D66 /* SearchViewModel.swift */; };
+		4D49C9D7BE6519076FA011BB /* DownloadStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9090FED0372DC1B642CEC83 /* DownloadStore.swift */; };
+		BF90A7E4C3175D350C572ED8 /* DownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D29E2556D0A833F15A04D6B0 /* DownloadService.swift */; };
+		D78B569CDE1F67ADF9AC73A7 /* DownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EDBA542F6162FE9537251BC /* DownloadManager.swift */; };
+		61855544A58CD804FE142178 /* LocalPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = F212278CDA1C2466E2A0C880 /* LocalPlayback.swift */; };
+		77E26E4559CB67E2D529AD5D /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E53F5E3377E0D4B22DB8C3CF /* DownloadsView.swift */; };
+		A8AA70CD423FD5DCC238368F /* LocalPlayerSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 989F6E87E9B3CF0057F0FCC7 /* LocalPlayerSurface.swift */; };
+		C6BACBED1D1C50E9026BAEAC /* DownloadConfigLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ECDDB993DD4C6CDAA43CDB3 /* DownloadConfigLink.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -90,6 +97,13 @@
 		F3BA485BDDB7D18FEDC8D887 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F7F28A6D4028554035CB0ECA /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		FA6A4A758FCEBAA99EF9A975 /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryViewModel.swift; path = LibraryViewModel.swift; sourceTree = "<group>"; };
+		D9090FED0372DC1B642CEC83 /* DownloadStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DownloadStore.swift; path = DownloadStore.swift; sourceTree = "<group>"; };
+		D29E2556D0A833F15A04D6B0 /* DownloadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DownloadService.swift; path = DownloadService.swift; sourceTree = "<group>"; };
+		3EDBA542F6162FE9537251BC /* DownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DownloadManager.swift; path = DownloadManager.swift; sourceTree = "<group>"; };
+		F212278CDA1C2466E2A0C880 /* LocalPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LocalPlayback.swift; path = LocalPlayback.swift; sourceTree = "<group>"; };
+		E53F5E3377E0D4B22DB8C3CF /* DownloadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DownloadsView.swift; path = DownloadsView.swift; sourceTree = "<group>"; };
+		989F6E87E9B3CF0057F0FCC7 /* LocalPlayerSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LocalPlayerSurface.swift; path = LocalPlayerSurface.swift; sourceTree = "<group>"; };
+		6ECDDB993DD4C6CDAA43CDB3 /* DownloadConfigLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DownloadConfigLink.swift; path = DownloadConfigLink.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -104,6 +118,7 @@
 		25754F8DA9AFC6A183833996 /* Player */ = {
 			isa = PBXGroup;
 			children = (
+				989F6E87E9B3CF0057F0FCC7 /* LocalPlayerSurface.swift */,
 				DFBA4A2E90A83CCEA3BEE9ED /* PlayerSurface.swift */,
 				E2594FCB99B0F3BE3777EAF6 /* PlayerContainerView.swift */,
 				BE2744C99CF77303B5A53C52 /* ExpandedPlayerView.swift */,
@@ -123,6 +138,7 @@
 		9CECDDFA5EF2AE0232F90708 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				E53F5E3377E0D4B22DB8C3CF /* DownloadsView.swift */,
 				6389BFBA5B84E6680E8B48C2 /* ChannelView.swift */,
 				A21370A0999F08944A80A55D /* EmptyStateView.swift */,
 				F7F28A6D4028554035CB0ECA /* HomeView.swift */,
@@ -155,6 +171,11 @@
 		CE882751F8B3EE4485706ED4 /* BetterYouTube */ = {
 			isa = PBXGroup;
 			children = (
+				6ECDDB993DD4C6CDAA43CDB3 /* DownloadConfigLink.swift */,
+				F212278CDA1C2466E2A0C880 /* LocalPlayback.swift */,
+				3EDBA542F6162FE9537251BC /* DownloadManager.swift */,
+				D29E2556D0A833F15A04D6B0 /* DownloadService.swift */,
+				D9090FED0372DC1B642CEC83 /* DownloadStore.swift */,
 				2460DE7F50655C47F611B382 /* BetterYouTubeApp.swift */,
 				83D530576D5CF8B70831C69D /* Models.swift */,
 				61B079CDDB3B2E4D7C531283 /* Persistence.swift */,
@@ -294,6 +315,13 @@
 				7AAD4AA89BAED0BD4237EBEF /* PlayerContainerView.swift in Sources */,
 				5AF94EA3A63C6046811F06CD /* ExpandedPlayerView.swift in Sources */,
 				45ED48BFA8B901A1E97C89CA /* PlayerDetailsView.swift in Sources */,
+				4D49C9D7BE6519076FA011BB /* DownloadStore.swift in Sources */,
+				BF90A7E4C3175D350C572ED8 /* DownloadService.swift in Sources */,
+				D78B569CDE1F67ADF9AC73A7 /* DownloadManager.swift in Sources */,
+				61855544A58CD804FE142178 /* LocalPlayback.swift in Sources */,
+				77E26E4559CB67E2D529AD5D /* DownloadsView.swift in Sources */,
+				A8AA70CD423FD5DCC238368F /* LocalPlayerSurface.swift in Sources */,
+				C6BACBED1D1C50E9026BAEAC /* DownloadConfigLink.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
