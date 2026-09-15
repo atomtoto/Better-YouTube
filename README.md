@@ -98,9 +98,15 @@ is the ranking, which is the part no endpoint sells; what you see comes from the
 setting switches between the app's cards and YouTube's own page, and on that page a tap opens the
 video in the app's player rather than YouTube's.
 
+**Promoted videos don't make it through.** A sponsored card carries an ordinary watch link, so the
+link says nothing; the slot it sits in does. YouTube wraps its ad units in custom elements named
+for what they are — `ytm-promoted-video-renderer`, `ytd-ad-slot-renderer` — and element names are
+the durable part of that page, where class names are minified and churn. The reader skips any link
+under one of those, and YouTube's own page hides them with a stylesheet of the same names.
+
 Be clear about what this is. It is outside what YouTube's terms allow an app to do: the default
 rendering reads a rendered page, which is automated extraction, where showing the page is only
-browsing. The risk sits on your Google account, not on anyone else. It is also brittle by nature —
+browsing — and hiding the adverts on that page is a further step again. The risk sits on your Google account, not on anyone else. It is also brittle by nature —
 it leans on `watch?v=` links surviving a redesign, which is the most stable thing on the page but
 not a contract. Nothing here runs until you sign in: no session, no third segment, and signing out
 forgets both. The one thing the app misrepresents is its user-agent string, because `WKWebView`

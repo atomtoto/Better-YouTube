@@ -282,14 +282,39 @@ final class YouTubeFeedReader {
         }
     }
 
-    /// Every `watch?v=` link on the page, deduplicated, in document order.
+    /// Every `watch?v=` link on the page that isn't an advert, deduplicated, in document order.
+    ///
+    /// A promoted video carries an ordinary watch link, so nothing about the link itself tells it
+    /// apart — what does is the element it sits in. YouTube wraps its ad slots in custom elements
+    /// named for what they are (`ytm-promoted-video-renderer`, `ytd-ad-slot-renderer`,
+    /// `ytm-promoted-sparkles-web-renderer`), and element names are the durable part of that
+    /// page: class names are minified and churn, tag names carry meaning and survive redesigns.
+    /// So the walk up from each link looks at tag, id and the `data-is-ad` marker, and the href
+    /// is checked against Google's ad redirectors on the way past.
+    ///
+    /// The pattern anchors "ad" to a whole word between separators, or it would throw away every
+    /// "badge", "download" and "upload" on the page.
     private static let harvestScript = """
     (function () {
+      var AD = /(^|[-_])ad(s|slot)?([-_]|$)|promoted|sparkles|advertiser/i;
+
+      function isSponsored(node) {
+        for (var el = node; el && el !== document.body; el = el.parentElement) {
+          if (AD.test(el.tagName || '')) { return true; }
+          if (el.id && AD.test(el.id)) { return true; }
+          if (el.hasAttribute && el.hasAttribute('data-is-ad')) { return true; }
+        }
+        return false;
+      }
+
       var ids = [];
       var seen = {};
       var links = document.querySelectorAll('a[href*="watch?v="]');
       for (var i = 0; i < links.length; i++) {
-        var match = (links[i].getAttribute('href') || '').match(/[?&]v=([A-Za-z0-9_-]{11})/);
+        var href = links[i].getAttribute('href') || '';
+        if (/\\/aclk\\?|\\/pagead\\/|doubleclick|googleadservices/i.test(href)) { continue; }
+        if (isSponsored(links[i])) { continue; }
+        var match = href.match(/[?&]v=([A-Za-z0-9_-]{11})/);
         if (!match || seen[match[1]]) { continue; }
         seen[match[1]] = true;
         ids.push(match[1]);

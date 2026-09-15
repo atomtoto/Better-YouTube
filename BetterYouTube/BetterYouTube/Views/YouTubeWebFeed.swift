@@ -57,13 +57,15 @@ private struct YouTubeWebPage: UIViewRepresentable {
 
         if interceptsVideoTaps {
             configuration.userContentController.add(context.coordinator, name: Coordinator.handler)
-            configuration.userContentController.addUserScript(
-                WKUserScript(
-                    source: Coordinator.tapScript,
-                    injectionTime: .atDocumentStart,
-                    forMainFrameOnly: false
+            for script in [Coordinator.tapScript, Coordinator.hideAdsScript] {
+                configuration.userContentController.addUserScript(
+                    WKUserScript(
+                        source: script,
+                        injectionTime: .atDocumentStart,
+                        forMainFrameOnly: false
+                    )
                 )
-            )
+            }
         }
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
@@ -104,6 +106,36 @@ private struct YouTubeWebPage: UIViewRepresentable {
           try {
             Object.defineProperty(navigator, 'credentials', { value: undefined, configurable: true });
           } catch (e) {}
+        })();
+        """
+
+        /// Takes the promoted cards out of the feed, so this rendering shows what the native one
+        /// shows. The same slots the reader skips when it harvests ids, named rather than
+        /// guessed: YouTube's ad renderers are custom elements, and a stylesheet can address
+        /// them directly. A rule that matches nothing costs nothing, so retired names can stay.
+        static let hideAdsScript = """
+        (function () {
+          var css = [
+            'ytm-promoted-video-renderer',
+            'ytm-compact-promoted-video-renderer',
+            'ytm-promoted-sparkles-web-renderer',
+            'ytm-promoted-sparkles-text-search-renderer',
+            'ytm-companion-slot-renderer',
+            'ytm-action-companion-ad-renderer',
+            'ytm-ad-slot-renderer',
+            'ytd-promoted-video-renderer',
+            'ytd-promoted-sparkles-web-renderer',
+            'ytd-ad-slot-renderer',
+            'ytd-display-ad-renderer',
+            'ytd-in-feed-ad-layout-renderer',
+            '[data-is-ad]',
+            '#player-ads',
+            '#masthead-ad'
+          ].join(',') + '{display:none !important;}';
+
+          var style = document.createElement('style');
+          style.textContent = css;
+          (document.head || document.documentElement).appendChild(style);
         })();
         """
 
