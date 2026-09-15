@@ -228,13 +228,22 @@ actor DownloadResolver {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 30
         if !source.token.isEmpty {
-            request.setValue("Bearer \(source.token)", forHTTPHeaderField: "Authorization")
+            // A token carrying its own scheme ("Api-Key abc123", which is what cobalt wants) is
+            // sent as typed; a bare one is assumed to be a bearer token. That covers both
+            // without asking the user to pick a scheme from a menu they'd have to be told about.
+            let credential = source.token.contains(" ") ? source.token : "Bearer \(source.token)"
+            request.setValue(credential, forHTTPHeaderField: "Authorization")
         }
+        // The same number under several names. Resolvers disagree about what to call it and
+        // ignore fields they don't know, so saying it every way costs nothing and is the
+        // difference between the quality setting working and being silently ignored.
         request.httpBody = try? JSONSerialization.data(withJSONObject: [
             "url": watchURL,
             "videoId": videoId,
             "quality": String(quality.maxHeight),
+            "videoQuality": String(quality.maxHeight),
             "maxHeight": quality.maxHeight,
+            "downloadMode": "auto",
             "audioOnly": false
         ])
 
@@ -258,6 +267,7 @@ actor DownloadResolver {
             throw DownloadError.http(http.statusCode)
         }
         guard let json else { throw DownloadError.noMedia }
+        if let problem = Self.splitStreamMessage(in: json) { throw DownloadError.service(problem) }
         guard let media = Self.mediaURL(in: json) else { throw DownloadError.noMedia }
 
         return ResolvedMedia(url: media, byteCount: Self.byteCount(in: json))
@@ -274,7 +284,9 @@ actor DownloadResolver {
     /// Keys holding a list of candidates, which the first usable entry is taken from. The service
     /// has already been told the quality wanted, so its own ordering is trusted rather than
     /// second-guessed here.
-    private static let listKeys = ["urls", "links", "formats", "streams", "medias", "results", "items"]
+    private static let listKeys = [
+        "urls", "links", "tunnel", "formats", "streams", "medias", "results", "items"
+    ]
 
     private static func mediaURL(in json: [String: Any]) -> URL? {
         if let direct = firstURL(in: json) { return direct }
@@ -309,6 +321,17 @@ actor DownloadResolver {
               let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
               url.host != nil else { return nil }
         return url
+    }
+
+    /// A reply handing back the video and the audio as separate streams, for the client to join.
+    ///
+    /// The app plays one file, so this is the one shape it genuinely can't take — and worth
+    /// naming precisely, because the fix is a setting on the service rather than anything the
+    /// user can do from here. Taking the first of the two would be worse than failing: a silent
+    /// download of a video with no sound.
+    private static func splitStreamMessage(in json: [String: Any]) -> String? {
+        guard let tunnels = json["tunnel"] as? [Any], tunnels.count > 1 else { return nil }
+        return "The download service sent the video and audio as separate streams, which this app can't join. Ask it for a single muxed file — on cobalt, a lower quality usually returns one."
     }
 
     private static func byteCount(in json: [String: Any]) -> Int64? {

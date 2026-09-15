@@ -180,12 +180,28 @@ Two shapes work, told apart by the address alone:
 | Contains `{id}`, `{videoId}` or `{url}` | Fills it in and fetches it as the media file directly. `https://box.local/yt/{id}.mp4` is a complete configuration. |
 | Anything else | `POST`s `{"url", "videoId", "quality", "maxHeight"}` and reads a media link out of the reply. |
 
-The reply is read generously, because every resolver spells this differently: `url`,
-`downloadUrl`, `link`, `media`, a `urls` array, or the first entry of `formats`, `streams` or
-`medias`, one level inside `data` or `result` if that is where they sit. A reply that says it
-failed — `status: "error"`, or an `error` of its own — is reported in the service's own words
-rather than as a generic failure. A bearer token can be set for a service that isn't open to the
-internet.
+The request says the wanted height under every name the common resolvers read it by
+(`quality`, `videoQuality`, `maxHeight`), since they ignore fields they don't know and the
+alternative is a quality setting that is silently disregarded. The reply is read just as
+generously: `url`, `downloadUrl`, `link`, `media`, a `urls` or `tunnel` array, or the first entry
+of `formats`, `streams` or `medias`, one level inside `data` or `result` if that is where they
+sit. A reply that says it failed — `status: "error"`, or an `error` of its own — is reported in
+the service's own words rather than as a generic failure.
+
+Two shapes are refused on purpose. A reply carrying the video and the audio as **separate
+streams** for the client to join is one the app can't use — it plays a single file — and taking
+the first of the two would download a silent video rather than fail, so it says what happened and
+what to change instead. And a media link that isn't absolute `http(s)` is dropped at the resolver
+rather than handed to the downloader, which is a worse place to find out about it.
+
+A token can be set for a service that isn't open to the internet. One typed with its own scheme
+(`Api-Key abc123`) is sent as it stands; a bare one is sent as `Bearer`.
+
+Known resolvers this fits: **yt-dlp** behind a small HTTP wrapper of your own — the one that is
+actually maintained against YouTube's changes, and so the one worth building on — or a
+self-hosted [**cobalt**](https://github.com/imputnet/cobalt), whose `POST /` answers
+`{"status": "tunnel", "url", "filename"}` and drops straight in. If you self-host cobalt, set its
+`API_URL` to the address you reach it on, or it hands back links pointing at its own localhost.
 
 Be clear about what this is, the same way the home feed above is. Downloading a video is outside
 what YouTube's terms allow, whoever fetches it; keeping a personal copy of something you can
