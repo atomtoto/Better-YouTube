@@ -156,7 +156,12 @@ final class GoogleAuthService: ObservableObject {
     /// Read/write: the app creates and edits its own Watch Later playlist. `youtube.readonly`
     /// would only let it read, and a token granted for that scope can never be upgraded in
     /// place — see `discardTokensGrantedForAnotherScope`.
-    private static let scope = "https://www.googleapis.com/auth/youtube"
+    ///
+    /// `force-ssl` rather than plain `youtube` because it is the wider of the two — "See, edit,
+    /// and permanently delete your YouTube videos, ratings, comments and captions" — and it is
+    /// the one every endpoint this app touches accepts. Ratings and comments are the places
+    /// where plain `youtube` can come back 403 for lack of permission.
+    private static let scope = "https://www.googleapis.com/auth/youtube.force-ssl"
     private static let authEndpoint = "https://accounts.google.com/o/oauth2/v2/auth"
     private static let tokenEndpoint = "https://oauth2.googleapis.com/token"
 
@@ -276,9 +281,18 @@ final class GoogleAuthService: ObservableObject {
     /// Called when Google refuses a request for lack of scope. The stored token can't be widened,
     /// so the only way forward is a fresh consent — the safety net for a token whose recorded
     /// scope and real scope have drifted apart.
-    func signOutForInsufficientScope() {
+    /// Whether the stored sign-in actually carries the permission the app asks for. When it
+    /// does, a refusal for lack of permission is not something signing in again can mend, and
+    /// the app must not throw the session away over it — that was a loop with no exit.
+    var holdsRequestedScope: Bool {
+        tokens?.grants(Self.scope) ?? false
+    }
+
+    /// `endpoint` is named in the message on purpose: a refusal says which call was refused, and
+    /// without that the only way to find out is to guess.
+    func signOutForInsufficientScope(endpoint: String) {
         signOut(reason: """
-        Google refused the request for lack of permission, and a token's scope can't be widened \
+        Google refused “\(endpoint)” for lack of permission, and a token's scope can't be widened \
         in place. This almost always means the YouTube tick box on the consent screen — "See, \
         edit, and permanently delete your YouTube videos, ratings, comments and captions" — was \
         left unticked. Sign in again and tick it before Continue.

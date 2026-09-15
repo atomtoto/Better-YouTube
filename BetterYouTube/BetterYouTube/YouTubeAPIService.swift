@@ -179,7 +179,15 @@ actor YouTubeAPIService {
         guard let url = components.url else { throw APIError.invalidURL }
 
         var urlRequest = URLRequest(url: url)
-        if let token {
+        // Only where the account is actually the point — or where there is no API key to read
+        // the public catalogue with.
+        //
+        // This used to go out on every request, and that was the bug behind a session that kept
+        // evaporating: Google validates a token's scope against the endpoint it arrives at, so a
+        // perfectly public call carrying a Bearer token can be refused 403 for lack of a
+        // permission the call never needed. Comments and search are the ones that bite, and they
+        // run on every video opened.
+        if let token, requiresAuth || key.isEmpty {
             urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         return urlRequest
@@ -235,7 +243,16 @@ actor YouTubeAPIService {
             if http.statusCode == 403, reasons.contains("insufficientPermissions")
                 || (reasons.isEmpty
                     && message?.localizedCaseInsensitiveContains("insufficient authentication scopes") == true) {
-                await GoogleAuthService.shared.signOutForInsufficientScope()
+                // Only a grant that really is too narrow is worth dropping the session over. If
+                // the token already holds what the app asks for, signing out and back in lands
+                // in exactly the same place — which is the loop this used to put people in, on
+                // every video they opened. Surface it as the ordinary failure it is instead.
+                if await GoogleAuthService.shared.holdsRequestedScope {
+                    throw APIError.server(
+                        message ?? "Google refused “\(endpoint)” for lack of permission."
+                    )
+                }
+                await GoogleAuthService.shared.signOutForInsufficientScope(endpoint: endpoint)
                 throw APIError.insufficientScope
             }
             // Distinct from any other failure: the thing asked for is gone, which callers holding
