@@ -172,4 +172,10 @@ private struct FeatureRow: View {
         .environmentObject(NotificationStore.shared)
         .environmentObject(NotificationService.shared)
         .environmentObject(AppRouter.shared)
+        .environmentObject(PlayerManager.shared)
+        .environmentObject(QuotaTracker.shared)
+        .environmentObject(YouTubeWebSession.shared)
+        .environmentObject(DownloadStore.shared)
+        .environmentObject(DownloadManager.shared)
+        .environmentObject(DownloadSettings.shared)
 }

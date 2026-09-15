@@ -144,4 +144,8 @@ struct ChannelHeaderView: View {
     .environmentObject(WatchLaterStore.shared)
         .environmentObject(NotificationStore.shared)
         .environmentObject(NotificationService.shared)
+        .environmentObject(DownloadStore.shared)
+        .environmentObject(DownloadManager.shared)
+        .environmentObject(DownloadSettings.shared)
+        .environmentObject(PlayerManager.shared)
 }

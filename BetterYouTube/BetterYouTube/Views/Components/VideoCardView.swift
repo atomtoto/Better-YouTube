@@ -5,11 +5,18 @@ struct VideoCardView: View {
     let video: Video
     var width: CGFloat = Theme.Size.carouselCard
 
+    @EnvironmentObject private var downloads: DownloadStore
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ArtworkView(url: video.thumbnailURL, duration: video.duration, cornerRadius: Theme.Radius.card)
+            ArtworkView(
+                url: downloads.artworkURL(for: video),
+                duration: video.duration,
+                cornerRadius: Theme.Radius.card
+            )
                 .frame(width: width, height: width * 9 / 16)
                 .artworkShadow()
+                .downloadedBadge(video, downloads: downloads)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(video.title)
@@ -34,12 +41,19 @@ struct FeedVideoCard: View {
     var avatarURL: URL?
 
     @EnvironmentObject private var library: LibraryStore
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            ArtworkView(url: video.thumbnailURL, duration: video.duration, cornerRadius: Theme.Radius.card)
+            ArtworkView(
+                url: downloads.artworkURL(for: video),
+                duration: video.duration,
+                cornerRadius: Theme.Radius.card
+            )
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
                 .artworkShadow()
+                .downloadedBadge(video, downloads: downloads)
 
             HStack(alignment: .top, spacing: 10) {
                 AvatarView(url: avatarURL, size: 36)
@@ -60,6 +74,8 @@ struct FeedVideoCard: View {
                 Spacer(minLength: 0)
 
                 Menu {
+                    DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
+
                     Button {
                         library.toggleWatchLater(video)
                     } label: {
@@ -108,10 +124,13 @@ struct VideoRowView: View {
     let video: Video
     var showsChannel: Bool = true
 
+    @EnvironmentObject private var downloads: DownloadStore
+
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            ArtworkView(url: video.thumbnailURL, duration: video.duration)
+            ArtworkView(url: downloads.artworkURL(for: video), duration: video.duration)
                 .frame(width: Theme.Size.compactThumbnail, height: Theme.Size.compactThumbnail * 9 / 16)
+                .downloadedBadge(video, downloads: downloads)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(video.title)
@@ -154,9 +173,15 @@ struct VideoRowView: View {
 struct FeaturedVideoCard: View {
     let video: Video
 
+    @EnvironmentObject private var downloads: DownloadStore
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ArtworkView(url: video.thumbnailURL, duration: video.duration, cornerRadius: Theme.Radius.hero)
+            ArtworkView(
+                url: downloads.artworkURL(for: video),
+                duration: video.duration,
+                cornerRadius: Theme.Radius.hero
+            )
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
                 .artworkShadow()
                 .overlay(alignment: .bottomLeading) {
@@ -220,6 +245,21 @@ struct ChannelRowView: View {
     }
 }
 
+extension View {
+    /// Marks artwork whose video is already on the device.
+    ///
+    /// Every card and row takes this, so "is this downloaded?" is answered in the same place and
+    /// the same way wherever a video appears — which is the point of downloading it at all.
+    @ViewBuilder
+    func downloadedBadge(_ video: Video, downloads: DownloadStore) -> some View {
+        if downloads.isDownloaded(video.id) {
+            overlay(alignment: .topLeading) { DownloadedBadge() }
+        } else {
+            self
+        }
+    }
+}
+
 #Preview {
     ScrollView {
         VStack(spacing: 24) {
@@ -236,6 +276,8 @@ struct ChannelRowView: View {
         }
         .padding()
     }
+    .environmentObject(DownloadStore.shared)
+    .environmentObject(DownloadManager.shared)
 }
 
 extension Video {

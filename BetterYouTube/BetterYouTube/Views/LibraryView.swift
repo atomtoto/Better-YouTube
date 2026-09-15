@@ -6,6 +6,7 @@ struct LibraryView: View {
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var watchLater: WatchLaterStore
     @EnvironmentObject private var auth: GoogleAuthService
+    @EnvironmentObject private var downloads: DownloadStore
     @StateObject private var viewModel = LibraryViewModel()
 
     var body: some View {
@@ -72,6 +73,19 @@ struct LibraryView: View {
             }
 
             Section("On This Device") {
+                // First in the section on purpose: it is the only row here that still works with
+                // the network off, which is exactly when someone goes looking for it.
+                NavigationLink {
+                    DownloadsView()
+                } label: {
+                    LibraryRow(
+                        icon: "arrow.down.circle.fill",
+                        tint: .green,
+                        title: "Downloads",
+                        count: downloads.readyRecords.count
+                    )
+                }
+
                 NavigationLink {
                     VideoListView(title: "Favorites", videos: library.favorites, onDelete: library.removeFavorites)
                 } label: {
@@ -170,4 +184,8 @@ private struct LibraryRow: View {
         .environmentObject(WatchLaterStore.shared)
         .environmentObject(GoogleAuthService.shared)
         .environmentObject(NotificationStore.shared)
+        .environmentObject(DownloadStore.shared)
+        .environmentObject(DownloadManager.shared)
+        .environmentObject(DownloadSettings.shared)
+        .environmentObject(PlayerManager.shared)
 }

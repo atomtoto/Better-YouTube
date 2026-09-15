@@ -209,4 +209,8 @@ struct SearchView: View {
         .environmentObject(LibraryStore.shared)
         .environmentObject(WatchLaterStore.shared)
         .environmentObject(RecentSearchStore.shared)
+        .environmentObject(DownloadStore.shared)
+        .environmentObject(DownloadManager.shared)
+        .environmentObject(DownloadSettings.shared)
+        .environmentObject(PlayerManager.shared)
 }

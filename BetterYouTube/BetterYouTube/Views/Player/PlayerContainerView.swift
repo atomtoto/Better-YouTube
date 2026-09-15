@@ -10,6 +10,8 @@ import SwiftUI
 /// layout instead of a jump, and the finger can drive it directly.
 struct PlayerContainerView: View {
     @EnvironmentObject private var player: PlayerManager
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
     /// The pull-down that shrinks the expanded player back into the bar.
     @State private var drag = PlayerDragState()
     /// The separate flick that expands or dismisses the docked bar.
@@ -67,7 +69,7 @@ struct PlayerContainerView: View {
                 .opacity(Double(1 - expansion))
                 .onTapGesture { player.expand() }
                 .gesture(barDragGesture)
-                .contextMenu { PlayerActions(player: player) }
+                .contextMenu { PlayerActions(player: player, downloads: downloads, downloadManager: downloadManager) }
                 .allowsHitTesting(!player.isExpanded)
 
             // 2. The one and only video surface. It keeps its full-screen layout size in every
@@ -75,7 +77,7 @@ struct PlayerContainerView: View {
             //    on every frame of a drag is what made collapsing the player stutter. Expanded,
             //    it takes the taps so YouTube's own controls work; docked, they fall through to
             //    the bar and expand the player.
-            PlayerSurface(webView: player.webView)
+            videoSurface
                 .frame(width: video.width, height: video.height)
                 .clipShape(
                     RoundedRectangle(
@@ -118,6 +120,18 @@ struct PlayerContainerView: View {
             .position(x: bar.midX, y: bar.midY)
             .opacity(Double(1 - expansion))
             .allowsHitTesting(!player.isExpanded)
+        }
+    }
+
+    /// Whichever player is live. They swap in the same slot and are laid out identically, so
+    /// the morph between the bar and full screen is unaware that there are two of them — and a
+    /// downloaded video docks, expands and goes full screen exactly like a streamed one.
+    @ViewBuilder
+    private var videoSurface: some View {
+        if player.isLocal {
+            LocalPlayerSurface(playback: player.local)
+        } else {
+            PlayerSurface(webView: player.webView)
         }
     }
 
@@ -215,8 +229,13 @@ struct PlayerActions: View {
     /// content is a presentation of its own, and an `@EnvironmentObject` resolved in there has
     /// no owner to find.
     @ObservedObject var player: PlayerManager
+    @ObservedObject var downloads: DownloadStore
+    @ObservedObject var downloadManager: DownloadManager
 
     var body: some View {
+        if let video = player.currentVideo {
+            DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
+        }
         if let url = player.currentVideo?.watchURL {
             ShareLink(item: url) {
                 Label("Share", systemImage: "square.and.arrow.up")
@@ -416,6 +435,8 @@ private struct MiniPlayerControls: View {
     let compactness: CGFloat
 
     @EnvironmentObject private var player: PlayerManager
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
 
     /// What survives in the pill: everything else fades and is clipped away.
     private var isCompact: Bool { compactness > 0.5 }
@@ -442,7 +463,7 @@ private struct MiniPlayerControls: View {
         .padding(.leading, artworkExtent + metrics.labelGap)
         .contentShape(Rectangle())
         .onTapGesture { player.expand() }
-        .contextMenu { PlayerActions(player: player) }
+        .contextMenu { PlayerActions(player: player, downloads: downloads, downloadManager: downloadManager) }
         .opacity(Double(1 - compactness))
         .allowsHitTesting(!isCompact)
     }
