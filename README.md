@@ -197,47 +197,37 @@ rather than handed to the downloader, which is a worse place to find out about i
 A token can be set for a service that isn't open to the internet. One typed with its own scheme
 (`Api-Key abc123`) is sent as it stands; a bare one is sent as `Bearer`.
 
-### One is included, and deploying it is a button
+### One is included
 
 `resolver/` is a working one: about 400 lines of Python standard library around **yt-dlp**, with a
-test suite that runs offline. That split is deliberate — yt-dlp is the only part that needs
-keeping current, and it is maintained by people who do it full time, so the container refreshes it
-on every start.
+test suite that runs offline. That split is deliberate — yt-dlp is the only part that needs keeping
+current, and it is maintained by people who do it full time, so the container refreshes it on every
+start.
 
-Setting it up takes no terminal and no machine of your own:
+**Run it on your own network**, which is not a preference but the thing that decides whether this
+works at all. YouTube distrusts datacenter IP ranges, so a resolver at a hosting provider is
+usually answered with *"Sign in to confirm you're not a bot"* rather than a video, and no setting
+talks it round. A home connection is an ordinary residential address and is simply not treated that
+way.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/atomtoto/Better-YouTube)
+```sh
+cd resolver && docker compose up -d
+```
 
-1. Click, sign in with GitHub, confirm. Two minutes.
-2. Open the service's URL **on the phone**.
-3. Tap **Set up Better YouTube**.
-
-Nothing is typed, and the access token is never even seen: Render generates one, and the
-resolver's own setup page hands it to the app, which asks you to confirm before saving it. That
-page closes once a download has worked, and otherwise half an hour after the service starts.
-
-`render.yaml` pins Render's **free** plan explicitly, because leaving that line out bills the
-default paid tier at $7/month. Free sleeps after 15 minutes idle and takes a minute to wake, which
-a background download barely notices — but its bandwidth allowance is what the muxed path eats, so
-on free hosting either cap the quality or run the resolver at home. Check any host's current
-pricing yourself; free tiers change.
-
-`fly.toml`, `railway.json` and a `docker compose up` are all there too — see
-[`resolver/README.md`](resolver/README.md). The same three steps work for a resolver on your own
-machine, with its LAN address in place of the hosting one.
+Then open `http://<your-machine's-LAN-address>:8080` **on the phone** and tap *Set up Better
+YouTube*. Nothing is typed and no token is copied: the resolver serves a page carrying its own
+address and access token as a `betteryoutube://` link, and the app asks you to confirm before
+saving it. Tailscale or a Cloudflare Tunnel puts that within reach from outside the house while
+keeping the requests on your own connection.
 
 **There is no address to configure.** The resolver works out how it was reached from each request,
 so it is right whether that is a LAN address, a tunnel or a hosting domain — which removes the
-setting that otherwise goes wrong most often, and with it every link that would have pointed at
-its own localhost.
+setting that otherwise goes wrong most often, and with it every link that would have pointed at its
+own localhost.
 
-It answers in two ways, and the difference is what it costs you to run. When YouTube offers the
-wanted height **already joined** — in practice 360p, sometimes 720p — the answer is YouTube's own
-CDN URL and the phone fetches it from Google: this server moves no video at all. Above that
-YouTube keeps video and audio apart and the app plays a single file, so the answer is a link back
-to the resolver, which re-resolves and pipes both through ffmpeg into a fragmented MP4 as it goes.
-Nothing is staged on disk, and `ALLOW_MUX=0` refuses that path entirely if you would rather never
-carry a byte of video — worth considering on a free hosting tier.
+`render.yaml`, `fly.toml` and `railway.json` are there for hosting it instead, with the free plans
+pinned where that is a choice — but expect the bot check, and read
+[`resolver/README.md`](resolver/README.md) on what getting round it costs before you rely on it.
 
 Other resolvers fit too: a self-hosted [**cobalt**](https://github.com/imputnet/cobalt), whose
 `POST /` answers `{"status": "tunnel", "url", "filename"}`, drops straight in — set its `API_URL`

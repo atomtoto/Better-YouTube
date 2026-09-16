@@ -4,6 +4,9 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+    volumes:
+      # Only used when COOKIES_FILE points inside it; harmless otherwise.
+      - ./cookies:/cookies:ro
     environment:
       # Set this on anything reachable from outside a network you control: without it, whoever
       # finds the address can use your resolver. The app never makes you type it — the setup page
@@ -23,6 +26,11 @@ services:
 
       # 0 skips the yt-dlp update on boot.
       UPDATE_YTDLP: "${UPDATE_YTDLP:-1}"
+
+      # Only needed where YouTube demands a sign-in, which is mostly at hosting providers. The
+      # downloads become the account that exported the cookies — see the README before using it.
+      COOKIES_FILE: "${COOKIES_FILE:-}"
+      PLAYER_CLIENT: "${PLAYER_CLIENT:-}"
 
       # Deliberately passed through empty unless you set it. The server works its own address out
       # from each request, which is right for a LAN address, a tunnel and a hosting domain alike;

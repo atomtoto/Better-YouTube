@@ -217,6 +217,49 @@ def main():
     server.SETUP_MINUTES = original_minutes
     server.PUBLIC_URL = original_public
 
+    print("yt-dlp's failures are rewritten for whoever tapped Download")
+    # The real thing, apostrophe and wiki links included, as it arrived in a user's manifest.
+    bot = ("ERROR: [youtube] DncsWImJMV4: Sign in to confirm you\u2019re not a bot. Use "
+           "--cookies-from-browser or --cookies for the authentication. See "
+           "https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp")
+    rewritten = server.friendly_error(bot)
+    check("the bot check names the real cause", "datacenter" in rewritten, True)
+    check("and keeps yt-dlp's flags off a phone screen", "--cookies-from-browser" in rewritten, False)
+    check("and no wiki links either", "github.com" in rewritten, False)
+
+    check(
+        "a private video says so plainly",
+        server.friendly_error("ERROR: [youtube] abc: Private video. Sign in if you've been granted access"),
+        "That video is private.",
+    )
+    check(
+        "anything unrecognised is passed through",
+        server.friendly_error("ERROR: something nobody has seen before"),
+        "ERROR: something nobody has seen before",
+    )
+
+    class Raising(server.Handler):
+        extractor = staticmethod(lambda video_id: (_ for _ in ()).throw(Exception(bot)))
+
+    raising = ThreadingHTTPServer(("127.0.0.1", PORT + 1), Raising)
+    threading.Thread(target=raising.serve_forever, daemon=True).start()
+    request = urllib.request.Request(f"http://127.0.0.1:{PORT + 1}/", method="POST")
+    request.data = json.dumps({"videoId": "dQw4w9WgXcQ"}).encode()
+    request.add_header("Content-Type", "application/json")
+    request.add_header("Authorization", "Bearer s3cret")
+    try:
+        urllib.request.urlopen(request)
+        status, reply = 200, {}
+    except urllib.error.HTTPError as error:
+        status, reply = error.code, json.loads(error.read())
+    check("and it reaches the app that way", status, 502)
+    check(
+        "carrying the rewritten message",
+        "datacenter" in reply.get("error", {}).get("message", ""),
+        True,
+    )
+    raising.shutdown()
+
     print("the rest")
     check("health", call("/health", method="GET", token=None)[1].get("status"), "ok")
     check("a body that isn't json is refused", call(body=None, method="POST")[0], 400)

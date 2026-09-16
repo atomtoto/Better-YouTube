@@ -8,36 +8,36 @@ extracting. That split is the point: yt-dlp is maintained against YouTube's chan
 do it full time, and it is the only part of this that needs keeping current. The container
 refreshes it on every start, so "it stopped working" is usually fixed by a restart.
 
-## The short way
+## Where to run it
+
+**Run it on your own network.** Not a preference — YouTube distrusts datacenter IP ranges, and a
+resolver at a hosting provider is usually met with *"Sign in to confirm you're not a bot"* instead
+of a video. No setting here talks it round, because nothing is wrong: YouTube has decided that
+address looks automated, and at a cloud provider it is not entirely wrong. A home connection is an
+ordinary residential address and is simply not treated that way.
+
+```sh
+docker compose up -d
+curl localhost:8080/health
+```
+
+Then open `http://<your-machine's-LAN-address>:8080` on the phone and tap **Set up Better
+YouTube**. That is the whole setup: no typing, and no token to copy — the page hands it over and
+the app asks you to confirm.
+
+Set `RESOLVER_TOKEN` in `.env` first if that port is reachable from anywhere you do not control.
+Without Docker: `pip install yt-dlp`, install `ffmpeg`, then `python3 server.py`.
+
+To reach it from outside the house, put it behind Tailscale or a Cloudflare Tunnel. Both keep the
+requests going out over your home connection, which is the part that matters here.
+
+## Hosting it instead, and why it often fails
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/atomtoto/Better-YouTube)
 
-1. Click the button, sign in with GitHub, confirm. Two minutes.
-2. When it is live, open the service's URL **on the phone**.
-3. Tap **Set up Better YouTube**.
-
-That is the whole thing. No terminal, no Docker, no IP addresses, and no typing an access token —
-Render generates one, and the resolver's own setup page hands it to the app, which asks you to
-confirm before saving it.
-
-**On Render's free plan**, which `render.yaml` pins explicitly: leaving `plan` out would have billed
-the default paid tier at $7/month, so the line matters. Free means the service sleeps after 15
-minutes idle and takes about a minute to wake, which costs a download nothing but a slow start —
-the transfer runs in the background either way. The allowance is 750 instance-hours a month, enough
-for one service, and **bandwidth is counted**, which is where the muxed path below gets expensive.
-
-The setup page closes once a download has actually worked, and otherwise about **30 minutes after
-the service starts**, because it shows that token and the address it sits at is a guessable
-subdomain. Both conditions are needed rather than just the timer: a sleeping instance restarts its
-clock every time it wakes, so the timer alone would leave the page open more or less permanently.
-Restart the service to open it again.
-
-## The other ways
-
-Check the current pricing of any of these yourself before leaving one running — hosting free
-tiers change, and this document is not the authority on what yours costs today.
-
-**Fly.io**, from this directory:
+`render.yaml` pins Render's **free** plan — leaving that line out bills the default paid tier at
+$7/month — and `generateValue` mints an access token nobody has to type. `fly.toml` and
+`railway.json` cover the other two:
 
 ```sh
 fly launch --copy-config --no-deploy
@@ -45,20 +45,26 @@ fly secrets set RESOLVER_TOKEN=$(openssl rand -hex 16)
 fly deploy
 ```
 
-**Railway**: point it at this repository; `railway.json` is picked up. Set `RESOLVER_TOKEN`
-yourself in the dashboard.
+**Expect the bot check.** It is the common outcome from any of these, and the resolver says so in
+those words rather than passing yt-dlp's flags and wiki links to a phone screen. Two ways round
+it, neither free:
 
-**Your own machine**, which is the only one where nothing leaves the house:
+- `COOKIES_FILE` pointed at an exported cookies file makes the requests authenticated. They then
+  belong to that YouTube account — and using an account from a datacenter address is a good way to
+  get it limited. Use a throwaway account if you use one at all.
+- `PLAYER_CLIENT` passes yt-dlp a different client to try. Worth touching only when a yt-dlp issue
+  thread names one; it is a moving target by nature.
 
-```sh
-docker compose up -d
-curl localhost:8080/health
-```
+If you are weighing those against plugging a machine in at home, plug the machine in at home.
 
-Then open `http://<your-machine's-LAN-address>:8080` on the phone and tap the button. Set
-`RESOLVER_TOKEN` in `.env` first if the port is reachable from anywhere you don't control.
+Free hosting has a second catch even when it works: the service sleeps after about 15 minutes idle
+and takes a minute to wake, and its **bandwidth is counted** — which is the muxed path's bill, not
+the direct one. Check any host's current pricing yourself; free tiers change.
 
-Without Docker: `pip install yt-dlp`, install `ffmpeg`, then `python3 server.py`.
+The setup page closes once a download has worked, and otherwise about 30 minutes after the service
+starts, because it shows the access token and the address it sits at is a guessable subdomain. Both
+conditions are needed rather than just the timer: a sleeping instance restarts that clock every
+time it wakes. Restart the service to open it again.
 
 ## What it costs to run
 
@@ -73,10 +79,9 @@ Nothing is ever written to disk: the muxed path streams. `ALLOW_MUX=0` refuses i
 then this server never carries a byte of video — downloads are capped at whatever YouTube happens
 to offer already joined.
 
-**This is the decision that matters on free hosting.** A muxed 1080p video is hundreds of megabytes
-through the server, against a monthly bandwidth allowance; the direct path is zero. So on a free
-tier either accept 360p-ish with `ALLOW_MUX=0`, hold it to `MAX_HEIGHT=720`, or run the resolver at
-home, where the bandwidth is already yours and the only cost is leaving something switched on.
+At home this is barely a decision: the bandwidth is already yours. It only bites on hosting, where
+a muxed 1080p video is hundreds of megabytes against a monthly allowance and the direct path is
+zero.
 
 ## Settings
 
@@ -88,6 +93,8 @@ Every one of these has a working default. The list is short on purpose.
 | `MAX_HEIGHT` | Ceiling regardless of what the app asks for. `720` keeps the muxed path cheaper. |
 | `ALLOW_MUX` | `0` refuses anything needing ffmpeg. |
 | `SETUP_MINUTES` | How long the setup page stays open after boot. `0` turns it off. |
+| `COOKIES_FILE` | Path to an exported cookies file, for when YouTube demands a sign-in. The downloads become that account's — read the warning above. |
+| `PLAYER_CLIENT` | Comma-separated yt-dlp player clients to try, e.g. `ios,web`. Only when a yt-dlp thread tells you to. |
 | `UPDATE_YTDLP` | `0` skips the update on boot. |
 | `PORT` | Default 8080. |
 | `PUBLIC_URL` | **Normally leave this alone.** The server reads its own address off each request, so it is right whether it is reached at a LAN address, through a tunnel, or at a hosting platform's domain. This is only an override for the rare setup where neither the `Host` nor the `X-Forwarded-*` headers tell the truth. |

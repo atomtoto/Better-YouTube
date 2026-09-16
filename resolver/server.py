@@ -30,6 +30,10 @@ Environment:
   MAX_HEIGHT      hard ceiling on resolution regardless of what the app asks (default 1080)
   ALLOW_MUX       set to 0 to refuse anything needing muxing, keeping this server bandwidth-free
   SETUP_MINUTES   how long after boot the setup page at / stays open (default 30, 0 disables it)
+  COOKIES_FILE    path to a Netscape-format cookies file, for when YouTube demands a sign-in.
+                  Read the warning by COOKIES_FILE below before using one.
+  PLAYER_CLIENT   comma-separated yt-dlp player clients to try (e.g. "ios,web"). Only worth
+                  touching when a yt-dlp issue thread tells you to.
 """
 
 import hashlib
@@ -51,6 +55,16 @@ TOKEN = os.environ.get("RESOLVER_TOKEN", "")
 MAX_HEIGHT = int(os.environ.get("MAX_HEIGHT", "1080"))
 ALLOW_MUX = os.environ.get("ALLOW_MUX", "1") not in ("0", "false", "no")
 SETUP_MINUTES = int(os.environ.get("SETUP_MINUTES", "30"))
+
+# A cookies file makes every request here an authenticated one, which is how you get past a
+# YouTube that has decided this address looks automated.
+#
+# Understand what it costs before reaching for it. The cookies are a live session for whichever
+# account exported them, so the downloads become that account's, and using an account from a
+# datacenter address is a good way to have it limited or locked. If the choice is between this and
+# running the resolver at home, run it at home.
+COOKIES_FILE = os.environ.get("COOKIES_FILE", "")
+PLAYER_CLIENT = os.environ.get("PLAYER_CLIENT", "")
 STARTED_AT = time.time()
 # Set the first time a client successfully resolves something, which is the only reliable sign
 # that setup actually worked. See `setup_is_open`.
@@ -77,6 +91,13 @@ def extract(video_id):
         # resolve to its first entry rather than several minutes of metadata.
         "noplaylist": True,
     }
+    if COOKIES_FILE and os.path.exists(COOKIES_FILE):
+        options["cookiefile"] = COOKIES_FILE
+    if PLAYER_CLIENT:
+        options["extractor_args"] = {
+            "youtube": {"player_client": [c.strip() for c in PLAYER_CLIENT.split(",") if c.strip()]}
+        }
+
     with YoutubeDL(options) as ydl:
         return ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
 
@@ -126,6 +147,41 @@ def split_formats(info, max_height):
     ))
     audios.sort(key=lambda f: (f.get("ext") == "m4a", f.get("abr") or 0))
     return videos[-1], audios[-1]
+
+
+def friendly_error(raw):
+    """yt-dlp's message, rewritten where it is a failure someone can actually do something about.
+
+    What comes out of here is shown verbatim in the app, on a phone, to whoever tapped Download.
+    yt-dlp writes for a terminal — its bot-check message is three lines of flags and two links to
+    a GitHub wiki — and putting that on a phone tells the reader nothing except that something
+    technical broke. Anything not recognised is passed through unchanged, because yt-dlp's own
+    words are usually the useful ones.
+    """
+    text = " ".join(str(raw).split())
+    low = text.lower()
+
+    if "not a bot" in low or "sign in to confirm you" in low:
+        return (
+            "YouTube refused this resolver, asking it to prove it isn't automated. That is what "
+            "happens at a hosting provider's address — YouTube distrusts datacenter IP ranges, and "
+            "no setting here changes its mind. Running the resolver on your home network is the "
+            "fix that lasts; a cookies file is the other way, and signs the downloads with a "
+            "YouTube account."
+        )
+    if "age" in low and ("confirm" in low or "restricted" in low):
+        return "YouTube age-restricted this video, so it won't hand it over without a signed-in account."
+    if "private video" in low:
+        return "That video is private."
+    if "video unavailable" in low or "removed" in low:
+        return "YouTube says that video isn't available any more."
+    if "members-only" in low or "join this channel" in low:
+        return "That video is members-only on its channel."
+    if "live event" in low and "begin" in low:
+        return "That is a premiere or a live stream that hasn't started."
+    if "unable to download" in low and ("timed out" in low or "timeout" in low):
+        return "The resolver couldn't reach YouTube — it may have no working network connection."
+    return text
 
 
 # --------------------------------------------------------------------------- signed links
@@ -326,7 +382,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             info = self.extractor(video_id)
         except Exception as error:  # yt-dlp raises a family of these; the message is the useful part
-            return self.send_error_json(502, "extract_failed", str(error).strip() or "yt-dlp couldn't read that video.")
+            return self.send_error_json(
+                502, "extract_failed",
+                friendly_error(error) or "yt-dlp couldn't read that video."
+            )
 
         global HAS_SERVED
         chosen = progressive_format(info, height)
@@ -377,7 +436,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             info = self.extractor(video_id)
         except Exception as error:
-            return self.send_error_json(502, "extract_failed", str(error).strip())
+            return self.send_error_json(502, "extract_failed", friendly_error(error))
 
         video, audio = split_formats(info, height)
         if not video or not audio:
