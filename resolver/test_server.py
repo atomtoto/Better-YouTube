@@ -42,13 +42,15 @@ class StubHandler(server.Handler):
     extractor = staticmethod(lambda video_id: state["info"])
 
 
-def call(path="/", body=None, token="s3cret", method="POST"):
+def call(path="/", body=None, token="s3cret", method="POST", headers=None):
     request = urllib.request.Request(f"http://127.0.0.1:{PORT}{path}", method=method)
     if body is not None:
         request.data = json.dumps(body).encode()
         request.add_header("Content-Type", "application/json")
     if token:
         request.add_header("Authorization", f"Bearer {token}")
+    for name, value in (headers or {}).items():
+        request.add_header(name, value)
     try:
         with urllib.request.urlopen(request) as response:
             return response.status, json.loads(response.read())
@@ -57,6 +59,18 @@ def call(path="/", body=None, token="s3cret", method="POST"):
             return error.code, json.loads(error.read())
         except ValueError:
             return error.code, {}
+
+
+def get_text(path="/", headers=None):
+    """A page rather than an API answer, so this one keeps the body as text."""
+    request = urllib.request.Request(f"http://127.0.0.1:{PORT}{path}", method="GET")
+    for name, value in (headers or {}).items():
+        request.add_header(name, value)
+    try:
+        with urllib.request.urlopen(request) as response:
+            return response.status, response.read().decode()
+    except urllib.error.HTTPError as error:
+        return error.code, error.read().decode()
 
 
 def check(name, got, want):
@@ -125,6 +139,73 @@ def main():
     )
     server.ALLOW_MUX = True
     state["info"] = PROGRESSIVE
+
+    print("the address is read off the request, not configured")
+    original_public = server.PUBLIC_URL
+    server.PUBLIC_URL = ""
+    state["info"] = SPLIT_ONLY
+
+    _, reply = call(body={"videoId": "dQw4w9WgXcQ"}, headers={"Host": "192.168.1.20:8080"})
+    check(
+        "a LAN Host header becomes the link's base",
+        reply.get("url", "").startswith("http://192.168.1.20:8080/media?"),
+        True,
+    )
+
+    _, reply = call(body={"videoId": "dQw4w9WgXcQ"}, headers={
+        "Host": "internal:8080",
+        "X-Forwarded-Host": "resolver.fly.dev",
+        "X-Forwarded-Proto": "https",
+    })
+    check(
+        "a proxy's forwarded host wins over the internal one",
+        reply.get("url", "").startswith("https://resolver.fly.dev/media?"),
+        True,
+    )
+
+    _, reply = call(body={"videoId": "dQw4w9WgXcQ"}, headers={
+        "Host": "internal:8080",
+        "X-Forwarded-Host": "a.fly.dev, b.internal",
+        "X-Forwarded-Proto": "https, http",
+    })
+    check(
+        "a proxy chain uses the client-facing entry",
+        reply.get("url", "").startswith("https://a.fly.dev/media?"),
+        True,
+    )
+
+    check(
+        "PUBLIC_URL still overrides when set",
+        (lambda: (setattr(server, "PUBLIC_URL", "https://forced.example"),
+                  call(body={"videoId": "dQw4w9WgXcQ"}, headers={"Host": "ignored"})[1]
+                  .get("url", "").startswith("https://forced.example/media?"))[1])(),
+        True,
+    )
+    server.PUBLIC_URL = ""
+    state["info"] = PROGRESSIVE
+
+    print("the setup page configures the app in one tap")
+    status, page = get_text("/", headers={"Host": "resolver.fly.dev", "X-Forwarded-Proto": "https"})
+    check("it is served", status, 200)
+    check(
+        "it carries a link the app understands",
+        "betteryoutube://downloads?endpoint=https%3A%2F%2Fresolver.fly.dev" in page,
+        True,
+    )
+    check("the token rides along so nobody types it", "token=s3cret" in page, True)
+
+    original_started = server.STARTED_AT
+    server.STARTED_AT = original_started - (server.SETUP_MINUTES * 60 + 1)
+    status, page = get_text("/")
+    check("it closes on a timer", status, 403)
+    check("and says the resolver itself is fine", "running normally" in page, True)
+    server.STARTED_AT = original_started
+
+    original_minutes = server.SETUP_MINUTES
+    server.SETUP_MINUTES = 0
+    check("0 disables it entirely", get_text("/")[0], 403)
+    server.SETUP_MINUTES = original_minutes
+    server.PUBLIC_URL = original_public
 
     print("the rest")
     check("health", call("/health", method="GET", token=None)[1].get("status"), "ok")

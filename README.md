@@ -197,12 +197,34 @@ rather than handed to the downloader, which is a worse place to find out about i
 A token can be set for a service that isn't open to the internet. One typed with its own scheme
 (`Api-Key abc123`) is sent as it stands; a bare one is sent as `Bearer`.
 
-### One is included
+### One is included, and deploying it is a button
 
-`resolver/` is a working one: about 300 lines of Python standard library around **yt-dlp**, with a
-`docker compose up` and a test suite that runs offline. That split is deliberate — yt-dlp is the
-only part that needs keeping current, and it is maintained by people who do it full time, so the
-container refreshes it on every start.
+`resolver/` is a working one: about 400 lines of Python standard library around **yt-dlp**, with a
+test suite that runs offline. That split is deliberate — yt-dlp is the only part that needs
+keeping current, and it is maintained by people who do it full time, so the container refreshes it
+on every start.
+
+Setting it up takes no terminal and no machine of your own:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/atomtoto/Better-YouTube)
+
+1. Click, sign in with GitHub, confirm. Two minutes.
+2. Open the service's URL **on the phone**.
+3. Tap **Set up Better YouTube**.
+
+Nothing is typed, and the access token is never even seen: Render generates one, and the
+resolver's own setup page hands it to the app, which asks you to confirm before saving it. That
+page closes half an hour after the service starts, because it carries that token and the address
+it sits at is a guessable subdomain; restarting the service opens it again.
+
+`fly.toml`, `railway.json` and a `docker compose up` are all there too — see
+[`resolver/README.md`](resolver/README.md). The same three steps work for a resolver on your own
+machine, with its LAN address in place of the hosting one.
+
+**There is no address to configure.** The resolver works out how it was reached from each request,
+so it is right whether that is a LAN address, a tunnel or a hosting domain — which removes the
+setting that otherwise goes wrong most often, and with it every link that would have pointed at
+its own localhost.
 
 It answers in two ways, and the difference is what it costs you to run. When YouTube offers the
 wanted height **already joined** — in practice 360p, sometimes 720p — the answer is YouTube's own
@@ -210,7 +232,7 @@ CDN URL and the phone fetches it from Google: this server moves no video at all.
 YouTube keeps video and audio apart and the app plays a single file, so the answer is a link back
 to the resolver, which re-resolves and pipes both through ffmpeg into a fragmented MP4 as it goes.
 Nothing is staged on disk, and `ALLOW_MUX=0` refuses that path entirely if you would rather never
-carry a byte of video. Details in [`resolver/README.md`](resolver/README.md).
+carry a byte of video — worth considering on a free hosting tier.
 
 Other resolvers fit too: a self-hosted [**cobalt**](https://github.com/imputnet/cobalt), whose
 `POST /` answers `{"status": "tunnel", "url", "filename"}`, drops straight in — set its `API_URL`
@@ -268,6 +290,7 @@ menu, and the Downloads screen says so rather than offering a button that can't 
 ## Project structure
 
 ```
+render.yaml                      One-click deploy of the resolver below
 resolver/                        A yt-dlp resolver: server.py, Dockerfile, compose, tests
 BetterYouTube/
   BetterYouTube.xcodeproj/       Xcode project (single iOS app target, iOS 26+)
