@@ -214,8 +214,13 @@ Setting it up takes no terminal and no machine of your own:
 
 Nothing is typed, and the access token is never even seen: Render generates one, and the
 resolver's own setup page hands it to the app, which asks you to confirm before saving it. That
-page closes half an hour after the service starts, because it carries that token and the address
-it sits at is a guessable subdomain; restarting the service opens it again.
+page closes once a download has worked, and otherwise half an hour after the service starts.
+
+`render.yaml` pins Render's **free** plan explicitly, because leaving that line out bills the
+default paid tier at $7/month. Free sleeps after 15 minutes idle and takes a minute to wake, which
+a background download barely notices — but its bandwidth allowance is what the muxed path eats, so
+on free hosting either cap the quality or run the resolver at home. Check any host's current
+pricing yourself; free tiers change.
 
 `fly.toml`, `railway.json` and a `docker compose up` are all there too — see
 [`resolver/README.md`](resolver/README.md). The same three steps work for a resolver on your own

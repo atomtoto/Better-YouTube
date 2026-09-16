@@ -52,6 +52,9 @@ MAX_HEIGHT = int(os.environ.get("MAX_HEIGHT", "1080"))
 ALLOW_MUX = os.environ.get("ALLOW_MUX", "1") not in ("0", "false", "no")
 SETUP_MINUTES = int(os.environ.get("SETUP_MINUTES", "30"))
 STARTED_AT = time.time()
+# Set the first time a client successfully resolves something, which is the only reliable sign
+# that setup actually worked. See `setup_is_open`.
+HAS_SERVED = False
 
 # How long a /media link stays valid. Long enough to survive a queue of downloads, short enough
 # that a link that leaks is not a standing invitation.
@@ -263,12 +266,19 @@ class Handler(BaseHTTPRequestHandler):
     def setup_is_open(self):
         """Whether the page at / will still hand out the configuration.
 
-        It closes on a timer, because the page carries the access token and the address it sits at
-        is not a secret — on a hosting platform it is a guessable subdomain. A window just after
-        boot is the same bargain a device makes when it starts up in pairing mode: long enough for
-        the person who just deployed it, short enough that it is not standing open for good.
-        Restarting the service opens it again.
+        Two conditions, and the second is the one that matters on a free hosting tier. The page
+        carries the access token and sits at a guessable subdomain, so it closes on a timer after
+        boot — the bargain a device makes by starting up in pairing mode.
+
+        But a free instance sleeps after a few minutes idle and boots again on the next request,
+        which would restart that timer over and over and leave the page effectively always open.
+        So it also closes for good once anything has successfully resolved through this process:
+        that only happens after an app is configured and working, and on a tier that sleeps, the
+        request that wakes the service is usually that very app. The timer is then just the window
+        before the first download, not a recurring one.
         """
+        if HAS_SERVED:
+            return False
         return SETUP_MINUTES > 0 and (time.time() - STARTED_AT) < SETUP_MINUTES * 60
 
     def serve_setup(self):
@@ -318,8 +328,10 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as error:  # yt-dlp raises a family of these; the message is the useful part
             return self.send_error_json(502, "extract_failed", str(error).strip() or "yt-dlp couldn't read that video.")
 
+        global HAS_SERVED
         chosen = progressive_format(info, height)
         if chosen:
+            HAS_SERVED = True
             return self.send_json(200, {
                 "status": "ok",
                 "url": chosen["url"],
@@ -340,6 +352,7 @@ class Handler(BaseHTTPRequestHandler):
         if not shutil.which("ffmpeg"):
             return self.send_error_json(500, "no_ffmpeg", "This one needs joining and ffmpeg isn't installed here.")
 
+        HAS_SERVED = True
         return self.send_json(200, {
             "status": "ok",
             "url": media_link(video_id, video.get("height") or height, self.base_url()),
@@ -459,7 +472,8 @@ SETUP_CLOSED_HTML = """<!doctype html>
   <h1>Setup is closed</h1>
   <p>This page shows the access token, so it only stays open for a while after the service starts.
      The resolver itself is running normally — this is only the setup page.</p>
-  <p>Restart the service to open it again.</p>
+  <p>It closes for good once a download has worked, and otherwise a while after the service
+     starts. Restart the service to open it again.</p>
 </main></body></html>""".replace("{{", "{").replace("}}", "}")
 
 

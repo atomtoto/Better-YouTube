@@ -20,10 +20,22 @@ That is the whole thing. No terminal, no Docker, no IP addresses, and no typing 
 Render generates one, and the resolver's own setup page hands it to the app, which asks you to
 confirm before saving it.
 
-The setup page closes about **30 minutes after the service starts**, because it shows that token
-and the address it lives at is a guessable subdomain. Restart the service to open it again.
+**On Render's free plan**, which `render.yaml` pins explicitly: leaving `plan` out would have billed
+the default paid tier at $7/month, so the line matters. Free means the service sleeps after 15
+minutes idle and takes about a minute to wake, which costs a download nothing but a slow start —
+the transfer runs in the background either way. The allowance is 750 instance-hours a month, enough
+for one service, and **bandwidth is counted**, which is where the muxed path below gets expensive.
+
+The setup page closes once a download has actually worked, and otherwise about **30 minutes after
+the service starts**, because it shows that token and the address it sits at is a guessable
+subdomain. Both conditions are needed rather than just the timer: a sleeping instance restarts its
+clock every time it wakes, so the timer alone would leave the page open more or less permanently.
+Restart the service to open it again.
 
 ## The other ways
+
+Check the current pricing of any of these yourself before leaving one running — hosting free
+tiers change, and this document is not the authority on what yours costs today.
 
 **Fly.io**, from this directory:
 
@@ -59,7 +71,12 @@ Two paths, and they are very different for you:
 
 Nothing is ever written to disk: the muxed path streams. `ALLOW_MUX=0` refuses it entirely, and
 then this server never carries a byte of video — downloads are capped at whatever YouTube happens
-to offer already joined. On a free hosting tier that is worth considering.
+to offer already joined.
+
+**This is the decision that matters on free hosting.** A muxed 1080p video is hundreds of megabytes
+through the server, against a monthly bandwidth allowance; the direct path is zero. So on a free
+tier either accept 360p-ish with `ALLOW_MUX=0`, hold it to `MAX_HEIGHT=720`, or run the resolver at
+home, where the bandwidth is already yours and the only cost is leaving something switched on.
 
 ## Settings
 

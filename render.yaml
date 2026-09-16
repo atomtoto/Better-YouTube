@@ -17,6 +17,10 @@ services:
     dockerContext: ./resolver
     region: frankfurt
     healthCheckPath: /health
+    # Without this Render bills the default 0.5c-512mb, which is $7/month. Free spins the service
+    # down after 15 minutes idle and takes about a minute to wake — which costs a downloaded
+    # video nothing but a slow start, since the app's transfer is in the background anyway.
+    plan: free
     envVars:
       # Generated once, kept across restarts, and never shown to you — the setup page passes it
       # to the app. Without this the resolver would be open to anyone who found its address.

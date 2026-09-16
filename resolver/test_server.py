@@ -185,6 +185,9 @@ def main():
     state["info"] = PROGRESSIVE
 
     print("the setup page configures the app in one tap")
+    # Everything above resolved successfully, which is exactly what closes the page for good —
+    # so this section starts from a process that hasn't served anything yet.
+    server.HAS_SERVED = False
     status, page = get_text("/", headers={"Host": "resolver.fly.dev", "X-Forwarded-Proto": "https"})
     check("it is served", status, 200)
     check(
@@ -200,6 +203,13 @@ def main():
     check("it closes on a timer", status, 403)
     check("and says the resolver itself is fine", "running normally" in page, True)
     server.STARTED_AT = original_started
+
+    # The timer alone is not enough where the host sleeps the service and boots it again on the
+    # next request: that restarts the clock, and the page would be open more or less always.
+    check("it reopens once the clock is reset", get_text("/")[0], 200)
+    call(body={"videoId": "dQw4w9WgXcQ"})
+    check("but a download that worked closes it for good", get_text("/")[0], 403)
+    server.HAS_SERVED = False
 
     original_minutes = server.SETUP_MINUTES
     server.SETUP_MINUTES = 0
