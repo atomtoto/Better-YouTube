@@ -30,6 +30,16 @@
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- A resolver on your own machine is reached over plain http at a LAN address, which ATS
+		     blocks by default. This opens exactly that case — local networking — and nothing else:
+		     http to the wider internet stays refused. A resolver behind https needs none of this. -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Better YouTube connects to the download service you configured, when it runs on this network.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
