@@ -33,7 +33,7 @@ struct VideoListView: View {
             }
         }
         .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationBar()
     }
 }
 
@@ -80,7 +80,7 @@ struct SubscriptionsView: View {
             }
         }
         .navigationTitle("Subscriptions")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationBar()
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
     }
 }
@@ -123,7 +123,7 @@ struct PlaylistsView: View {
             }
         }
         .navigationTitle("Playlists")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationBar()
         .navigationDestination(for: Playlist.self) { PlaylistDetailView(playlist: $0) }
     }
 }
@@ -181,7 +181,7 @@ struct PlaylistDetailView: View {
             }
         }
         .navigationTitle(playlist.title)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationBar()
         .task {
             if viewModel.videos.isEmpty { await viewModel.load() }
         }

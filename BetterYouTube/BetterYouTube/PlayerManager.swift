@@ -1,6 +1,12 @@
 import Foundation
 import SwiftUI
 import WebKit
+#if canImport(UIKit)
+import UIKit
+#endif
+#if canImport(AppKit)
+import AppKit
+#endif
 
 /// One event coming back from the embedded player. Kept to primitives so it can cross actor
 /// boundaries from the script-message handler.
@@ -9,6 +15,17 @@ struct PlayerEvent: Sendable {
     let time: Double?
     let duration: Double?
     let state: Int?
+}
+
+/// Where the picture is coming from.
+///
+/// Decided per video, not per screen: anything with a file in the Downloads folder plays from
+/// that file, and everything else from YouTube's embed. Since the choice is made in `play`, a
+/// downloaded video plays from the file wherever it was tapped — Watch Later, history, search, a
+/// playlist, the up-next queue — with no screen having to know it was downloaded.
+enum PlaybackSource: Equatable {
+    case embed
+    case local(URL)
 }
 
 /// Why playback isn't running.
@@ -104,8 +121,18 @@ final class PlayerManager: ObservableObject {
     /// Set whenever playback fails to start, so the UI can say what happened instead of
     /// showing a silent black rectangle.
     @Published private(set) var issue: PlaybackIssue?
+    /// Which of the two players is live. Watched by the container, which swaps the surface.
+    @Published private(set) var source: PlaybackSource = .embed
 
     let webView: WKWebView
+    /// The other player. Both exist for the app's lifetime; `source` says which one is live.
+    let local = LocalPlayback()
+
+    /// True while a downloaded file is what is playing.
+    var isLocal: Bool {
+        if case .local = source { return true }
+        return false
+    }
 
     private let bridge = PlayerScriptBridge()
     private let navigationBridge = PlayerNavigationBridge()
@@ -133,7 +160,10 @@ final class PlayerManager: ObservableObject {
 
     private init() {
         let configuration = WKWebViewConfiguration()
+        #if os(iOS)
+        // A Mac never plays video anywhere but inline, so there is nothing to ask for there.
         configuration.allowsInlineMediaPlayback = true
+        #endif
         configuration.mediaTypesRequiringUserActionForPlayback = []
         // Lets the page hand the video to the system's full-screen presentation, which is what
         // turning the phone now does. Without it WebKit refuses the request and all the app can
@@ -144,10 +174,16 @@ final class PlayerManager: ObservableObject {
         configuration.userContentController = controller
 
         webView = WKWebView(frame: .zero, configuration: configuration)
+        // Black behind the page, so the letterboxing around a video that isn't the surface's
+        // shape reads as part of the picture rather than as a gap. `underPageBackgroundColor`
+        // is the one spelling both platforms share; the scroll view below is iOS's alone.
+        webView.underPageBackgroundColor = .black
+        #if os(iOS)
         webView.scrollView.isScrollEnabled = false
         webView.scrollView.backgroundColor = .black
         webView.backgroundColor = .black
         webView.isOpaque = false
+        #endif
 
         controller.add(bridge, name: "player")
         webView.navigationDelegate = navigationBridge
@@ -158,6 +194,47 @@ final class PlayerManager: ObservableObject {
         fullScreenObserver = webView.observe(\.fullscreenState) { webView, _ in
             let active = webView.fullscreenState == .inFullscreen
             Task { @MainActor in PlayerManager.shared.setSystemFullScreen(active) }
+        }
+
+        wireLocalPlayback()
+    }
+
+    /// Points the file player's reports at the same state the embed's bridge feeds, so everything
+    /// above — the mini bar, the scrubber, the lock screen, the up-next queue — carries on
+    /// working without knowing which player is behind it.
+    private func wireLocalPlayback() {
+        local.onProgress = { [weak self] elapsed, duration in
+            guard let self, self.isLocal else { return }
+            if duration > 0, self.progress.duration != duration {
+                self.progress.duration = duration
+                // The lock screen's scrubber has nothing to draw until the duration arrives.
+                self.refreshNowPlaying()
+            }
+            if abs(elapsed - self.progress.currentTime) > 0.05 {
+                self.progress.currentTime = elapsed
+            }
+        }
+
+        local.onPlayingChanged = { [weak self] playing in
+            guard let self, self.isLocal else { return }
+            self.setPlaying(playing)
+            if playing { self.setBuffering(false) }
+        }
+
+        local.onBufferingChanged = { [weak self] buffering in
+            guard let self, self.isLocal else { return }
+            self.setBuffering(buffering)
+        }
+
+        local.onEnded = { [weak self] in
+            guard let self, self.isLocal else { return }
+            self.playNext()
+        }
+
+        local.onFailure = { [weak self] message in
+            guard let self, self.isLocal else { return }
+            self.setBuffering(false)
+            self.issue = .loadFailed(message)
         }
     }
 
@@ -181,14 +258,44 @@ final class PlayerManager: ObservableObject {
             isFullScreen = isLandscape
         }
 
-        desiredVideoId = video.id
-        sync()
-        // Started with the phone already on its side: hand it over as soon as the embed is up.
-        if isLandscape { wantsSystemFullScreen = true }
+        // The one decision that makes a download worth having: if the file is here, play it.
+        // `readyMediaURL` checks the disk as well as the manifest, so a download deleted behind
+        // the app's back falls back to streaming rather than playing a black rectangle.
+        if let file = DownloadStore.shared.readyMediaURL(for: video.id) {
+            startLocal(file)
+        } else {
+            startEmbed(video.id)
+        }
 
         // Claim the audio session now, so leaving the app doesn't take the sound with it.
         NowPlaying.shared.begin()
         refreshNowPlaying()
+    }
+
+    /// Hands over to the file player, and quiets the embed — two soundtracks at once is the
+    /// failure mode here, and it is not a subtle one.
+    private func startLocal(_ file: URL) {
+        if isShellLoaded { evaluate("stopVideo()") }
+        desiredVideoId = nil
+        loadedVideoId = nil
+        watchdog?.cancel()
+        wantsSystemFullScreen = false
+        fullScreenRequest?.cancel()
+        fullScreenRequest = nil
+
+        source = .local(file)
+        local.load(url: file)
+        local.play()
+    }
+
+    private func startEmbed(_ videoId: String) {
+        if isLocal { local.stop() }
+        source = .embed
+
+        desiredVideoId = videoId
+        sync()
+        // Started with the phone already on its side: hand it over as soon as the embed is up.
+        if isLandscape { wantsSystemFullScreen = true }
     }
 
     /// Publishes the lock screen's copy of what is playing. Called when something *jumps* — the
@@ -258,13 +365,21 @@ final class PlayerManager: ObservableObject {
     }
 
     func resume() {
-        evaluate("resume()")
+        if isLocal {
+            local.play()
+        } else {
+            evaluate("resume()")
+        }
         isPlaying = true
         refreshNowPlaying()
     }
 
     func pause() {
-        evaluate("pauseVideo()")
+        if isLocal {
+            local.pause()
+        } else {
+            evaluate("pauseVideo()")
+        }
         isPlaying = false
         refreshNowPlaying()
     }
@@ -273,7 +388,11 @@ final class PlayerManager: ObservableObject {
         let duration = progress.duration
         let target = max(0, min(seconds, duration > 0 ? duration : seconds))
         progress.currentTime = target
-        evaluate("seekTo(\(target))")
+        if isLocal {
+            local.seek(to: target)
+        } else {
+            evaluate("seekTo(\(target))")
+        }
         refreshNowPlaying()
     }
 
@@ -290,7 +409,12 @@ final class PlayerManager: ObservableObject {
     func close() {
         exitSystemFullScreen()
         NowPlaying.shared.end()
-        evaluate("stopVideo()")
+        if isLocal {
+            local.stop()
+        } else {
+            evaluate("stopVideo()")
+        }
+        source = .embed
         withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
             isExpanded = false
             currentVideo = nil
@@ -337,6 +461,9 @@ final class PlayerManager: ObservableObject {
             isFullScreen = landscape
         }
 
+        // A downloaded video has no page to hand anything to: `isFullScreen` above is already
+        // the whole story, and the layout fills the screen on its own.
+        guard !isLocal else { return }
         if landscape {
             requestSystemFullScreen()
         } else {
@@ -344,8 +471,33 @@ final class PlayerManager: ObservableObject {
         }
     }
 
-    private func requestSystemFullScreen() {
+#if os(macOS)
+    /// The Mac's version of turning the phone on its side.
+    ///
+    /// A window has no orientation to react to, so full screen here is something you ask for:
+    /// from the Playback menu, or ⇧⌘F. It is the app's *own* full screen — the video fills the
+    /// window and the chrome steps aside — rather than WebKit's, because the window itself is
+    /// already the thing the user zooms or takes full screen with the green button, and stacking
+    /// a second full-screen window inside that is one too many. The embed's own button is still
+    /// there for anyone who wants WebKit's.
+    func toggleFillsWindow() {
         guard currentVideo != nil else { return }
+        let fills = !isFullScreen
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+            if fills {
+                wasExpandedBeforeFullScreen = isExpanded
+                isExpanded = true
+                isBarCompact = false
+            } else {
+                isExpanded = wasExpandedBeforeFullScreen
+            }
+            isFullScreen = fills
+        }
+    }
+#endif
+
+    private func requestSystemFullScreen() {
+        guard currentVideo != nil, !isLocal else { return }
         wantsSystemFullScreen = true
         startFullScreenRequest()
     }
@@ -447,6 +599,18 @@ final class PlayerManager: ObservableObject {
     // MARK: - Events from the web player
 
     func handle(_ event: PlayerEvent) {
+        // The embed keeps reporting for a moment after a downloaded video takes over, and its
+        // position would fight the file's for the scrubber. Only the handshake is still worth
+        // hearing: it says the shell is up and ready for the next streamed video.
+        if isLocal {
+            if event.type == "ready" {
+                isShellLoaded = true
+                isLoadingShell = false
+                watchdog?.cancel()
+            }
+            return
+        }
+
         if let duration = event.duration, duration > 0, progress.duration != duration {
             progress.duration = duration
             // The scrubber on the lock screen has nothing to draw until this arrives.

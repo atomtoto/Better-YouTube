@@ -53,7 +53,7 @@ struct ChannelView: View {
             }
         }
         .navigationTitle(channel?.title ?? "Channel")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationBar()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -144,4 +144,8 @@ struct ChannelHeaderView: View {
     .environmentObject(WatchLaterStore.shared)
         .environmentObject(NotificationStore.shared)
         .environmentObject(NotificationService.shared)
+        .environmentObject(DownloadStore.shared)
+        .environmentObject(DownloadManager.shared)
+        .environmentObject(DownloadSettings.shared)
+        .environmentObject(PlayerManager.shared)
 }

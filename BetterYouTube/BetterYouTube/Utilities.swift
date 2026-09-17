@@ -1,33 +1,54 @@
 import Foundation
 
 /// Converts ISO 8601 durations returned by the YouTube API (e.g. "PT1H2M3S") into "1:02:03".
+///
+/// The `T` decides what `M` means, and it used to be read and then thrown away: before the `T` it
+/// is months, after it minutes. So `P1M` — a month — came back as "1:00", the same as `PT1M`.
+/// No video is a month long, but the date half of a duration is not hypothetical either: `P0D` is
+/// what a live stream returns.
+///
+/// Days and weeks fold into hours, so a 30-hour stream reads as 30:00:00 rather than losing a
+/// day. Years and months are dropped, because converting them needs a calendar and a date to
+/// start from, and a duration has neither.
 enum ISO8601DurationFormatter {
     static func humanReadable(_ iso: String) -> String {
-        var hours = 0, minutes = 0, seconds = 0
+        var days = 0, hours = 0, minutes = 0, seconds = 0
         var number = ""
+        /// Set by the `T`, which is the only thing separating months from minutes.
         var isTime = false
 
-        for char in iso {
-            switch char {
+        for character in iso {
+            switch character {
             case "P":
                 continue
             case "T":
                 isTime = true
-            case "H":
-                hours = Int(number) ?? 0
+                number = ""
+            case "Y":
+                // Nothing to fold a year into. See above.
                 number = ""
             case "M":
-                minutes = Int(number) ?? 0
+                // The one letter that means two things.
+                if isTime { minutes = Int(number) ?? 0 }
+                number = ""
+            case "W":
+                days += (Int(number) ?? 0) * 7
+                number = ""
+            case "D":
+                days += Int(number) ?? 0
+                number = ""
+            case "H":
+                hours = Int(number) ?? 0
                 number = ""
             case "S":
                 seconds = Int(number) ?? 0
                 number = ""
             default:
-                if char.isNumber { number.append(char) }
+                if character.isNumber { number.append(character) }
             }
         }
-        _ = isTime
 
+        hours += days * 24
         if hours > 0 {
             return String(format: "%d:%02d:%02d", hours, minutes, seconds)
         }

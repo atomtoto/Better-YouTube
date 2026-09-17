@@ -2,7 +2,12 @@ import AuthenticationServices
 import CryptoKit
 import Foundation
 import Security
+#if canImport(UIKit)
 import UIKit
+#endif
+#if canImport(AppKit)
+import AppKit
+#endif
 
 // MARK: - Errors
 
@@ -22,7 +27,7 @@ enum AuthError: LocalizedError {
         case .missingClientId:
             return "Add your Google OAuth client ID in Settings before signing in."
         case .invalidClientId:
-            return "That doesn't look like an iOS OAuth client ID (it should end in .apps.googleusercontent.com)."
+            return "That doesn't look like an Apple-platform OAuth client ID (it should end in .apps.googleusercontent.com)."
         case .cancelled:
             return "Sign-in was cancelled."
         case .scopeDeclined:
@@ -71,58 +76,34 @@ struct OAuthTokens: Codable {
     }
 }
 
-/// Tokens live in the keychain rather than UserDefaults — they're credentials.
+/// Tokens live in the keychain rather than UserDefaults — they're credentials. See `Keychain`,
+/// which is where the awkward parts of that are dealt with.
 enum KeychainStore {
     private static let service = "com.atomtoto.BetterYouTube.oauth"
     private static let account = "google"
 
     static func save(_ tokens: OAuthTokens) {
         guard let data = try? JSONEncoder().encode(tokens) else { return }
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ]
-        SecItemDelete(query as CFDictionary)
-
-        var attributes = query
-        attributes[kSecValueData as String] = data
-        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(attributes as CFDictionary, nil)
+        Keychain.save(data, service: service, account: account)
     }
 
     static func load() -> OAuthTokens? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var item: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
-              let data = item as? Data else { return nil }
+        guard let data = Keychain.load(service: service, account: account) else { return nil }
         return try? JSONDecoder().decode(OAuthTokens.self, from: data)
     }
 
     static func clear() {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ]
-        SecItemDelete(query as CFDictionary)
+        Keychain.delete(service: service, account: account)
     }
 }
 
 // MARK: - Presentation anchor
 
+/// Where the sign-in sheet hangs from: a `UIWindow` on iOS, an `NSWindow` on macOS. The two are
+/// the same thing under `ASPresentationAnchor`, which is why this is the whole of the difference.
 final class WebAuthPresenter: NSObject, ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
+        MainActor.assumeIsolated { Platform.keyWindow } ?? ASPresentationAnchor()
     }
 }
 

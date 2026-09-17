@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The Mac's half of Info.plist. It is a separate file rather than a set of conditionals
+	     because a plist has no conditionals: the iOS one declares things a Mac must not claim
+	     (LSRequiresIPhoneOS, background modes, supported orientations, a launch screen) and
+	     leaves out the ones only a Mac needs. `INFOPLIST_FILE[sdk=macosx*]` in the build
+	     settings is what picks this one.
+
+	     Anything that belongs to *both* — the URL scheme, the local-networking exception —
+	     has to be kept in step with Info.plist by hand. There are three such keys, and they
+	     are marked below. -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Better YouTube</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.entertainment</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>An unofficial client built on the public YouTube Data API v3. Not affiliated with YouTube or Google.</string>
+
+	<!-- Shared with Info.plist: a resolver on your own machine is reached over plain http at a
+	     LAN address, which App Transport Security blocks by default. This opens exactly that
+	     case — local networking — and nothing else. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!-- Shared with Info.plist. macOS asks for local network permission in its own right, and
+	     this is the sentence it shows. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Better YouTube connects to the download service you configured, when it runs on this network.</string>
+
+	<!-- Shared with Info.plist: `betteryoutube://downloads?…` setup links. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.atomtoto.BetterYouTube.downloads</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>betteryoutube</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

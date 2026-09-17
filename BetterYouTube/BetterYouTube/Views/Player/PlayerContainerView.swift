@@ -10,17 +10,26 @@ import SwiftUI
 /// layout instead of a jump, and the finger can drive it directly.
 struct PlayerContainerView: View {
     @EnvironmentObject private var player: PlayerManager
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
     /// The pull-down that shrinks the expanded player back into the bar.
     @State private var drag = PlayerDragState()
     /// The separate flick that expands or dismisses the docked bar.
     @State private var barDragOffset: CGFloat = 0
+    #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    #endif
 
     private let metrics = PlayerMetrics()
 
+    #if os(iOS)
     /// The phone on its side, which is what puts the video full screen. A compact height is
     /// exactly that: portrait and every iPad layout are regular.
+    ///
+    /// A Mac has no counterpart: a window has no orientation, so full screen there is asked for
+    /// rather than inferred — see `PlayerManager.toggleFillsWindow`.
     private var isLandscape: Bool { verticalSizeClass == .compact }
+    #endif
 
     var body: some View {
         GeometryReader { proxy in
@@ -38,11 +47,12 @@ struct PlayerContainerView: View {
         .ignoresSafeArea(.container, edges: player.isFullScreen ? .all : [])
         .opacity(player.currentVideo == nil ? 0 : 1)
         .allowsHitTesting(player.currentVideo != nil)
-        .statusBarHidden(player.isFullScreen)
-        .persistentSystemOverlays(player.isFullScreen ? .hidden : .automatic)
+        .systemChromeHidden(player.isFullScreen)
+        #if os(iOS)
         .onChange(of: isLandscape, initial: true) { _, landscape in
             player.setLandscape(landscape)
         }
+        #endif
     }
 
     @ViewBuilder
@@ -56,7 +66,7 @@ struct PlayerContainerView: View {
         ZStack(alignment: .topLeading) {
             // 1. Backdrops — drawn under the video surface. Black full screen, so the bars
             //    beside a video that isn't the screen's shape read as part of the picture.
-            (player.isFullScreen ? Color.black : Color(uiColor: .systemBackground))
+            (player.isFullScreen ? Color.black : Color.appBackground)
                 .opacity(Double(expansion))
                 .ignoresSafeArea()
                 .allowsHitTesting(player.isExpanded)
@@ -67,7 +77,7 @@ struct PlayerContainerView: View {
                 .opacity(Double(1 - expansion))
                 .onTapGesture { player.expand() }
                 .gesture(barDragGesture)
-                .contextMenu { PlayerActions(player: player) }
+                .contextMenu { PlayerActions(player: player, downloads: downloads, downloadManager: downloadManager) }
                 .allowsHitTesting(!player.isExpanded)
 
             // 2. The one and only video surface. It keeps its full-screen layout size in every
@@ -75,7 +85,7 @@ struct PlayerContainerView: View {
             //    on every frame of a drag is what made collapsing the player stutter. Expanded,
             //    it takes the taps so YouTube's own controls work; docked, they fall through to
             //    the bar and expand the player.
-            PlayerSurface(webView: player.webView)
+            videoSurface
                 .frame(width: video.width, height: video.height)
                 .clipShape(
                     RoundedRectangle(
@@ -118,6 +128,18 @@ struct PlayerContainerView: View {
             .position(x: bar.midX, y: bar.midY)
             .opacity(Double(1 - expansion))
             .allowsHitTesting(!player.isExpanded)
+        }
+    }
+
+    /// Whichever player is live. They swap in the same slot and are laid out identically, so
+    /// the morph between the bar and full screen is unaware that there are two of them — and a
+    /// downloaded video docks, expands and goes full screen exactly like a streamed one.
+    @ViewBuilder
+    private var videoSurface: some View {
+        if player.isLocal {
+            LocalPlayerSurface(playback: player.local)
+        } else {
+            PlayerSurface(webView: player.webView)
         }
     }
 
@@ -215,8 +237,13 @@ struct PlayerActions: View {
     /// content is a presentation of its own, and an `@EnvironmentObject` resolved in there has
     /// no owner to find.
     @ObservedObject var player: PlayerManager
+    @ObservedObject var downloads: DownloadStore
+    @ObservedObject var downloadManager: DownloadManager
 
     var body: some View {
+        if let video = player.currentVideo {
+            DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
+        }
         if let url = player.currentVideo?.watchURL {
             ShareLink(item: url) {
                 Label("Share", systemImage: "square.and.arrow.up")
@@ -255,14 +282,25 @@ extension View {
 /// own metrics change.
 private struct PlayerMetrics {
     let barHeight: CGFloat = 62
-    let barInset: CGFloat = 20
     let barCornerRadius: CGFloat = 26
+
+    #if os(macOS)
+    let barInset: CGFloat = 16
+    /// There is no tab bar under the Mac's bar — the sections live in a sidebar — so the only
+    /// clearance it needs is the margin it floats on. The window's content is given the same
+    /// room back as a bottom safe-area inset, in `RootTabView`.
+    let tabBarClearance: CGFloat = 16
+    let compactTabBarClearance: CGFloat = 16
+    #else
+    let barInset: CGFloat = 20
     /// Room left below the full-width bar for the floating tab bar.
     let tabBarClearance: CGFloat = 54
     /// The pill drops into the tab bar's own row rather than hovering above it, and a little
     /// below its bottom edge to line up with the pill the tab bar minimizes to. By then the tab
     /// bar is minimized too — the same scroll shrinks both — so the space beside it is free.
     let compactTabBarClearance: CGFloat = -6
+    #endif
+
     let artworkPadding: CGFloat = 8
     let headerHeight: CGFloat = 44
     /// The pill the bar shrinks to on scroll keeps the artwork and play/pause, nothing else.
@@ -416,6 +454,8 @@ private struct MiniPlayerControls: View {
     let compactness: CGFloat
 
     @EnvironmentObject private var player: PlayerManager
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
 
     /// What survives in the pill: everything else fades and is clipped away.
     private var isCompact: Bool { compactness > 0.5 }
@@ -442,7 +482,7 @@ private struct MiniPlayerControls: View {
         .padding(.leading, artworkExtent + metrics.labelGap)
         .contentShape(Rectangle())
         .onTapGesture { player.expand() }
-        .contextMenu { PlayerActions(player: player) }
+        .contextMenu { PlayerActions(player: player, downloads: downloads, downloadManager: downloadManager) }
         .opacity(Double(1 - compactness))
         .allowsHitTesting(!isCompact)
     }

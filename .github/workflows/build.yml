@@ -1,0 +1,74 @@
+name: Build
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: macos-latest
+
+    # One target, two platforms — so both have to be built, or the one nobody is
+    # currently working on quietly stops compiling.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: iOS Simulator
+            sdk: iphonesimulator
+            destination: generic/platform=iOS Simulator
+          - name: macOS
+            sdk: macosx
+            destination: generic/platform=macOS
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build BetterYouTube
+        working-directory: BetterYouTube
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project BetterYouTube.xcodeproj \
+            -scheme BetterYouTube \
+            -sdk ${{ matrix.sdk }} \
+            -destination "${{ matrix.destination }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+  test:
+    name: Test
+    runs-on: macos-latest
+
+    # The tests are pure logic — formatters, the Takeout reader, setup links — so one
+    # platform proves them. macOS is the cheap one: no simulator to boot.
+    #
+    # The signing overrides are what let an app the runner has no certificate for launch
+    # as a test host: ad-hoc is enough to run locally, and the sandbox goes with the
+    # entitlements because that one needs a provisioning profile this runner has not got.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        working-directory: BetterYouTube
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project BetterYouTube.xcodeproj \
+            -scheme BetterYouTube \
+            -destination "platform=macOS" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            DEVELOPMENT_TEAM="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            ENABLE_HARDENED_RUNTIME=NO

@@ -21,7 +21,7 @@ struct HomeView: View {
             if showsYouTubePage {
                 // The page scrolls itself, so the picker sits above it rather than inside it.
                 VStack(spacing: 12) {
-                    feedPicker
+                    feedPickerInContent
                     YouTubeWebFeedView()
                         .ignoresSafeArea(edges: .bottom)
                 }
@@ -30,9 +30,22 @@ struct HomeView: View {
                 cardFeed
             }
         }
-        .background(Color(uiColor: .systemBackground))
+        .background(Color.appBackground)
         .navigationTitle("Home")
         .toolbar {
+            #if os(macOS)
+            ToolbarItem(placement: .principal) {
+                // `fixedSize` because a segmented picker in a toolbar is given the whole width
+                // otherwise, and hugs its titles with it.
+                feedPicker.fixedSize()
+            }
+
+            // Pull-to-refresh below is the phone's affordance; a Mac needs somewhere to click.
+            ToolbarItem(placement: .primaryAction) {
+                RefreshButton { await refresh(force: true) }
+            }
+            #endif
+
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showsNotifications = true
@@ -79,6 +92,10 @@ struct HomeView: View {
 
     /// The segmented control. YouTube's own feed is only on offer once there is a session to
     /// read it with — signed out of that, Home is exactly what it was before.
+    ///
+    /// It carries no margins of its own because the two platforms put it in different places: on
+    /// a phone it scrolls with the feed, on a Mac it sits in the window's toolbar. See
+    /// `feedPickerInContent` and the toolbar below.
     private var feedPicker: some View {
         Picker("Feed", selection: Binding(get: { viewModel.feed }, set: viewModel.select)) {
             ForEach(HomeViewModel.Feed.allCases) { feed in
@@ -88,13 +105,26 @@ struct HomeView: View {
             }
         }
         .pickerStyle(.segmented)
-        .padding(.horizontal, Theme.Spacing.gutter)
+    }
+
+    /// The picker where it belongs *in the page*, which is nowhere on a Mac.
+    ///
+    /// A control that switches what the whole screen is showing belongs in the toolbar on macOS,
+    /// not in the scroll view: in the content it scrolls away with the feed, and it reads as a
+    /// row of tabs that has somehow ended up below the real title bar. A phone has no toolbar to
+    /// put it in, and there the segmented control at the top of the feed is the native answer.
+    @ViewBuilder
+    private var feedPickerInContent: some View {
+        #if os(iOS)
+        feedPicker
+            .padding(.horizontal, Theme.Spacing.gutter)
+        #endif
     }
 
     private var cardFeed: some View {
         ScrollView {
             LazyVStack(spacing: 24) {
-                feedPicker
+                feedPickerInContent
 
                 if isLoadingCurrentFeed && viewModel.videos.isEmpty {
                     placeholderFeed
@@ -173,15 +203,15 @@ struct HomeView: View {
             ForEach(0..<3, id: \.self) { _ in
                 VStack(alignment: .leading, spacing: 10) {
                     RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                        .fill(Color(uiColor: .tertiarySystemFill))
+                        .fill(Color.appTertiaryFill)
                         .aspectRatio(16.0 / 9.0, contentMode: .fit)
                     HStack(spacing: 10) {
                         Circle()
-                            .fill(Color(uiColor: .tertiarySystemFill))
+                            .fill(Color.appTertiaryFill)
                             .frame(width: 36, height: 36)
                         VStack(alignment: .leading, spacing: 6) {
-                            Capsule().fill(Color(uiColor: .tertiarySystemFill)).frame(height: 12)
-                            Capsule().fill(Color(uiColor: .tertiarySystemFill)).frame(width: 140, height: 10)
+                            Capsule().fill(Color.appTertiaryFill).frame(height: 12)
+                            Capsule().fill(Color.appTertiaryFill).frame(width: 140, height: 10)
                         }
                     }
                 }
@@ -197,9 +227,17 @@ struct VideoContextMenu: ViewModifier {
     let video: Video
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var watchLater: WatchLaterStore
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
 
     func body(content: Content) -> some View {
         content.contextMenu {
+            // The one place every video in the app can be downloaded from. Home, search, a
+            // channel, Watch Later, a playlist and the up-next queue all long-press into this,
+            // so there is no screen where the option is missing and none where it had to be
+            // added by hand.
+            DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
+
             Button {
                 library.toggleFavorite(video)
             } label: {

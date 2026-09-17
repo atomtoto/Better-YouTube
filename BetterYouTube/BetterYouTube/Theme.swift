@@ -29,7 +29,7 @@ extension View {
     func cardBackground(cornerRadius: CGFloat = Theme.Radius.card) -> some View {
         background(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemBackground))
+                .fill(Color.appSecondaryBackground)
         )
     }
 }
@@ -76,7 +76,7 @@ struct ArtworkView: View {
     }
 
     private var placeholder: some View {
-        Rectangle().fill(Color(uiColor: .tertiarySystemFill))
+        Rectangle().fill(Color.appTertiaryFill)
     }
 }
 
@@ -91,7 +91,7 @@ struct AvatarView: View {
                 image.resizable().aspectRatio(contentMode: .fill)
             } else {
                 ZStack {
-                    Circle().fill(Color(uiColor: .tertiarySystemFill))
+                    Circle().fill(Color.appTertiaryFill)
                     Image(systemName: "person.fill")
                         .font(.system(size: size * 0.45))
                         .foregroundStyle(.tertiary)
