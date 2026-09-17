@@ -335,7 +335,9 @@ app read its own credentials back.
      creates and edits its own Watch Later playlist. A token granted for an earlier, narrower scope
      can't be widened in place, so the app drops it and asks you to sign in once more when the
      scope changes. Tokens are stored in the keychain — the iOS one, or the data-protection
-     keychain on macOS; the API key lives in `UserDefaults`.
+     keychain on macOS. So is the download resolver's bearer token, for the same reason. The API
+     key lives in `UserDefaults`: it is a quota identifier rather than a credential, it is visible
+     in every request the app makes, and Google's own advice is to restrict it rather than hide it.
 
 ## Project structure
 
@@ -363,10 +365,12 @@ BetterYouTube/
     DownloadConfigLink.swift     betteryoutube:// setup links, and their QR codes
     YouTubeWebSession.swift      Optional youtube.com web session + home-feed reader
     Utilities.swift              Duration, count and relative-date formatters, Takeout CSV reader
+    Keychain.swift               The two credentials this app keeps, and where they are kept
     ViewModels/                  One @MainActor view model per screen
     Views/                       SwiftUI screens
     Views/Settings/              One file per settings section, the panes, and each shell
     Views/Components/            Reusable cards and rows
+  BetterYouTubeTests/            Unit tests for the pure parts
 ```
 
 ## Continuous integration
@@ -375,6 +379,12 @@ BetterYouTube/
 every push and pull request — **once for the iOS simulator and once for macOS** — so compile errors
 surface without a local Mac, and so the platform nobody is currently working on can't quietly stop
 compiling.
+
+A third job runs the unit tests (`BetterYouTubeTests`) on macOS. They cover the pure parts, which
+are the ones worth pinning down because nothing on screen tells you when they are wrong: the ISO
+8601 duration formatter, the Google Takeout CSV reader, the abbreviated counts, and what a
+`betteryoutube://` setup link accepts and refuses. macOS rather than the simulator because it needs
+no device booted; the code under test has no platform in it either way.
 
 ## Notes
 

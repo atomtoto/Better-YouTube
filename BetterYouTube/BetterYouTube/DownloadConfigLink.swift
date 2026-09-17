@@ -50,11 +50,30 @@ struct DownloadConfigLink: Equatable, Identifiable {
         var components = URLComponents()
         components.scheme = Self.scheme
         components.host = Self.host
-        var items = [URLQueryItem(name: "endpoint", value: endpoint)]
-        if !token.isEmpty { items.append(URLQueryItem(name: "token", value: token)) }
-        components.queryItems = items
+
+        var items = [(name: "endpoint", value: endpoint)]
+        if !token.isEmpty { items.append((name: "token", value: token)) }
+
+        // Encoded here rather than through `queryItems`, which escapes with `urlQueryAllowed` —
+        // a set that permits `&` and `=`. A token holding either would be written literally and
+        // read back as two query items, so sharing a setup whose token happened to contain an
+        // ampersand handed the other person half a token.
+        components.percentEncodedQueryItems = items.map { item in
+            URLQueryItem(
+                name: item.name,
+                value: item.value.addingPercentEncoding(withAllowedCharacters: Self.queryValueAllowed)
+            )
+        }
         return components.url
     }
+
+    /// What may stand unescaped inside a query value: everything a query allows, less the four
+    /// characters that would end the value or the query.
+    private static let queryValueAllowed: CharacterSet = {
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: "&=+?#")
+        return allowed
+    }()
 
     /// The same rule the settings field applies, so a link can't configure something the app
     /// would have refused if it were typed.

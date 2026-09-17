@@ -76,54 +76,24 @@ struct OAuthTokens: Codable {
     }
 }
 
-/// Tokens live in the keychain rather than UserDefaults — they're credentials.
+/// Tokens live in the keychain rather than UserDefaults — they're credentials. See `Keychain`,
+/// which is where the awkward parts of that are dealt with.
 enum KeychainStore {
     private static let service = "com.atomtoto.BetterYouTube.oauth"
     private static let account = "google"
 
-    /// What identifies this app's one keychain item, on both platforms.
-    ///
-    /// `kSecUseDataProtectionKeychain` is the part that matters on macOS. Without it a Mac uses
-    /// the old file-based keychain, where `kSecAttrAccessible` means nothing, the item can end up
-    /// in the login keychain rather than the app's own, and the user is prompted for a password
-    /// the first time the app reads its *own* token back. With it, both platforms use the same
-    /// keychain with the same semantics — which is also what makes the item follow the app rather
-    /// than the Mac it was signed on.
-    private static var identity: [String: Any] {
-        var query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ]
-        #if os(macOS)
-        query[kSecUseDataProtectionKeychain as String] = true
-        #endif
-        return query
-    }
-
     static func save(_ tokens: OAuthTokens) {
         guard let data = try? JSONEncoder().encode(tokens) else { return }
-        SecItemDelete(identity as CFDictionary)
-
-        var attributes = identity
-        attributes[kSecValueData as String] = data
-        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(attributes as CFDictionary, nil)
+        Keychain.save(data, service: service, account: account)
     }
 
     static func load() -> OAuthTokens? {
-        var query = identity
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-
-        var item: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
-              let data = item as? Data else { return nil }
+        guard let data = Keychain.load(service: service, account: account) else { return nil }
         return try? JSONDecoder().decode(OAuthTokens.self, from: data)
     }
 
     static func clear() {
-        SecItemDelete(identity as CFDictionary)
+        Keychain.delete(service: service, account: account)
     }
 }
 

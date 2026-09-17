@@ -156,17 +156,6 @@ final class DownloadManager: ObservableObject {
         store.removeAll()
     }
 
-    /// Everything that is queued or running, stopped where it stands. For the app reset.
-    func cancelAllTransfers() {
-        for (videoId, task) in tasks {
-            task.cancel()
-            store.update(videoId) { $0.state = .paused }
-        }
-        tasks.removeAll()
-        resolving.removeAll()
-        progress.removeAll()
-    }
-
     // MARK: - The queue
 
     /// Starts whatever can be started. Called after anything that could free a slot or add work.

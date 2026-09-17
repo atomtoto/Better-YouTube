@@ -22,8 +22,12 @@ final class DownloadSettings: ObservableObject {
     }
 
     /// Sent as `Authorization: Bearer …` when set, for a service that isn't open to the internet.
+    ///
+    /// Kept in the keychain, not in `UserDefaults` beside the rest of this. It is a bearer token:
+    /// whoever holds it can spend somebody's resolver, and everything else on this screen is a
+    /// preference. Installs from before it moved are carried across once — see `loadToken`.
     @Published var token: String {
-        didSet { UserDefaults.standard.set(token, forKey: Self.tokenKey) }
+        didSet { Self.saveToken(token) }
     }
 
     @Published var quality: DownloadQuality {
@@ -41,7 +45,6 @@ final class DownloadSettings: ObservableObject {
     }
 
     private static let endpointKey = "download_endpoint"
-    private static let tokenKey = "download_token"
     private static let qualityKey = "download_quality"
     private static let wifiOnlyKey = "download_wifi_only"
     private static let storageLimitKey = "download_storage_limit_gb"
@@ -49,11 +52,44 @@ final class DownloadSettings: ObservableObject {
     private init() {
         let defaults = UserDefaults.standard
         endpoint = defaults.string(forKey: Self.endpointKey) ?? ""
-        token = defaults.string(forKey: Self.tokenKey) ?? ""
+        token = Self.loadToken()
         quality = defaults.string(forKey: Self.qualityKey)
             .flatMap(DownloadQuality.init(rawValue:)) ?? .medium
         wifiOnly = defaults.object(forKey: Self.wifiOnlyKey) as? Bool ?? true
         storageLimitGB = defaults.object(forKey: Self.storageLimitKey) as? Int ?? 8
+    }
+
+    // MARK: - The token
+
+    private static let tokenService = "com.atomtoto.BetterYouTube.downloads"
+    private static let tokenAccount = "resolver"
+    /// Where the token used to be kept. Read once, then removed.
+    private static let legacyTokenKey = "download_token"
+
+    private static func saveToken(_ token: String) {
+        Keychain.saveText(
+            token.trimmingCharacters(in: .whitespacesAndNewlines),
+            service: tokenService,
+            account: tokenAccount
+        )
+    }
+
+    /// The saved token, moving it out of `UserDefaults` on the way if that is where it still is.
+    ///
+    /// The removal is the point of the migration, not a tidy-up after it: a token copied to the
+    /// keychain and left behind in the plist is a token that is still in the plist. So the old key
+    /// goes whether or not there was anything under it, and one launch is all it takes.
+    private static func loadToken() -> String {
+        let defaults = UserDefaults.standard
+        let legacy = defaults.string(forKey: legacyTokenKey)
+        defaults.removeObject(forKey: legacyTokenKey)
+
+        if let stored = Keychain.loadText(service: tokenService, account: tokenAccount), !stored.isEmpty {
+            return stored
+        }
+        guard let legacy, !legacy.isEmpty else { return "" }
+        saveToken(legacy)
+        return legacy
     }
 
     var trimmedEndpoint: String {
