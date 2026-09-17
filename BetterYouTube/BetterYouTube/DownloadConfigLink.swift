@@ -1,7 +1,6 @@
 import CoreImage
 import CoreImage.CIFilterBuiltins
 import SwiftUI
-import UIKit
 
 /// A download service handed over as a link, so setting one up is a tap rather than typing a URL
 /// into a phone.
@@ -92,13 +91,13 @@ struct QRCodeView: View {
     var body: some View {
         Group {
             if let image = Self.image(for: text) {
-                Image(uiImage: image)
+                Image(platformImage: image)
                     .interpolation(.none)
                     .resizable()
                     .scaledToFit()
             } else {
                 RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                    .fill(Color(uiColor: .tertiarySystemFill))
+                    .fill(Color.appTertiaryFill)
                     .overlay(
                         Image(systemName: "qrcode")
                             .font(.largeTitle)
@@ -113,7 +112,7 @@ struct QRCodeView: View {
 
     private static let context = CIContext()
 
-    static func image(for text: String) -> UIImage? {
+    static func image(for text: String) -> PlatformImage? {
         let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(text.utf8)
         // A phone camera reads this from a few inches away on a screen; the middle correction
@@ -125,6 +124,6 @@ struct QRCodeView: View {
         // before rasterizing and drawn without interpolation.
         let scaled = output.transformed(by: CGAffineTransform(scaleX: 12, y: 12))
         guard let cgImage = context.createCGImage(scaled, from: scaled.extent) else { return nil }
-        return UIImage(cgImage: cgImage)
+        return .fromCGImage(cgImage)
     }
 }

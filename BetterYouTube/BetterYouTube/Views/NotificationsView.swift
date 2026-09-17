@@ -39,8 +39,14 @@ struct NotificationsView: View {
                 }
             }
             .navigationTitle("Notifications")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationBar()
             .toolbar {
+                #if os(macOS)
+                ToolbarItem(placement: .primaryAction) {
+                    RefreshButton { await refresh() }
+                }
+                #endif
+
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }

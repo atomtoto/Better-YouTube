@@ -28,15 +28,15 @@ struct DownloadsView: View {
                     }
                     storageSection
                 }
-                .listStyle(.insetGrouped)
+                .groupedListStyle()
                 .minimizesPlayerBarOnScroll()
             }
         }
         .navigationTitle("Downloads")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationBar()
         .toolbar {
             if !store.readyRecords.isEmpty {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Button {
                         let videos = store.downloadedVideos
                         guard let first = videos.first else { return }
@@ -105,11 +105,21 @@ struct DownloadsView: View {
                 "Storage Used",
                 value: ByteCountFormatter.string(fromByteCount: store.bytesOnDisk(), countStyle: .file)
             )
+            #if os(macOS)
+            // A Mac has a Finder, and the folder is otherwise buried in the app's container
+            // where nobody would think to look for it.
+            Button {
+                Platform.revealInFileBrowser(DownloadStore.root)
+            } label: {
+                Label("Show in Finder", systemImage: "folder")
+            }
+            #endif
+
             Button("Remove All Downloads", role: .destructive) {
                 showsRemoveAllConfirmation = true
             }
         } footer: {
-            Text("The folder is “Downloads” in the app's documents, which the Files app shows under “Better YouTube”.")
+            Text(Platform.downloadsLocationDescription)
         }
         .confirmationDialog(
             "Remove all downloads?",
@@ -473,9 +483,9 @@ struct DownloadConfigImportView: View {
             }
             .padding(Theme.Spacing.gutter)
             .navigationTitle("Downloads")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationBar()
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
             }
@@ -550,9 +560,9 @@ struct DownloadConfigShareView: View {
                 .padding(Theme.Spacing.gutter)
             }
             .navigationTitle("Share Setup")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationBar()
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }

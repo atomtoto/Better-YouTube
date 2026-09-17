@@ -1,12 +1,30 @@
 import AVFoundation
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#endif
+#if canImport(AppKit)
+import AppKit
+#endif
 
 /// Draws the downloaded-file player, in the same slot the embed's web view occupies.
 ///
 /// It is the counterpart of `PlayerSurface`, and deliberately as thin: `PlayerContainerView` moves
 /// one video rectangle between the docked bar and full screen, and neither surface should know
-/// anything about that. What this one adds is the layer, and the background dance below.
+/// anything about that. What this one adds is the layer, and — on iOS — the background dance below.
+#if os(macOS)
+struct LocalPlayerSurface: NSViewRepresentable {
+    let playback: LocalPlayback
+
+    func makeNSView(context: Context) -> LocalPlayerHostView {
+        LocalPlayerHostView(player: playback.player)
+    }
+
+    func updateNSView(_ nsView: LocalPlayerHostView, context: Context) {
+        nsView.adopt(playback.player)
+    }
+}
+#else
 struct LocalPlayerSurface: UIViewRepresentable {
     let playback: LocalPlayback
 
@@ -18,6 +36,45 @@ struct LocalPlayerSurface: UIViewRepresentable {
         uiView.adopt(playback.player)
     }
 }
+#endif
+
+#if os(macOS)
+
+/// A view whose backing layer *is* the player layer.
+///
+/// No background dance here, and that is the whole difference from iOS. macOS never takes the
+/// video away from a layer that has scrolled out of sight or whose app is behind another one — a
+/// Mac app that is open is running — so the player simply stays where it is put.
+final class LocalPlayerHostView: NSView {
+    private var playerLayer: AVPlayerLayer? { layer as? AVPlayerLayer }
+
+    init(player: AVPlayer) {
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.black.cgColor
+        playerLayer?.videoGravity = .resizeAspect
+        adopt(player)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    /// `layerClass` is a UIKit idea; AppKit asks the view to make its own backing layer.
+    override func makeBackingLayer() -> CALayer {
+        AVPlayerLayer()
+    }
+
+    override var isFlipped: Bool { true }
+
+    func adopt(_ player: AVPlayer) {
+        guard playerLayer?.player !== player else { return }
+        playerLayer?.player = player
+    }
+}
+
+#else
 
 /// A view whose layer *is* the player layer.
 ///
@@ -85,3 +142,5 @@ final class LocalPlayerHostView: UIView {
         })
     }
 }
+
+#endif

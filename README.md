@@ -1,7 +1,13 @@
 # Better-YouTube
 
-An unofficial YouTube client for iOS, built with SwiftUI and designed to feel like a native Apple
-app (Apple Music-style shelves, artwork cards, inset-grouped library, context menus, share sheets).
+An unofficial YouTube client for **iOS and macOS**, built with SwiftUI and designed to feel like a
+native Apple app (Apple Music-style shelves, artwork cards, inset-grouped library, context menus,
+share sheets).
+
+One target builds both. The phone gets a tab bar, a docked player over it and a video that goes
+full screen when you turn the phone on its side; the Mac gets a sidebar, a menu bar with keyboard
+shortcuts and a window. Everything between those two — the API client, the player, the download
+queue, the on-device library — is the same code. See [Running on a Mac](#running-on-a-mac).
 
 ## Features
 
@@ -11,7 +17,7 @@ app (Apple Music-style shelves, artwork cards, inset-grouped library, context me
 - **Playback** — the official YouTube embedded player (WKWebView), so playback stays within
   YouTube's Terms of Service. Turning the phone on its side hands the video to iOS's own
   full-screen presentation — the system's controls, over the app — and turning it back puts the
-  player where it was
+  player where it was. On a Mac, ⇧⌘F fills the window instead
 - **Video detail** — stats, expandable description, comments, share sheet, and a thumbs-up that
   is the real like on your YouTube account (the heart beside it is this device's own favourites)
 - **Channels** — profile header plus latest uploads
@@ -23,6 +29,7 @@ app (Apple Music-style shelves, artwork cards, inset-grouped library, context me
   [one is included](#one-is-included) — see [Downloads](#downloads)
 - **Background playback** — the audio carries on when the app is backgrounded or the screen
   locks, with title, artwork, scrubber and transport on the lock screen and in Control Centre
+  (on a Mac: the media widget in Control Centre and the keyboard's play/pause key)
 - **Settings** — Google sign-in, API key, library counts, what is left of the day's API quota,
   and a reset that puts the device back to a fresh install
 
@@ -250,15 +257,59 @@ already watch is the ordinary case for it, and the risk sits on your account and
 not on anyone else. Nothing here runs until you fill that field in: no service, no Download in any
 menu, and the Downloads screen says so rather than offering a button that can't work.
 
+## Running on a Mac
+
+The Mac build is a **native AppKit-backed SwiftUI app**, not Catalyst and not "Designed for iPad":
+same target, `SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx"`, `SDKROOT = auto`. Pick
+*My Mac* as the run destination and build.
+
+Requirements: **macOS 26+**, Xcode 26+.
+
+### What is different, and why
+
+| | iPhone / iPad | Mac |
+| --- | --- | --- |
+| Sections | Tab bar that minimizes on scroll | Source-list sidebar, ⌘1/⌘2/⌘3 |
+| Player full screen | Turn the phone on its side | ⇧⌘F fills the window; the green button takes the window full screen |
+| Mini / expanded player | Tap the bar, flick it down | ⇧⌘P, or click the bar |
+| Transport | The docked bar, the lock screen | The bar, the **Playback** menu, ⌘P / ⌥⌘← / ⌥⌘→ / ⇧⌘N |
+| Settings | A tab | Still a sidebar item, opened by ⌘, |
+| Refresh | Pull down | A Refresh button in the toolbar, ⌘R |
+| Search field | Pinned to the bottom, in thumb reach | Pinned to the top, where a Mac keeps one |
+| YouTube's own pages | `m.youtube.com` | `www.youtube.com` — a window holds the desktop site |
+| Periodic new-upload check | `BGAppRefreshTask`, on iOS's schedule | The app's own two-hour timer; an open Mac app is running |
+| Downloaded files | The Files app, under "Better YouTube" | Downloads → **Show in Finder** |
+| Tokens | iOS keychain | The data-protection keychain, which is why the Mac build is sandboxed |
+
+Everything else — sign-in, the API client, the quota tally, the download queue, the on-device
+library, the notification inbox — is one implementation.
+
+### How the code is split
+
+There is no `#if os(macOS)` scattered through the views. `Platform.swift` names everything the two
+platforms spell differently — `PlatformImage`, the key window, the surface colours, the modifiers
+only one of them has — and the rest of the app uses those names. Where a difference is *real*
+rather than cosmetic (a phone can be turned on its side; a Mac app is never suspended), the `#if`
+stays in the file that cares and is commented there: `PlayerManager`, `BackgroundRefresh`,
+`LocalPlayerSurface`, `RootTabView`.
+
+The Mac build is **sandboxed** (`BetterYouTube-macOS.entitlements`): network client, read-only
+access to the one CSV you pick when importing Watch Later, and nothing else. That is also what
+gives the app a keychain access group of its own, so the OAuth token lands in the app's keychain
+rather than your login keychain — without it macOS would ask for your password the first time the
+app read its own credentials back.
+
 ## Getting started
 
-1. Open `BetterYouTube/BetterYouTube.xcodeproj` in Xcode 26+ and run on an iOS 26+ simulator or device.
+1. Open `BetterYouTube/BetterYouTube.xcodeproj` in Xcode 26+ and run on an iOS 26+ simulator or
+   device, or pick *My Mac* for the macOS 26+ build.
 2. **API key** (required for browsing): in the Google Cloud Console, enable the *YouTube Data API v3*
    and create an **API key** credential. Paste it on first launch or in Settings.
 3. **Google sign-in** (optional, for your own library): in the same project, create an **OAuth 2.0
    client ID** of type **iOS** with the app's bundle identifier
-   (`com.atomtoto.BetterYouTube`, or your own). Paste the client ID in Settings, then tap
-   *Sign in with Google*.
+   (`com.atomtoto.BetterYouTube`, or your own). That client type covers macOS too — the same
+   client ID works for both builds, and both use the reversed client ID as their callback scheme.
+   Paste the client ID in Settings, then tap *Sign in with Google*.
    - **Add yourself as a test user**, or sign-in fails with `Error 403: access_denied`. In
      *Google Auth Platform → Audience*, with publishing status **Testing**, only the accounts listed
      under *Test users* may grant consent — add the Google account you sign in with. Alternatively
@@ -273,14 +324,15 @@ menu, and the Downloads screen says so rather than offering a button that can't 
      so this fails loudly at the sheet instead of quietly a moment later.
    - The flow is OAuth 2.0 with PKCE via `ASWebAuthenticationSession`, so no client secret is
      needed and no URL scheme has to be registered manually. That also rules out **passkeys**:
-     iOS only offers them in Safari itself, and the callback scheme is the reversed client ID —
+     the system only offers them in Safari itself, and the callback scheme is the reversed client ID —
      entered at runtime, so it can't be declared in `Info.plist` and the flow can't move to
      Safari. Sign in to Google in Safari with your passkey instead; the session is not ephemeral,
      so the sheet borrows those cookies and asks for nothing.
    - Scope requested: `https://www.googleapis.com/auth/youtube` — read/write, because the app
      creates and edits its own Watch Later playlist. A token granted for an earlier, narrower scope
      can't be widened in place, so the app drops it and asks you to sign in once more when the
-     scope changes. Tokens are stored in the iOS keychain; the API key lives in `UserDefaults`.
+     scope changes. Tokens are stored in the keychain — the iOS one, or the data-protection
+     keychain on macOS; the API key lives in `UserDefaults`.
 
 ## Project structure
 
@@ -288,9 +340,13 @@ menu, and the Downloads screen says so rather than offering a button that can't 
 render.yaml                      One-click deploy of the resolver below
 resolver/                        A yt-dlp resolver: server.py, Dockerfile, compose, tests
 BetterYouTube/
-  BetterYouTube.xcodeproj/       Xcode project (single iOS app target, iOS 26+)
+  BetterYouTube.xcodeproj/       Xcode project (one app target, iOS 26+ and macOS 26+)
   BetterYouTube/
-    BetterYouTubeApp.swift       App entry point
+    BetterYouTubeApp.swift       App entry point, both app delegates, the Mac's menu bar
+    Platform.swift               The iOS/macOS seam: typealiases, colours, window, modifiers
+    Info.plist                   iOS
+    Info-macOS.plist             macOS
+    BetterYouTube-macOS.entitlements   The Mac build's sandbox
     Theme.swift                  Design tokens + shared artwork/avatar/section components
     Models.swift                 Domain models and YouTube API decoding
     YouTubeAPIService.swift      API client (actor) with OAuth + API key support
@@ -311,8 +367,10 @@ BetterYouTube/
 
 ## Continuous integration
 
-`.github/workflows/ios-build.yml` builds the app with `xcodebuild` on a GitHub-hosted macOS runner
-for every push and pull request, so compile errors surface without a local Mac.
+`.github/workflows/build.yml` builds the app with `xcodebuild` on a GitHub-hosted macOS runner for
+every push and pull request — **once for the iOS simulator and once for macOS** — so compile errors
+surface without a local Mac, and so the platform nobody is currently working on can't quietly stop
+compiling.
 
 ## Notes
 

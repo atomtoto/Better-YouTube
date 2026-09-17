@@ -2,7 +2,12 @@ import AuthenticationServices
 import CryptoKit
 import Foundation
 import Security
+#if canImport(UIKit)
 import UIKit
+#endif
+#if canImport(AppKit)
+import AppKit
+#endif
 
 // MARK: - Errors
 
@@ -22,7 +27,7 @@ enum AuthError: LocalizedError {
         case .missingClientId:
             return "Add your Google OAuth client ID in Settings before signing in."
         case .invalidClientId:
-            return "That doesn't look like an iOS OAuth client ID (it should end in .apps.googleusercontent.com)."
+            return "That doesn't look like an Apple-platform OAuth client ID (it should end in .apps.googleusercontent.com)."
         case .cancelled:
             return "Sign-in was cancelled."
         case .scopeDeclined:
@@ -76,29 +81,41 @@ enum KeychainStore {
     private static let service = "com.atomtoto.BetterYouTube.oauth"
     private static let account = "google"
 
-    static func save(_ tokens: OAuthTokens) {
-        guard let data = try? JSONEncoder().encode(tokens) else { return }
-        let query: [String: Any] = [
+    /// What identifies this app's one keychain item, on both platforms.
+    ///
+    /// `kSecUseDataProtectionKeychain` is the part that matters on macOS. Without it a Mac uses
+    /// the old file-based keychain, where `kSecAttrAccessible` means nothing, the item can end up
+    /// in the login keychain rather than the app's own, and the user is prompted for a password
+    /// the first time the app reads its *own* token back. With it, both platforms use the same
+    /// keychain with the same semantics — which is also what makes the item follow the app rather
+    /// than the Mac it was signed on.
+    private static var identity: [String: Any] {
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account
         ]
-        SecItemDelete(query as CFDictionary)
+        #if os(macOS)
+        query[kSecUseDataProtectionKeychain as String] = true
+        #endif
+        return query
+    }
 
-        var attributes = query
+    static func save(_ tokens: OAuthTokens) {
+        guard let data = try? JSONEncoder().encode(tokens) else { return }
+        SecItemDelete(identity as CFDictionary)
+
+        var attributes = identity
         attributes[kSecValueData as String] = data
         attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
         SecItemAdd(attributes as CFDictionary, nil)
     }
 
     static func load() -> OAuthTokens? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
+        var query = identity
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
         var item: CFTypeRef?
         guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
               let data = item as? Data else { return nil }
@@ -106,23 +123,17 @@ enum KeychainStore {
     }
 
     static func clear() {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ]
-        SecItemDelete(query as CFDictionary)
+        SecItemDelete(identity as CFDictionary)
     }
 }
 
 // MARK: - Presentation anchor
 
+/// Where the sign-in sheet hangs from: a `UIWindow` on iOS, an `NSWindow` on macOS. The two are
+/// the same thing under `ASPresentationAnchor`, which is why this is the whole of the difference.
 final class WebAuthPresenter: NSObject, ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
+        MainActor.assumeIsolated { Platform.keyWindow } ?? ASPresentationAnchor()
     }
 }
 

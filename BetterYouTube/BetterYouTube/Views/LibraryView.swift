@@ -113,14 +113,18 @@ struct LibraryView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .groupedListStyle()
         .minimizesPlayerBarOnScroll()
         .navigationTitle("Library")
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
-        .refreshable {
-            await watchLater.refresh()
-            if auth.isSignedIn { await viewModel.load() }
+        .refreshable { await reload() }
+        // The whole toolbar is the Mac's: on a phone the pull above is the affordance, and an
+        // empty `toolbar` block isn't a thing the builder accepts.
+        #if os(macOS)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) { RefreshButton(action: reload) }
         }
+        #endif
         .task(id: auth.isSignedIn) {
             await watchLater.refresh()
             if auth.isSignedIn {
@@ -129,6 +133,12 @@ struct LibraryView: View {
                 viewModel.reset()
             }
         }
+    }
+
+    /// What a pull — or, on a Mac, the Refresh button — asks for.
+    private func reload() async {
+        await watchLater.refresh()
+        if auth.isSignedIn { await viewModel.load() }
     }
 
     private var signInPrompt: some View {

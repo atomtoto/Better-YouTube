@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 import UniformTypeIdentifiers
 
 struct SettingsView: View {
@@ -67,6 +66,7 @@ struct SettingsView: View {
                 Text("About")
             }
         }
+        .settingsFormStyle()
         .minimizesPlayerBarOnScroll()
         .navigationTitle("Settings")
         // Takeout's CSVs arrive as plain text as often as with a CSV type, so accept both.
@@ -244,8 +244,7 @@ struct SettingsView: View {
                 }
 
                 TextField("Click here to add YouTube OAuth client ID", text: $draftClientId)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+                    .identifierField()
                     .onChange(of: draftClientId) { newValue in
                         auth.clientId = newValue
                     }
@@ -284,9 +283,9 @@ struct SettingsView: View {
             On the consent screen, tick the YouTube permission before Continue: left unticked, \
             Google issues a sign-in that can't do anything and the app has to throw it away.
 
-            Passkeys don't work in the sign-in sheet — iOS only offers them in Safari itself. \
-            Sign in to Google in Safari first, with your passkey, and this sheet borrows that \
-            session and won't ask for anything at all.
+            Passkeys don't work in the sign-in sheet — the system only offers them in Safari \
+            itself. Sign in to Google in Safari first, with your passkey, and this sheet borrows \
+            that session and won't ask for anything at all.
             """)
         }
     }
@@ -314,12 +313,13 @@ struct SettingsView: View {
 
             if notificationStore.isEnabled && notifications.authorizationStatus == .denied {
                 Button {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
+                    Platform.openNotificationSettings()
                 } label: {
-                    Label("Allow notifications in iOS Settings", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
+                    Label(
+                        "Allow notifications in \(Platform.settingsAppName)",
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .foregroundStyle(.orange)
                 }
             }
 
@@ -377,8 +377,7 @@ struct SettingsView: View {
     private var apiKeySection: some View {
         Section {
             TextField("API key", text: $draftKey)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
+                .identifierField()
 
             Button("Save Key") {
                 apiKeyStore.apiKey = draftKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -487,13 +486,10 @@ struct SettingsView: View {
     private var downloadsSection: some View {
         Section {
             TextField("https://…", text: $draftEndpoint)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .keyboardType(.URL)
+                .identifierField(isURL: true)
 
             SecureField("Bearer token (optional)", text: $draftToken)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
+                .identifierField()
 
             Button("Save Download Service") {
                 downloadSettings.endpoint = draftEndpoint.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -572,23 +568,27 @@ struct SettingsView: View {
     }
 
     /// Kept out of the view builder: it is three paragraphs, and inlining it buries the section.
-    private static let downloadsFooter = """
-    Playback goes through YouTube's own embed, which never hands over a media file, so the app has \
-    no way to fetch one by itself. Point this at a resolver you run and Download appears on every \
-    video; leave it empty and downloading stays off.
+    ///
+    /// One line of it is the platform's — where the files end up is the Files app on a phone and
+    /// a folder in the Finder on a Mac — so `Platform` supplies that sentence.
+    private static var downloadsFooter: String {
+        """
+        Playback goes through YouTube's own embed, which never hands over a media file, so the app \
+        has no way to fetch one by itself. Point this at a resolver you run and Download appears on \
+        every video; leave it empty and downloading stays off.
 
-    Two shapes work. An address carrying {id}, {videoId} or {url} is filled in and fetched \
-    directly, so https://box.local/yt/{id}.mp4 is a complete setup. Anything else is sent a POST \
-    of url, videoId, quality and maxHeight, and its reply is read for a media link — url, \
-    downloadUrl, link, or the first entry of urls, formats or streams.
+        Two shapes work. An address carrying {id}, {videoId} or {url} is filled in and fetched \
+        directly, so https://box.local/yt/{id}.mp4 is a complete setup. Anything else is sent a POST \
+        of url, videoId, quality and maxHeight, and its reply is read for a media link — url, \
+        downloadUrl, link, or the first entry of urls, formats or streams.
 
-    Files land in Downloads, which the Files app shows under “Better YouTube”. They stay out of \
-    iCloud backups, and a downloaded video plays from the file everywhere in the app, with no \
-    network at all.
+        \(Platform.downloadsLocationDescription) They stay out of iCloud backups, and a downloaded \
+        video plays from the file everywhere in the app, with no network at all.
 
-    Once it works, Share Setup hands the same service to another phone as a link or a QR \
-    code, so nobody else has to type any of this.
-    """
+        Once it works, Share Setup hands the same service to another device as a link or a QR \
+        code, so nobody else has to type any of this.
+        """
+    }
 
     private var downloadSourceStatus: String {
         guard downloadSettings.isConfigured else {
@@ -714,7 +714,7 @@ private struct QuotaBar: View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
                 Capsule(style: .continuous)
-                    .fill(Color(uiColor: .tertiarySystemFill))
+                    .fill(Color.appTertiaryFill)
                 Capsule(style: .continuous)
                     .fill(
                         LinearGradient(

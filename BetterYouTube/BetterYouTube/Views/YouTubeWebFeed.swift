@@ -14,7 +14,7 @@ struct YouTubeSignInView: View {
             YouTubeWebPage(interceptsVideoTaps: false)
                 .ignoresSafeArea(edges: .bottom)
                 .navigationTitle("youtube.com")
-                .navigationBarTitleDisplayMode(.inline)
+                .inlineNavigationBar()
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") {
@@ -40,11 +40,11 @@ struct YouTubeWebFeedView: View {
 }
 
 /// The web view behind both of the above.
-private struct YouTubeWebPage: UIViewRepresentable {
+private struct YouTubeWebPage {
     /// Whether a tap on a video should open the app's player instead of YouTube's.
     let interceptsVideoTaps: Bool
 
-    func makeUIView(context: Context) -> WKWebView {
+    fileprivate func makeWebView(coordinator: Coordinator) -> WKWebView {
         let configuration = YouTubeWebSession.shared.configuration()
 
         configuration.userContentController.addUserScript(
@@ -56,7 +56,7 @@ private struct YouTubeWebPage: UIViewRepresentable {
         )
 
         if interceptsVideoTaps {
-            configuration.userContentController.add(context.coordinator, name: Coordinator.handler)
+            configuration.userContentController.add(coordinator, name: Coordinator.handler)
             for script in [Coordinator.tapScript, Coordinator.hideAdsScript] {
                 configuration.userContentController.addUserScript(
                     WKUserScript(
@@ -70,13 +70,11 @@ private struct YouTubeWebPage: UIViewRepresentable {
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.customUserAgent = YouTubeWebSession.userAgent
-        webView.navigationDelegate = context.coordinator
+        webView.navigationDelegate = coordinator
         webView.allowsBackForwardNavigationGestures = true
         webView.load(URLRequest(url: YouTubeWebSession.homeURL))
         return webView
     }
-
-    func updateUIView(_ webView: WKWebView, context: Context) {}
 
     func makeCoordinator() -> Coordinator {
         Coordinator(interceptsVideoTaps: interceptsVideoTaps)
@@ -179,3 +177,23 @@ private struct YouTubeWebPage: UIViewRepresentable {
         }
     }
 }
+
+// The page above is the whole of it; all either platform adds is the protocol it is handed to
+// SwiftUI through.
+#if os(macOS)
+extension YouTubeWebPage: NSViewRepresentable {
+    func makeNSView(context: Context) -> WKWebView {
+        makeWebView(coordinator: context.coordinator)
+    }
+
+    func updateNSView(_ webView: WKWebView, context: Context) {}
+}
+#else
+extension YouTubeWebPage: UIViewRepresentable {
+    func makeUIView(context: Context) -> WKWebView {
+        makeWebView(coordinator: context.coordinator)
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {}
+}
+#endif

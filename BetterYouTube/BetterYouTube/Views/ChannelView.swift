@@ -53,7 +53,7 @@ struct ChannelView: View {
             }
         }
         .navigationTitle(channel?.title ?? "Channel")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationBar()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {

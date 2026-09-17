@@ -1,6 +1,11 @@
 import Foundation
-import UIKit
 import WebKit
+#if canImport(UIKit)
+import UIKit
+#endif
+#if canImport(AppKit)
+import AppKit
+#endif
 
 /// Why the home feed couldn't be read.
 enum YouTubeFeedIssue: LocalizedError, Equatable {
@@ -71,17 +76,35 @@ final class YouTubeWebSession: ObservableObject {
         didSet { UserDefaults.standard.set(rendering.rawValue, forKey: Self.renderingKey) }
     }
 
-    static let homeURL = URL(string: "https://m.youtube.com/")!
+    /// YouTube's own pages, in the edition that suits the screen they will be shown on.
+    ///
+    /// The phone reads `m.youtube.com` and the Mac reads `www.youtube.com`, for the same reason a
+    /// browser would: on a Mac window the mobile site is a narrow column of enormous cards, and
+    /// the desktop site holds several times as many videos in a first screenful — which the feed
+    /// reader below also benefits from, since how much of a feed exists at all is decided by the
+    /// height of the viewport. Nothing that reads these pages depends on which one it got: the
+    /// harvest looks for `watch?v=` links, and the ad filter names both editions' renderers.
+    #if os(macOS)
+    static let homeURL = URL(string: "https://www.youtube.com/")!
     /// The account's own notification inbox — the bell's actual output, which the Data API has
     /// no endpoint for.
+    static let notificationsURL = URL(string: "https://www.youtube.com/feed/notifications")!
+    #else
+    static let homeURL = URL(string: "https://m.youtube.com/")!
     static let notificationsURL = URL(string: "https://m.youtube.com/feed/notifications")!
+    #endif
 
-    /// A full mobile Safari string. `WKWebView` otherwise sends a user agent that omits
-    /// `Version/… Safari/…`, which is exactly how Google recognises an embedded web view and
-    /// refuses to let you sign in. It is the one thing here that misrepresents anything, and it
-    /// only makes the sign-in page treat this like the browser it is.
+    /// A full Safari string, matching the edition above. `WKWebView` otherwise sends a user agent
+    /// that omits `Version/… Safari/…`, which is exactly how Google recognises an embedded web
+    /// view and refuses to let you sign in. It is the one thing here that misrepresents anything,
+    /// and it only makes the sign-in page treat this like the browser it is.
+    #if os(macOS)
+    static let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        + "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
+    #else
     static let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) "
         + "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
+    #endif
 
     /// Cookies that only exist once youtube.com has a signed-in session.
     private static let sessionCookies: Set<String> = ["LOGIN_INFO", "SID", "__Secure-1PSID", "__Secure-3PSID"]
@@ -104,7 +127,9 @@ final class YouTubeWebSession: ObservableObject {
     func configuration() -> WKWebViewConfiguration {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = dataStore
+        #if os(iOS)
         configuration.allowsInlineMediaPlayback = true
+        #endif
         return configuration
     }
 
@@ -142,14 +167,6 @@ final class YouTubeWebSession: ObservableObject {
         candidate.count == 11 && candidate.allSatisfy {
             $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_"
         }
-    }
-
-    /// The key window, for the reader below to hang its web view on.
-    static var keyWindow: UIWindow? {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first { $0.isKeyWindow }
     }
 }
 
@@ -246,15 +263,25 @@ final class YouTubeFeedReader {
         let webView = self.webView ?? makeWebView()
         self.webView = webView
 
-        if let window = YouTubeWebSession.keyWindow, webView.superview !== window {
+        #if os(macOS)
+        guard let host = Platform.keyWindow?.contentView else { return webView }
+        #else
+        guard let host = Platform.keyWindow else { return webView }
+        #endif
+
+        if webView.superview !== host {
             webView.removeFromSuperview()
             webView.frame = CGRect(
                 x: 0,
                 y: 0,
-                width: window.bounds.width,
+                width: host.bounds.width,
                 height: Self.readerHeight
             )
-            window.insertSubview(webView, at: 0)
+            #if os(macOS)
+            host.addSubview(webView, positioned: .below, relativeTo: nil)
+            #else
+            host.insertSubview(webView, at: 0)
+            #endif
         }
         return webView
     }
@@ -263,8 +290,13 @@ final class YouTubeFeedReader {
         let webView = WKWebView(frame: .zero, configuration: YouTubeWebSession.shared.configuration())
         webView.customUserAgent = YouTubeWebSession.userAgent
         webView.navigationDelegate = bridge
+        // Invisible and deaf to input: it is behind the whole app and only there to lay out.
+        #if os(macOS)
+        webView.alphaValue = 0
+        #else
         webView.isUserInteractionEnabled = false
         webView.alpha = 0
+        #endif
         return webView
     }
 

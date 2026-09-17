@@ -1,0 +1,45 @@
+name: Build
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: macos-latest
+
+    # One target, two platforms — so both have to be built, or the one nobody is
+    # currently working on quietly stops compiling.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: iOS Simulator
+            sdk: iphonesimulator
+            destination: generic/platform=iOS Simulator
+          - name: macOS
+            sdk: macosx
+            destination: generic/platform=macOS
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build BetterYouTube
+        working-directory: BetterYouTube
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project BetterYouTube.xcodeproj \
+            -scheme BetterYouTube \
+            -sdk ${{ matrix.sdk }} \
+            -destination "${{ matrix.destination }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            build

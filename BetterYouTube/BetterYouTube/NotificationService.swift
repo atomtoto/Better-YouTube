@@ -1,5 +1,4 @@
 import Foundation
-import UIKit
 import UserNotifications
 
 /// File-scope so the nonisolated delegate methods can read them without hopping actors.

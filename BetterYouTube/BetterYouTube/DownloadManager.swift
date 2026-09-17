@@ -30,9 +30,15 @@ final class DownloadManager: ObservableObject {
     /// failure the service reported lives on the record instead, where the retry button is.
     @Published var lastError: String?
 
+    #if os(iOS)
     /// Called when iOS has finished delivering background events, handed over by the app
     /// delegate. Calling it is what lets the system stop holding the app awake.
+    ///
+    /// iOS only, and not for want of porting: the handshake exists because iOS *relaunches* a
+    /// suspended app to tell it a transfer finished. A Mac app that started a transfer is still
+    /// running when it lands, so there is nobody to hand anything back to.
     var backgroundCompletionHandler: (() -> Void)?
+    #endif
 
     private static let sessionIdentifier = "com.atomtoto.BetterYouTube.downloads"
     /// Two at a time. Enough to keep a fast connection busy, few enough that a queue of ten
@@ -54,9 +60,12 @@ final class DownloadManager: ObservableObject {
 
     private init() {
         let configuration = URLSessionConfiguration.background(withIdentifier: Self.sessionIdentifier)
+        #if os(iOS)
         // Lets iOS relaunch the app to tell it a transfer finished, rather than the app finding
-        // out whenever it is next opened.
+        // out whenever it is next opened. The setting is iOS's alone — a Mac app is not
+        // relaunched for a transfer because it was never suspended.
         configuration.sessionSendsLaunchEvents = true
+        #endif
         // Downloads are asked for, not speculative, so they shouldn't wait for the system to
         // decide the moment is convenient.
         configuration.isDiscretionary = false
@@ -409,10 +418,12 @@ final class DownloadManager: ObservableObject {
         }
     }
 
+    #if os(iOS)
     fileprivate func finishedBackgroundEvents() {
         backgroundCompletionHandler?()
         backgroundCompletionHandler = nil
     }
+    #endif
 }
 
 /// The background session's delegate.
@@ -502,9 +513,11 @@ private final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegat
         }
     }
 
+    #if os(iOS)
     func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
         Task { @MainActor [weak self] in
             self?.manager?.finishedBackgroundEvents()
         }
     }
+    #endif
 }

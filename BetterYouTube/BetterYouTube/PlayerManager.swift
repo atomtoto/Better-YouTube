@@ -1,6 +1,12 @@
 import Foundation
 import SwiftUI
 import WebKit
+#if canImport(UIKit)
+import UIKit
+#endif
+#if canImport(AppKit)
+import AppKit
+#endif
 
 /// One event coming back from the embedded player. Kept to primitives so it can cross actor
 /// boundaries from the script-message handler.
@@ -154,7 +160,10 @@ final class PlayerManager: ObservableObject {
 
     private init() {
         let configuration = WKWebViewConfiguration()
+        #if os(iOS)
+        // A Mac never plays video anywhere but inline, so there is nothing to ask for there.
         configuration.allowsInlineMediaPlayback = true
+        #endif
         configuration.mediaTypesRequiringUserActionForPlayback = []
         // Lets the page hand the video to the system's full-screen presentation, which is what
         // turning the phone now does. Without it WebKit refuses the request and all the app can
@@ -165,10 +174,16 @@ final class PlayerManager: ObservableObject {
         configuration.userContentController = controller
 
         webView = WKWebView(frame: .zero, configuration: configuration)
+        // Black behind the page, so the letterboxing around a video that isn't the surface's
+        // shape reads as part of the picture rather than as a gap. `underPageBackgroundColor`
+        // is the one spelling both platforms share; the scroll view below is iOS's alone.
+        webView.underPageBackgroundColor = .black
+        #if os(iOS)
         webView.scrollView.isScrollEnabled = false
         webView.scrollView.backgroundColor = .black
         webView.backgroundColor = .black
         webView.isOpaque = false
+        #endif
 
         controller.add(bridge, name: "player")
         webView.navigationDelegate = navigationBridge
@@ -455,6 +470,31 @@ final class PlayerManager: ObservableObject {
             exitSystemFullScreen()
         }
     }
+
+#if os(macOS)
+    /// The Mac's version of turning the phone on its side.
+    ///
+    /// A window has no orientation to react to, so full screen here is something you ask for:
+    /// from the Playback menu, or ⇧⌘F. It is the app's *own* full screen — the video fills the
+    /// window and the chrome steps aside — rather than WebKit's, because the window itself is
+    /// already the thing the user zooms or takes full screen with the green button, and stacking
+    /// a second full-screen window inside that is one too many. The embed's own button is still
+    /// there for anyone who wants WebKit's.
+    func toggleFillsWindow() {
+        guard currentVideo != nil else { return }
+        let fills = !isFullScreen
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
+            if fills {
+                wasExpandedBeforeFullScreen = isExpanded
+                isExpanded = true
+                isBarCompact = false
+            } else {
+                isExpanded = wasExpandedBeforeFullScreen
+            }
+            isFullScreen = fills
+        }
+    }
+#endif
 
     private func requestSystemFullScreen() {
         guard currentVideo != nil, !isLocal else { return }

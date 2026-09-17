@@ -27,14 +27,15 @@ struct SearchView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(uiColor: .systemBackground))
+        .background(Color.appBackground)
         // Tapping anywhere outside the field puts the keyboard away. Simultaneous so rows and
         // buttons still receive their own taps.
         .contentShape(Rectangle())
         .simultaneousGesture(TapGesture().onEnded { isFieldFocused = false })
         .navigationTitle("Search")
-        .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom) { searchField }
+        .inlineNavigationBar()
+        // Bottom on a phone, top on a Mac — see `searchFieldInset`.
+        .searchFieldInset { searchField }
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
         .onAppear { isFieldFocused = true }
     }
@@ -56,8 +57,8 @@ struct SearchView: View {
                 TextField("Search videos and channels", text: $viewModel.query)
                     .focused($isFieldFocused)
                     .submitLabel(.search)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+                    .identifierField()
+                    .textFieldStyle(.plain)
                     .onSubmit(submit)
 
                 if !viewModel.query.isEmpty {
@@ -76,7 +77,7 @@ struct SearchView: View {
             }
             .padding(.horizontal, 14)
             .frame(height: 40)
-            .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
+            .background(Color.appSecondaryBackground, in: Capsule())
             .overlay(
                 Capsule().strokeBorder(
                     isFieldFocused ? Color.accentColor.opacity(0.4) : Color.clear,
@@ -91,7 +92,7 @@ struct SearchView: View {
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(.white)
                     .frame(width: 40, height: 40)
-                    .background(canSubmit ? Color.accentColor : Color(uiColor: .tertiarySystemFill), in: Circle())
+                    .background(canSubmit ? Color.accentColor : Color.appTertiaryFill, in: Circle())
                     .contentShape(Circle())
             }
             .buttonStyle(.plain)

@@ -30,9 +30,16 @@ struct HomeView: View {
                 cardFeed
             }
         }
-        .background(Color(uiColor: .systemBackground))
+        .background(Color.appBackground)
         .navigationTitle("Home")
         .toolbar {
+            #if os(macOS)
+            // Pull-to-refresh below is the phone's affordance; a Mac needs somewhere to click.
+            ToolbarItem(placement: .primaryAction) {
+                RefreshButton { await refresh(force: true) }
+            }
+            #endif
+
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showsNotifications = true
@@ -173,15 +180,15 @@ struct HomeView: View {
             ForEach(0..<3, id: \.self) { _ in
                 VStack(alignment: .leading, spacing: 10) {
                     RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                        .fill(Color(uiColor: .tertiarySystemFill))
+                        .fill(Color.appTertiaryFill)
                         .aspectRatio(16.0 / 9.0, contentMode: .fit)
                     HStack(spacing: 10) {
                         Circle()
-                            .fill(Color(uiColor: .tertiarySystemFill))
+                            .fill(Color.appTertiaryFill)
                             .frame(width: 36, height: 36)
                         VStack(alignment: .leading, spacing: 6) {
-                            Capsule().fill(Color(uiColor: .tertiarySystemFill)).frame(height: 12)
-                            Capsule().fill(Color(uiColor: .tertiarySystemFill)).frame(width: 140, height: 10)
+                            Capsule().fill(Color.appTertiaryFill).frame(height: 12)
+                            Capsule().fill(Color.appTertiaryFill).frame(width: 140, height: 10)
                         }
                     }
                 }

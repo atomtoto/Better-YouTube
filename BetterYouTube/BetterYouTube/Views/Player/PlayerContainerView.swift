@@ -16,13 +16,20 @@ struct PlayerContainerView: View {
     @State private var drag = PlayerDragState()
     /// The separate flick that expands or dismisses the docked bar.
     @State private var barDragOffset: CGFloat = 0
+    #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    #endif
 
     private let metrics = PlayerMetrics()
 
+    #if os(iOS)
     /// The phone on its side, which is what puts the video full screen. A compact height is
     /// exactly that: portrait and every iPad layout are regular.
+    ///
+    /// A Mac has no counterpart: a window has no orientation, so full screen there is asked for
+    /// rather than inferred — see `PlayerManager.toggleFillsWindow`.
     private var isLandscape: Bool { verticalSizeClass == .compact }
+    #endif
 
     var body: some View {
         GeometryReader { proxy in
@@ -40,11 +47,12 @@ struct PlayerContainerView: View {
         .ignoresSafeArea(.container, edges: player.isFullScreen ? .all : [])
         .opacity(player.currentVideo == nil ? 0 : 1)
         .allowsHitTesting(player.currentVideo != nil)
-        .statusBarHidden(player.isFullScreen)
-        .persistentSystemOverlays(player.isFullScreen ? .hidden : .automatic)
+        .systemChromeHidden(player.isFullScreen)
+        #if os(iOS)
         .onChange(of: isLandscape, initial: true) { _, landscape in
             player.setLandscape(landscape)
         }
+        #endif
     }
 
     @ViewBuilder
@@ -58,7 +66,7 @@ struct PlayerContainerView: View {
         ZStack(alignment: .topLeading) {
             // 1. Backdrops — drawn under the video surface. Black full screen, so the bars
             //    beside a video that isn't the screen's shape read as part of the picture.
-            (player.isFullScreen ? Color.black : Color(uiColor: .systemBackground))
+            (player.isFullScreen ? Color.black : Color.appBackground)
                 .opacity(Double(expansion))
                 .ignoresSafeArea()
                 .allowsHitTesting(player.isExpanded)
@@ -274,14 +282,25 @@ extension View {
 /// own metrics change.
 private struct PlayerMetrics {
     let barHeight: CGFloat = 62
-    let barInset: CGFloat = 20
     let barCornerRadius: CGFloat = 26
+
+    #if os(macOS)
+    let barInset: CGFloat = 16
+    /// There is no tab bar under the Mac's bar — the sections live in a sidebar — so the only
+    /// clearance it needs is the margin it floats on. The window's content is given the same
+    /// room back as a bottom safe-area inset, in `RootTabView`.
+    let tabBarClearance: CGFloat = 16
+    let compactTabBarClearance: CGFloat = 16
+    #else
+    let barInset: CGFloat = 20
     /// Room left below the full-width bar for the floating tab bar.
     let tabBarClearance: CGFloat = 54
     /// The pill drops into the tab bar's own row rather than hovering above it, and a little
     /// below its bottom edge to line up with the pill the tab bar minimizes to. By then the tab
     /// bar is minimized too — the same scroll shrinks both — so the space beside it is free.
     let compactTabBarClearance: CGFloat = -6
+    #endif
+
     let artworkPadding: CGFloat = 8
     let headerHeight: CGFloat = 44
     /// The pill the bar shrinks to on scroll keeps the artwork and play/pause, nothing else.

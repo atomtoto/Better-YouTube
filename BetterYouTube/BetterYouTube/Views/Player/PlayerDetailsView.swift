@@ -175,7 +175,7 @@ struct PlayerDetailsView: View {
                                 .font(.subheadline.weight(.medium))
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 9)
-                                .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
+                                .background(Color.appSecondaryBackground, in: Capsule())
                         }
                         .buttonStyle(.plain)
                     }
@@ -355,7 +355,7 @@ private struct PlayerActionPill: View {
                 .background(
                     isActive
                         ? AnyShapeStyle(Color.red.opacity(0.15))
-                        : AnyShapeStyle(Color(uiColor: .secondarySystemBackground)),
+                        : AnyShapeStyle(Color.appSecondaryBackground),
                     in: Capsule()
                 )
                 .foregroundStyle(isActive ? Color.red : Color.primary)
