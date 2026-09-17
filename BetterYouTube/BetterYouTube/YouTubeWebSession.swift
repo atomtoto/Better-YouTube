@@ -85,13 +85,13 @@ final class YouTubeWebSession: ObservableObject {
     /// height of the viewport. Nothing that reads these pages depends on which one it got: the
     /// harvest looks for `watch?v=` links, and the ad filter names both editions' renderers.
     #if os(macOS)
-    static let homeURL = URL(string: "https://www.youtube.com/")!
+    nonisolated static let homeURL = URL(string: "https://www.youtube.com/")!
     /// The account's own notification inbox — the bell's actual output, which the Data API has
     /// no endpoint for.
-    static let notificationsURL = URL(string: "https://www.youtube.com/feed/notifications")!
+    nonisolated static let notificationsURL = URL(string: "https://www.youtube.com/feed/notifications")!
     #else
-    static let homeURL = URL(string: "https://m.youtube.com/")!
-    static let notificationsURL = URL(string: "https://m.youtube.com/feed/notifications")!
+    nonisolated static let homeURL = URL(string: "https://m.youtube.com/")!
+    nonisolated static let notificationsURL = URL(string: "https://m.youtube.com/feed/notifications")!
     #endif
 
     /// A full Safari string, matching the edition above. `WKWebView` otherwise sends a user agent
@@ -99,10 +99,10 @@ final class YouTubeWebSession: ObservableObject {
     /// view and refuses to let you sign in. It is the one thing here that misrepresents anything,
     /// and it only makes the sign-in page treat this like the browser it is.
     #if os(macOS)
-    static let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    nonisolated static let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
         + "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
     #else
-    static let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) "
+    nonisolated static let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) "
         + "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
     #endif
 

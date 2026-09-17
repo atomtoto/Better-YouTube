@@ -44,6 +44,9 @@ private struct YouTubeWebPage {
     /// Whether a tap on a video should open the app's player instead of YouTube's.
     let interceptsVideoTaps: Bool
 
+    /// Explicitly on the main actor: `makeUIView`/`makeNSView` are isolated by the representable
+    /// protocol itself, and lifting the body out of them into a shared method left it nowhere.
+    @MainActor
     fileprivate func makeWebView(coordinator: Coordinator) -> WKWebView {
         let configuration = YouTubeWebSession.shared.configuration()
 
