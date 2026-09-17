@@ -148,12 +148,7 @@ struct LibraryView: View {
             Text("Sign in with Google from Settings to browse your subscriptions, playlists and liked videos, and to keep Watch Later as a playlist on your account rather than only on this device. Watch history stays here either way — YouTube's API has never exposed it.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            NavigationLink {
-                SettingsView()
-            } label: {
-                Text("Open Settings")
-                    .font(.subheadline.weight(.semibold))
-            }
+            OpenSettingsButton()
         }
         .padding(.vertical, 6)
     }

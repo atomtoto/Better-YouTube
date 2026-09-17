@@ -270,10 +270,11 @@ Requirements: **macOS 26+**, Xcode 26+.
 | | iPhone / iPad | Mac |
 | --- | --- | --- |
 | Sections | Tab bar that minimizes on scroll | Source-list sidebar, ⌘1/⌘2/⌘3 |
+| Home's feed switcher | Segmented control at the top of the feed | In the window's toolbar, where a mode switcher belongs |
 | Player full screen | Turn the phone on its side | ⇧⌘F fills the window; the green button takes the window full screen |
 | Mini / expanded player | Tap the bar, flick it down | ⇧⌘P, or click the bar |
 | Transport | The docked bar, the lock screen | The bar, the **Playback** menu, ⌘P / ⌥⌘← / ⌥⌘→ / ⇧⌘N |
-| Settings | A tab | Still a sidebar item, opened by ⌘, |
+| Settings | A tab, one long form | Its own window of panes, ⌘, — no sidebar row |
 | Refresh | Pull down | A Refresh button in the toolbar, ⌘R |
 | Search field | Pinned to the bottom, in thumb reach | Pinned to the top, where a Mac keeps one |
 | YouTube's own pages | `m.youtube.com` | `www.youtube.com` — a window holds the desktop site |
@@ -362,6 +363,7 @@ BetterYouTube/
     Utilities.swift              Duration, count and relative-date formatters, Takeout CSV reader
     ViewModels/                  One @MainActor view model per screen
     Views/                       SwiftUI screens
+    Views/Settings/              One file per settings section, plus each platform's shell
     Views/Components/            Reusable cards and rows
 ```
 

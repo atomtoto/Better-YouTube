@@ -176,12 +176,7 @@ struct DownloadsView: View {
                     .padding(14)
                     .cardBackground()
 
-                    NavigationLink {
-                        SettingsView()
-                    } label: {
-                        Text("Open Settings")
-                            .font(.subheadline.weight(.semibold))
-                    }
+                    OpenSettingsButton()
                 }
                 .padding(Theme.Spacing.gutter * 2)
                 .frame(maxWidth: .infinity)

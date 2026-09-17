@@ -35,21 +35,7 @@ struct BetterYouTubeApp: App {
     var body: some Scene {
         WindowGroup {
             RootTabView()
-                .environmentObject(apiKeyStore)
-                .environmentObject(library)
-                .environmentObject(watchLater)
-                .environmentObject(auth)
-                .environmentObject(recentSearches)
-                .environmentObject(notificationStore)
-                .environmentObject(notifications)
-                .environmentObject(router)
-                .environmentObject(player)
-                .environmentObject(quota)
-                .environmentObject(webSession)
-                .environmentObject(downloadStore)
-                .environmentObject(downloadManager)
-                .environmentObject(downloadSettings)
-                .tint(.red)
+                .appEnvironment()
                 #if os(macOS)
                 // A phone-shaped window is not a Mac app. This is wide enough for the sidebar
                 // and a two-column feed, and tall enough that the expanded player has the
@@ -62,7 +48,7 @@ struct BetterYouTubeApp: App {
         .windowToolbarStyle(.unified)
         .commands { PlayerCommands(player: player, router: router) }
         #endif
-        .onChange(of: scenePhase) { phase in
+        .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
                 Task {
@@ -75,6 +61,44 @@ struct BetterYouTubeApp: App {
                 break
             }
         }
+
+        #if os(macOS)
+        // ⌘, on a Mac opens a window, and this scene is what gives the app one for free —
+        // including the File menu item, which is why there is no `appSettings` command below.
+        // A scene does not inherit the environment of another, so the objects are attached
+        // again here; `appEnvironment` is the one list of them.
+        Settings {
+            MacSettingsWindow()
+                .appEnvironment()
+        }
+        #endif
+    }
+}
+
+/// Hands a view every store the app runs on.
+///
+/// It exists because macOS has two scenes — the window and Settings — and a scene inherits
+/// nothing from its neighbour, so this list would otherwise be written out twice and drift. Every
+/// store here is the same singleton the `@StateObject` properties above hold; those keep the
+/// objects alive for the app's lifetime, this puts them where views can find them.
+private extension View {
+    func appEnvironment() -> some View {
+        self
+            .environmentObject(APIKeyStore.shared)
+            .environmentObject(LibraryStore.shared)
+            .environmentObject(WatchLaterStore.shared)
+            .environmentObject(GoogleAuthService.shared)
+            .environmentObject(RecentSearchStore.shared)
+            .environmentObject(NotificationStore.shared)
+            .environmentObject(NotificationService.shared)
+            .environmentObject(AppRouter.shared)
+            .environmentObject(PlayerManager.shared)
+            .environmentObject(QuotaTracker.shared)
+            .environmentObject(YouTubeWebSession.shared)
+            .environmentObject(DownloadStore.shared)
+            .environmentObject(DownloadManager.shared)
+            .environmentObject(DownloadSettings.shared)
+            .tint(.red)
     }
 }
 
@@ -150,12 +174,8 @@ struct PlayerCommands: Commands {
     @ObservedObject var router: AppRouter
 
     var body: some Commands {
-        // ⌘, opens Settings on every Mac app there has ever been. The app keeps Settings as a
-        // sidebar item rather than a window of its own, so this selects it.
-        CommandGroup(replacing: .appSettings) {
-            Button("Settings…") { router.selectedTab = .settings }
-                .keyboardShortcut(",", modifiers: .command)
-        }
+        // No `appSettings` group here on purpose: the `Settings` scene gives the app ⌘, and the
+        // menu item that opens it, and replacing that would only take it away again.
 
         // Every shortcut below carries ⌘. That rules out the one the hand reaches for — space,
         // which is what Music, TV and QuickTime use — and it is deliberate: AppKit offers a key

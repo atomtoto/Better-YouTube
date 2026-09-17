@@ -107,8 +107,8 @@ struct RootTabView: View {
                     .tag(AppRouter.Tab.search)
                 Label("Library", systemImage: "rectangle.stack.badge.play.fill")
                     .tag(AppRouter.Tab.library)
-                Label("Settings", systemImage: "gearshape.fill")
-                    .tag(AppRouter.Tab.settings)
+                // No Settings row: on a Mac it is a window, opened with ⌘, from the app menu
+                // like every other Mac app's. See the `Settings` scene in `BetterYouTubeApp`.
             }
             .navigationSplitViewColumnWidth(min: 178, ideal: 205, max: 280)
         } detail: {

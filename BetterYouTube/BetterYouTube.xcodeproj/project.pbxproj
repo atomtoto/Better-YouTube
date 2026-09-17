@@ -54,6 +54,17 @@
 		A8AA70CD423FD5DCC238368F /* LocalPlayerSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 989F6E87E9B3CF0057F0FCC7 /* LocalPlayerSurface.swift */; };
 		C6BACBED1D1C50E9026BAEAC /* DownloadConfigLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ECDDB993DD4C6CDAA43CDB3 /* DownloadConfigLink.swift */; };
 		B1A2C3D40E5F60718293A4B5 /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B3D4E5F60718293A4B5C6D /* Platform.swift */; };
+		A1B2C3D4E5F600112202CC02 /* AboutSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112202BB02 /* AboutSection.swift */; };
+		A1B2C3D4E5F600112203CC03 /* APIKeySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112203BB03 /* APIKeySection.swift */; };
+		A1B2C3D4E5F600112204CC04 /* AccountSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112204BB04 /* AccountSection.swift */; };
+		A1B2C3D4E5F600112205CC05 /* DownloadsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112205BB05 /* DownloadsSection.swift */; };
+		A1B2C3D4E5F600112206CC06 /* MacSettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112206BB06 /* MacSettingsWindow.swift */; };
+		A1B2C3D4E5F600112207CC07 /* NotificationsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112207BB07 /* NotificationsSection.swift */; };
+		A1B2C3D4E5F600112208CC08 /* OnThisDeviceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112208BB08 /* OnThisDeviceSection.swift */; };
+		A1B2C3D4E5F600112209CC09 /* QuotaSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112209BB09 /* QuotaSection.swift */; };
+		A1B2C3D4E5F600112210CC10 /* ResetSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112210BB10 /* ResetSection.swift */; };
+		A1B2C3D4E5F600112211CC11 /* WatchLaterSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112211BB11 /* WatchLaterSection.swift */; };
+		A1B2C3D4E5F600112212CC12 /* YouTubeHomeSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112212BB12 /* YouTubeHomeSection.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -108,6 +119,17 @@
 		C2B3D4E5F60718293A4B5C6D /* Platform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Platform.swift; sourceTree = "<group>"; };
 		D3C4E5F60718293A4B5C6D7E /* Info-macOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-macOS.plist"; sourceTree = "<group>"; };
 		E4D5F60718293A4B5C6D7E8F /* BetterYouTube-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "BetterYouTube-macOS.entitlements"; sourceTree = "<group>"; };
+		A1B2C3D4E5F600112202BB02 /* AboutSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutSection.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F600112203BB03 /* APIKeySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeySection.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F600112204BB04 /* AccountSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSection.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F600112205BB05 /* DownloadsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsSection.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F600112206BB06 /* MacSettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSettingsWindow.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F600112207BB07 /* NotificationsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSection.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F600112208BB08 /* OnThisDeviceSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnThisDeviceSection.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F600112209BB09 /* QuotaSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaSection.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F600112210BB10 /* ResetSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetSection.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F600112211BB11 /* WatchLaterSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLaterSection.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F600112212BB12 /* YouTubeHomeSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeHomeSection.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -149,7 +171,7 @@
 				205910A80EFBDFAD9310F5CD /* LibraryView.swift */,
 				5A988341166DB56C3D423057 /* RootTabView.swift */,
 				6BD1CCEBA5BC1F5564078632 /* SearchView.swift */,
-				CD59E0EB71DC1D5B631D2753 /* SettingsView.swift */,
+				A1B2C3D4E5F600112233AA01 /* Settings */,
 				DA6B490E99286C354C0290CE /* Components */,
 				B0AA470184C4B77CEE258C2D /* VideoListView.swift */,
 				61454B909858AA3CBDB6C50B /* NotificationsView.swift */,
@@ -214,6 +236,25 @@
 				200946DDA34EED92264FD752 /* VideoCardView.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F600112233AA01 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				CD59E0EB71DC1D5B631D2753 /* SettingsView.swift */,
+				A1B2C3D4E5F600112202BB02 /* AboutSection.swift */,
+				A1B2C3D4E5F600112203BB03 /* APIKeySection.swift */,
+				A1B2C3D4E5F600112204BB04 /* AccountSection.swift */,
+				A1B2C3D4E5F600112205BB05 /* DownloadsSection.swift */,
+				A1B2C3D4E5F600112206BB06 /* MacSettingsWindow.swift */,
+				A1B2C3D4E5F600112207BB07 /* NotificationsSection.swift */,
+				A1B2C3D4E5F600112208BB08 /* OnThisDeviceSection.swift */,
+				A1B2C3D4E5F600112209BB09 /* QuotaSection.swift */,
+				A1B2C3D4E5F600112210BB10 /* ResetSection.swift */,
+				A1B2C3D4E5F600112211BB11 /* WatchLaterSection.swift */,
+				A1B2C3D4E5F600112212BB12 /* YouTubeHomeSection.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -306,6 +347,17 @@
 				7A740261748970FEF044EFF9 /* RootTabView.swift in Sources */,
 				F4F905BB38F666A73F65B59F /* SearchView.swift in Sources */,
 				9427E70309498CDBF08B3846 /* SettingsView.swift in Sources */,
+				A1B2C3D4E5F600112202CC02 /* AboutSection.swift in Sources */,
+				A1B2C3D4E5F600112203CC03 /* APIKeySection.swift in Sources */,
+				A1B2C3D4E5F600112204CC04 /* AccountSection.swift in Sources */,
+				A1B2C3D4E5F600112205CC05 /* DownloadsSection.swift in Sources */,
+				A1B2C3D4E5F600112206CC06 /* MacSettingsWindow.swift in Sources */,
+				A1B2C3D4E5F600112207CC07 /* NotificationsSection.swift in Sources */,
+				A1B2C3D4E5F600112208CC08 /* OnThisDeviceSection.swift in Sources */,
+				A1B2C3D4E5F600112209CC09 /* QuotaSection.swift in Sources */,
+				A1B2C3D4E5F600112210CC10 /* ResetSection.swift in Sources */,
+				A1B2C3D4E5F600112211CC11 /* WatchLaterSection.swift in Sources */,
+				A1B2C3D4E5F600112212CC12 /* YouTubeHomeSection.swift in Sources */,
 				9AA644F99737914623BCC493 /* Theme.swift in Sources */,
 				057D4422BBED259B4344DA8B /* GoogleAuthService.swift in Sources */,
 				3CFA4EEAB6309A184C48E69D /* LibraryViewModel.swift in Sources */,
