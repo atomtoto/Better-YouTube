@@ -65,6 +65,7 @@
 		A1B2C3D4E5F600112210CC10 /* ResetSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112210BB10 /* ResetSection.swift */; };
 		A1B2C3D4E5F600112211CC11 /* WatchLaterSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112211BB11 /* WatchLaterSection.swift */; };
 		A1B2C3D4E5F600112212CC12 /* YouTubeHomeSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112212BB12 /* YouTubeHomeSection.swift */; };
+		A1B2C3D4E5F600112299CC99 /* SettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112299BB99 /* SettingsPane.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -130,6 +131,7 @@
 		A1B2C3D4E5F600112210BB10 /* ResetSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetSection.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F600112211BB11 /* WatchLaterSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLaterSection.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F600112212BB12 /* YouTubeHomeSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeHomeSection.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F600112299BB99 /* SettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPane.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -242,6 +244,7 @@
 			isa = PBXGroup;
 			children = (
 				CD59E0EB71DC1D5B631D2753 /* SettingsView.swift */,
+				A1B2C3D4E5F600112299BB99 /* SettingsPane.swift */,
 				A1B2C3D4E5F600112202BB02 /* AboutSection.swift */,
 				A1B2C3D4E5F600112203BB03 /* APIKeySection.swift */,
 				A1B2C3D4E5F600112204BB04 /* AccountSection.swift */,
@@ -347,6 +350,7 @@
 				7A740261748970FEF044EFF9 /* RootTabView.swift in Sources */,
 				F4F905BB38F666A73F65B59F /* SearchView.swift in Sources */,
 				9427E70309498CDBF08B3846 /* SettingsView.swift in Sources */,
+				A1B2C3D4E5F600112299CC99 /* SettingsPane.swift in Sources */,
 				A1B2C3D4E5F600112202CC02 /* AboutSection.swift in Sources */,
 				A1B2C3D4E5F600112203CC03 /* APIKeySection.swift in Sources */,
 				A1B2C3D4E5F600112204CC04 /* AccountSection.swift in Sources */,

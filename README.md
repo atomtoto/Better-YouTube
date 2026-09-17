@@ -274,7 +274,7 @@ Requirements: **macOS 26+**, Xcode 26+.
 | Player full screen | Turn the phone on its side | ⇧⌘F fills the window; the green button takes the window full screen |
 | Mini / expanded player | Tap the bar, flick it down | ⇧⌘P, or click the bar |
 | Transport | The docked bar, the lock screen | The bar, the **Playback** menu, ⌘P / ⌥⌘← / ⌥⌘→ / ⇧⌘N |
-| Settings | A tab, one long form | Its own window of panes, ⌘, — no sidebar row |
+| Settings | A tab; panes that push | Its own window, the same panes as a source list, ⌘, |
 | Refresh | Pull down | A Refresh button in the toolbar, ⌘R |
 | Search field | Pinned to the bottom, in thumb reach | Pinned to the top, where a Mac keeps one |
 | YouTube's own pages | `m.youtube.com` | `www.youtube.com` — a window holds the desktop site |
@@ -283,7 +283,9 @@ Requirements: **macOS 26+**, Xcode 26+.
 | Tokens | iOS keychain | The data-protection keychain, which is why the Mac build is sandboxed |
 
 Everything else — sign-in, the API client, the quota tally, the download queue, the on-device
-library, the notification inbox — is one implementation.
+library, the notification inbox — is one implementation. Settings is divided into the same seven
+panes on both, by `SettingsPane`; only the shell around them differs, a pushing list against a
+source list.
 
 ### How the code is split
 
@@ -363,7 +365,7 @@ BetterYouTube/
     Utilities.swift              Duration, count and relative-date formatters, Takeout CSV reader
     ViewModels/                  One @MainActor view model per screen
     Views/                       SwiftUI screens
-    Views/Settings/              One file per settings section, plus each platform's shell
+    Views/Settings/              One file per settings section, the panes, and each shell
     Views/Components/            Reusable cards and rows
 ```
 
