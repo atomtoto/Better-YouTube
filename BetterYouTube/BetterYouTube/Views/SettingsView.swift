@@ -243,7 +243,7 @@ struct SettingsView: View {
                     }
                 }
 
-                TextField("OAuth client ID (iOS)", text: $draftClientId)
+                TextField("Click here to add YouTube OAuth client ID", text: $draftClientId)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .onChange(of: draftClientId) { newValue in
