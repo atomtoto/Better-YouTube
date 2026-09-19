@@ -36,6 +36,7 @@ enum AppReset {
         // Stop playback first — it holds the audio session and a video that's about to have no
         // history entry to belong to.
         PlayerManager.shared.close()
+        UserDefaults.standard.removeObject(forKey: MiniPlayerStyle.storageKey)
 
         // The two sign-ins. The web session's cookies live in a data store of their own, which
         // is why this one is async.

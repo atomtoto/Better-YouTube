@@ -418,6 +418,70 @@ actor YouTubeAPIService {
         return response.items.map(VideoComment.init(thread:))
     }
 
+    /// Publishes a new top-level comment. YouTube returns the created thread, including the
+    /// server-authored id and timestamp, so the UI can insert the canonical value immediately.
+    func addComment(videoId: String, text: String) async throws -> VideoComment {
+        struct Body: Encodable {
+            struct Snippet: Encodable {
+                struct TopLevelComment: Encodable {
+                    struct CommentSnippet: Encodable { let textOriginal: String }
+                    let snippet: CommentSnippet
+                }
+                let videoId: String
+                let topLevelComment: TopLevelComment
+            }
+            let snippet: Snippet
+        }
+
+        let thread: YTCommentThreadItem = try await send(
+            "POST",
+            path: "commentThreads",
+            query: ["part": "snippet"],
+            body: Body(
+                snippet: .init(
+                    videoId: videoId,
+                    topLevelComment: .init(snippet: .init(textOriginal: text))
+                )
+            )
+        )
+        return VideoComment(thread: thread)
+    }
+
+    /// Replies to a top-level comment. The parent id is the comment resource id, not the thread
+    /// id; `VideoComment` intentionally keeps that distinction when mapping API responses.
+    func reply(to parentId: String, text: String) async throws -> VideoComment {
+        struct Body: Encodable {
+            struct Snippet: Encodable {
+                let parentId: String
+                let textOriginal: String
+            }
+            let snippet: Snippet
+        }
+
+        let item: YTCommentItem = try await send(
+            "POST",
+            path: "comments",
+            query: ["part": "snippet"],
+            body: Body(snippet: .init(parentId: parentId, textOriginal: text))
+        )
+        return VideoComment(item: item)
+    }
+
+    /// Fetches the replies separately: `commentThreads.list` includes at most a small preview,
+    /// while `comments.list` returns the complete conversation page for an expanded thread.
+    func replies(to parentId: String, limit: Int = 200) async throws -> [VideoComment] {
+        let items: [YTCommentItem] = try await allPages(
+            path: "comments",
+            query: [
+                "part": "snippet",
+                "parentId": parentId,
+                "textFormat": "plainText"
+            ],
+            limit: limit
+        )
+        return items.map { VideoComment(item: $0) }
+    }
+
     // MARK: - Playlists
 
     func videos(inPlaylist playlistId: String, maxResults: Int = 25) async throws -> [Video] {

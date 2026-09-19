@@ -11,13 +11,14 @@ import SwiftUI
 /// live in: the API key and what it has spent are one subject, a playlist and the videos kept on
 /// the device are another.
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case account, library, notifications, youTubeHome, downloads, api, advanced
+    case account, playback, library, notifications, youTubeHome, downloads, api, advanced
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .account: return "Account"
+        case .playback: return "Playback"
         case .library: return "Library"
         case .notifications: return "Notifications"
         case .youTubeHome: return "YouTube Home"
@@ -30,6 +31,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .account: return "person.crop.circle"
+        case .playback: return "play.rectangle"
         case .library: return "rectangle.stack"
         case .notifications: return "bell"
         case .youTubeHome: return "globe"
@@ -43,6 +45,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .account: return .blue
+        case .playback: return .red
         case .library: return .orange
         case .notifications: return .red
         case .youTubeHome: return .pink
@@ -66,6 +69,8 @@ struct SettingsPaneView: View {
             switch pane {
             case .account:
                 AccountSection()
+            case .playback:
+                PlaybackSection()
             case .library:
                 WatchLaterSection()
                 OnThisDeviceSection()
@@ -90,5 +95,23 @@ struct SettingsPaneView: View {
         #if os(iOS)
         .minimizesPlayerBarOnScroll()
         #endif
+    }
+}
+
+private struct PlaybackSection: View {
+    @AppStorage(MiniPlayerStyle.storageKey) private var miniPlayerStyle = MiniPlayerStyle.platformDefault
+
+    var body: some View {
+        Section {
+            Picker("Mini Player", selection: $miniPlayerStyle) {
+                ForEach(MiniPlayerStyle.allCases) { style in
+                    Text(style.title).tag(style)
+                }
+            }
+        } header: {
+            Text("Player")
+        } footer: {
+            Text("Floating keeps a rectangular 16:9 player in the bottom-right corner. Playback Bar shows the title and channel across the bottom. Long-press the mini player to switch between them.")
+        }
     }
 }

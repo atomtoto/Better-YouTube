@@ -12,6 +12,7 @@ struct PlayerDetailsView: View {
     @EnvironmentObject private var downloadManager: DownloadManager
     @StateObject private var viewModel: VideoDetailViewModel
     @State private var isDescriptionExpanded = false
+    @State private var newCommentText = ""
 
     init(video: Video) {
         self.video = video
@@ -270,6 +271,38 @@ struct PlayerDetailsView: View {
             Text("Comments")
                 .font(.title3.bold())
 
+            HStack(alignment: .bottom, spacing: 8) {
+                TextField("Add a comment", text: $newCommentText, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .lineLimit(1...4)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Color.appSecondaryBackground, in: RoundedRectangle(cornerRadius: 14))
+                    .onSubmit { postComment() }
+
+                Button { postComment() } label: {
+                    if viewModel.isPostingComment {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "paperplane.fill")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.circle)
+                .disabled(
+                    newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        || viewModel.isPostingComment
+                )
+                .accessibilityLabel("Post comment")
+            }
+
+            if let error = viewModel.commentActionError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             if viewModel.isLoadingComments {
                 ProgressView().frame(maxWidth: .infinity)
             } else if let error = viewModel.commentsError {
@@ -282,8 +315,21 @@ struct PlayerDetailsView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(viewModel.comments) { comment in
-                    CommentRowView(comment: comment)
+                    CommentRowView(
+                        comment: comment,
+                        videoId: displayed.id,
+                        viewModel: viewModel
+                    )
                 }
+            }
+        }
+    }
+
+    private func postComment() {
+        let text = newCommentText
+        Task {
+            if await viewModel.addComment(text) {
+                newCommentText = ""
             }
         }
     }
@@ -379,30 +425,135 @@ private struct PlayerActionPill: View {
 
 struct CommentRowView: View {
     let comment: VideoComment
+    let videoId: String
+    @ObservedObject var viewModel: VideoDetailViewModel
+
+    @Environment(\.openURL) private var openURL
+    @State private var showsReplies = false
+    @State private var showsReplyComposer = false
+    @State private var replyText = ""
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            AvatarView(url: comment.authorAvatarURL, size: 32)
+        VStack(alignment: .leading, spacing: 10) {
+            commentContent(comment, avatarSize: 32)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(comment.authorName)
-                        .font(.caption.weight(.semibold))
-                    Text(RelativeDateFormatter.string(from: comment.publishedAt))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+            HStack(spacing: 16) {
+                Button {
+                    if let url = youTubeURL(for: comment.id) { openURL(url) }
+                } label: {
+                    Label(
+                        comment.likeCount > 0 ? CountFormatter.abbreviated(comment.likeCount) : "Like",
+                        systemImage: "hand.thumbsup"
+                    )
                 }
-                Text(comment.text)
-                    .font(.footnote)
-                    .fixedSize(horizontal: false, vertical: true)
-                if comment.likeCount > 0 {
-                    Label("\(comment.likeCount)", systemImage: "hand.thumbsup")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                .accessibilityHint("Opens this comment on YouTube to like it")
+
+                Button("Reply") {
+                    withAnimation(.easeInOut(duration: 0.2)) { showsReplyComposer.toggle() }
+                }
+
+                if comment.totalReplyCount > 0 || !(viewModel.repliesByParent[comment.id] ?? []).isEmpty {
+                    Button(replyButtonTitle) {
+                        showsReplies.toggle()
+                        if showsReplies {
+                            Task { await viewModel.loadReplies(to: comment.id) }
+                        }
+                    }
                 }
             }
+            .buttonStyle(.plain)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.leading, 42)
 
+            if showsReplyComposer {
+                replyComposer
+                    .padding(.leading, 42)
+            }
+
+            if showsReplies {
+                replies
+                    .padding(.leading, 42)
+            }
+        }
+    }
+
+    private var replyButtonTitle: String {
+        let count = max(comment.totalReplyCount, viewModel.repliesByParent[comment.id]?.count ?? 0)
+        return showsReplies ? "Hide replies" : "\(count) repl\(count == 1 ? "y" : "ies")"
+    }
+
+    @ViewBuilder
+    private var replies: some View {
+        if viewModel.loadingReplies.contains(comment.id) {
+            ProgressView().controlSize(.small)
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(viewModel.repliesByParent[comment.id] ?? []) { reply in
+                    commentContent(reply, avatarSize: 26)
+                }
+            }
+        }
+    }
+
+    private var replyComposer: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            TextField("Write a reply", text: $replyText, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(1...3)
+                .onSubmit { postReply() }
+            Button { postReply() } label: {
+                if viewModel.sendingReplyTo.contains(comment.id) {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Image(systemName: "paperplane.fill")
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(
+                replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    || viewModel.sendingReplyTo.contains(comment.id)
+            )
+            .accessibilityLabel("Post reply")
+        }
+    }
+
+    private func commentContent(_ item: VideoComment, avatarSize: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            AvatarView(url: item.authorAvatarURL, size: avatarSize)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(item.authorName).font(.caption.weight(.semibold))
+                    Text(RelativeDateFormatter.string(from: item.publishedAt))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Text(item.text)
+                    .font(.footnote)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Spacer(minLength: 0)
         }
+    }
+
+    private func postReply() {
+        let text = replyText
+        Task {
+            if await viewModel.reply(text, to: comment.id) {
+                replyText = ""
+                showsReplyComposer = false
+                showsReplies = true
+                await viewModel.loadReplies(to: comment.id)
+            }
+        }
+    }
+
+    private func youTubeURL(for commentId: String) -> URL? {
+        var components = URLComponents(string: "https://www.youtube.com/watch")
+        components?.queryItems = [
+            URLQueryItem(name: "v", value: videoId),
+            URLQueryItem(name: "lc", value: commentId)
+        ]
+        return components?.url
     }
 }

@@ -1,5 +1,30 @@
 import SwiftUI
 
+/// The two shapes available while playback is tucked out of the way.
+enum MiniPlayerStyle: String, CaseIterable, Identifiable {
+    case floatingVideo
+    case playbackBar
+
+    static let storageKey = "mini_player_style"
+
+    static var platformDefault: MiniPlayerStyle {
+        #if os(macOS)
+        .floatingVideo
+        #else
+        .playbackBar
+        #endif
+    }
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .floatingVideo: return "Floating"
+        case .playbackBar: return "Playback Bar"
+        }
+    }
+}
+
 /// The player that lives above every screen. It morphs between a bar docked over the tab bar and
 /// a full-screen player, moving one shared video surface between the two positions rather than
 /// rebuilding it — so the video never restarts.
@@ -10,12 +35,11 @@ import SwiftUI
 /// layout instead of a jump, and the finger can drive it directly.
 struct PlayerContainerView: View {
     @EnvironmentObject private var player: PlayerManager
-    @EnvironmentObject private var downloads: DownloadStore
-    @EnvironmentObject private var downloadManager: DownloadManager
     /// The pull-down that shrinks the expanded player back into the bar.
     @State private var drag = PlayerDragState()
     /// The separate flick that expands or dismisses the docked bar.
     @State private var barDragOffset: CGFloat = 0
+    @AppStorage(MiniPlayerStyle.storageKey) private var miniPlayerStyle = MiniPlayerStyle.platformDefault
     #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     #endif
@@ -37,6 +61,7 @@ struct PlayerContainerView: View {
                 size: proxy.size,
                 metrics: metrics,
                 compactness: player.isBarCompact ? 1 : 0,
+                style: miniPlayerStyle,
                 isFullScreen: player.isFullScreen
             )
             playerBody(in: layout)
@@ -77,7 +102,6 @@ struct PlayerContainerView: View {
                 .opacity(Double(1 - expansion))
                 .onTapGesture { player.expand() }
                 .gesture(barDragGesture)
-                .contextMenu { PlayerActions(player: player, downloads: downloads, downloadManager: downloadManager) }
                 .allowsHitTesting(!player.isExpanded)
 
             // 2. The one and only video surface. It keeps its full-screen layout size in every
@@ -121,13 +145,28 @@ struct PlayerContainerView: View {
                 metrics: metrics,
                 artworkExtent: layout.artworkExtent,
                 labelWidth: layout.labelWidth,
-                compactness: layout.compactness
+                compactness: layout.compactness,
+                style: layout.style
             )
             .frame(width: bar.width, height: bar.height)
             .clipShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
             .position(x: bar.midX, y: bar.midY)
             .opacity(Double(1 - expansion))
             .allowsHitTesting(!player.isExpanded)
+            .contentShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
+            .highPriorityGesture(
+                LongPressGesture(minimumDuration: 0.55)
+                    .onEnded { _ in switchMiniPlayerStyle() }
+            )
+        }
+    }
+
+    /// A long press is deliberately shared by both compact shapes, so the current choice never
+    /// traps the user in a style whose Settings screen they have to go and find.
+    private func switchMiniPlayerStyle() {
+        guard !player.isExpanded else { return }
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+            miniPlayerStyle = miniPlayerStyle == .floatingVideo ? .playbackBar : .floatingVideo
         }
     }
 
@@ -230,8 +269,7 @@ struct PlayerCollapseDrag {
 // MARK: - The player's menu
 
 /// What you can do to the playing video, wherever the player offers a menu: the expanded
-/// player's ellipsis, and a long press on the docked bar — which is how you close the bar once
-/// it has shrunk to its pill and left the close button behind.
+/// player's ellipsis. The docked player's long press is reserved for switching its presentation.
 struct PlayerActions: View {
     /// Handed in rather than read from the environment: this is built inside a menu, whose
     /// content is a presentation of its own, and an `@EnvironmentObject` resolved in there has
@@ -310,6 +348,11 @@ private struct PlayerMetrics {
     let controlsTrailingPadding: CGFloat = 10
     /// Gap between the artwork and the title.
     let labelGap: CGFloat = 10
+    #if os(macOS)
+    let floatingVideoWidth: CGFloat = 320
+    #else
+    let floatingVideoWidth: CGFloat = 200
+    #endif
 }
 
 /// Interpolates the player between the three shapes it can take. The bar keeps its trailing edge
@@ -320,6 +363,7 @@ private struct PlayerLayout {
     let metrics: PlayerMetrics
     /// 0 the full-width bar, 1 the compact pill.
     let compactness: CGFloat
+    let style: MiniPlayerStyle
     /// Set in landscape, where the video has the screen to itself.
     let isFullScreen: Bool
 
@@ -327,6 +371,26 @@ private struct PlayerLayout {
     var dockedVideoFrame: CGRect { dockedVideoFrame(at: compactness) }
 
     func barFrame(at compactness: CGFloat) -> CGRect {
+        if style == .floatingVideo {
+            let availableWidth = max(0, size.width - metrics.barInset * 2)
+            let expandedWidth = min(metrics.floatingVideoWidth, availableWidth)
+            let width = lerp(expandedWidth, compactBarWidth, compactness)
+            let expandedVideoWidth = max(0, expandedWidth - metrics.artworkPadding * 2)
+            let expandedHeight = expandedVideoWidth * 9 / 16 + metrics.artworkPadding * 2
+            let height = lerp(expandedHeight, metrics.compactBarHeight, compactness)
+            let clearance = lerp(
+                metrics.tabBarClearance,
+                metrics.compactTabBarClearance,
+                compactness
+            )
+            let bottom = size.height - clearance
+            return CGRect(
+                x: size.width - metrics.barInset - width,
+                y: bottom - height,
+                width: width,
+                height: height
+            )
+        }
         let height = lerp(metrics.barHeight, metrics.compactBarHeight, compactness)
         let width = lerp(size.width - metrics.barInset * 2, compactBarWidth, compactness)
         let bottom = size.height - lerp(metrics.tabBarClearance, metrics.compactTabBarClearance, compactness)
@@ -341,6 +405,28 @@ private struct PlayerLayout {
     /// The artwork — really the video surface — inside the bar.
     func dockedVideoFrame(at compactness: CGFloat) -> CGRect {
         let bar = barFrame(at: compactness)
+        if style == .floatingVideo {
+            let expandedArtworkWidth = max(0, barFrame(at: 0).width - metrics.artworkPadding * 2)
+            let expandedArtwork = CGRect(
+                x: barFrame(at: 0).minX + metrics.artworkPadding,
+                y: barFrame(at: 0).minY + metrics.artworkPadding,
+                width: expandedArtworkWidth,
+                height: expandedArtworkWidth * 9 / 16
+            )
+            let compactArtworkHeight = metrics.compactBarHeight - metrics.artworkPadding * 2
+            let compactArtwork = CGRect(
+                x: bar.minX + metrics.artworkPadding,
+                y: bar.minY + metrics.artworkPadding,
+                width: compactArtworkHeight * 16 / 9,
+                height: compactArtworkHeight
+            )
+            return CGRect(
+                x: lerp(expandedArtwork.minX, compactArtwork.minX, compactness),
+                y: lerp(expandedArtwork.minY, compactArtwork.minY, compactness),
+                width: lerp(expandedArtwork.width, compactArtwork.width, compactness),
+                height: lerp(expandedArtwork.height, compactArtwork.height, compactness)
+            )
+        }
         let height = max(0, bar.height - metrics.artworkPadding * 2)
         return CGRect(
             x: bar.minX + metrics.artworkPadding,
@@ -358,7 +444,7 @@ private struct PlayerLayout {
     }
 
     var barCornerRadius: CGFloat {
-        lerp(metrics.barCornerRadius, metrics.compactBarHeight / 2, compactness)
+        return lerp(metrics.barCornerRadius, metrics.compactBarHeight / 2, compactness)
     }
 
     /// Where the video sits with the player open: under the header in portrait, alone on the
@@ -419,7 +505,18 @@ private struct PlayerLayout {
     /// The radius the corners should *look* like; the clip shape is applied before the scale, so
     /// the caller divides it by that scale.
     func videoCornerRadius(expansion: CGFloat) -> CGFloat {
-        lerp(10, 0, expansion)
+        // The visible inset curve is concentric with the glass card. A fixed 10 pt radius left
+        // the floating video's corners visibly squarer than its 26 pt container.
+        let dockedRadius: CGFloat
+        if style == .floatingVideo {
+            dockedRadius = min(
+                dockedVideoFrame.height / 2,
+                max(0, barCornerRadius - metrics.artworkPadding)
+            )
+        } else {
+            dockedRadius = 10
+        }
+        return lerp(dockedRadius, 0, expansion)
     }
 }
 
@@ -452,19 +549,64 @@ private struct MiniPlayerControls: View {
     let labelWidth: CGFloat
     /// 0 the full-width bar, 1 the compact pill.
     let compactness: CGFloat
+    let style: MiniPlayerStyle
 
     @EnvironmentObject private var player: PlayerManager
-    @EnvironmentObject private var downloads: DownloadStore
-    @EnvironmentObject private var downloadManager: DownloadManager
 
     /// What survives in the pill: everything else fades and is clipped away.
     private var isCompact: Bool { compactness > 0.5 }
 
     var body: some View {
+        if style == .floatingVideo {
+            floatingControls
+                .overlay(alignment: .trailing) {
+                    transport
+                        .opacity(Double(compactness))
+                        .allowsHitTesting(isCompact)
+                }
+        } else {
+            Color.clear
+                .allowsHitTesting(false)
+                .overlay(alignment: .leading) { labels }
+                .overlay(alignment: .trailing) { transport }
+                .overlay(alignment: .bottom) { progressLine }
+        }
+    }
+
+    /// YouTube's current mini-player shape: the picture is the card, with controls over it.
+    private var floatingControls: some View {
         Color.clear
-            .allowsHitTesting(false)
-            .overlay(alignment: .leading) { labels }
-            .overlay(alignment: .trailing) { transport }
+            .contentShape(Rectangle())
+            .onTapGesture { player.expand() }
+            .overlay {
+                Button {
+                    player.togglePlayPause()
+                } label: {
+                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                        .frame(width: 46, height: 46)
+                        .background(.black.opacity(0.58), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
+                .opacity(Double(1 - compactness))
+                .allowsHitTesting(!isCompact)
+            }
+            .overlay(alignment: .topTrailing) {
+                Button { player.close() } label: {
+                    Image(systemName: "xmark")
+                        .font(.footnote.bold())
+                        .foregroundStyle(.white)
+                        .frame(width: 30, height: 30)
+                        .background(.black.opacity(0.62), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .padding(8)
+                .accessibilityLabel("Close player")
+                .opacity(Double(1 - compactness))
+                .allowsHitTesting(!isCompact)
+            }
             .overlay(alignment: .bottom) { progressLine }
     }
 
@@ -482,7 +624,6 @@ private struct MiniPlayerControls: View {
         .padding(.leading, artworkExtent + metrics.labelGap)
         .contentShape(Rectangle())
         .onTapGesture { player.expand() }
-        .contextMenu { PlayerActions(player: player, downloads: downloads, downloadManager: downloadManager) }
         .opacity(Double(1 - compactness))
         .allowsHitTesting(!isCompact)
     }
