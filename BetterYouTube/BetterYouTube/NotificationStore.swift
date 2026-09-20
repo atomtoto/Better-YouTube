@@ -47,6 +47,22 @@ final class NotificationStore: ObservableObject {
     @Published var mode: NotificationMode { didSet { persist() } }
     @Published private(set) var channelOptIns: Set<String> = []
     @Published private(set) var items: [NotificationItem] = []
+    @Published private(set) var isImportingYouTube = false
+    @Published private(set) var lastYouTubeImport: YouTubeImport?
+    @Published private(set) var lastYouTubeImportDate: Date?
+    @Published var automaticallyImportYouTube = UserDefaults.standard.object(forKey: "auto_import_youtube_notifications") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(automaticallyImportYouTube, forKey: "auto_import_youtube_notifications") }
+    }
+    private var lastYouTubeAttempt: Date?
+
+    func importYouTubeIfDue() async {
+        guard automaticallyImportYouTube, !isImportingYouTube else { return }
+        await YouTubeWebSession.shared.refresh()
+        guard YouTubeWebSession.shared.isSignedIn else { return }
+        let interval: TimeInterval = lastYouTubeImport?.failure == nil ? 15 * 60 : 60
+        guard lastYouTubeAttempt.map({ Date().timeIntervalSince($0) >= interval }) ?? true else { return }
+        _ = await importFromYouTube(enableNotifications: false)
+    }
 
     /// Video IDs already accounted for, so a video is only ever announced once.
     private var seenVideoIds: Set<String> = []
@@ -151,9 +167,22 @@ final class NotificationStore: ObservableObject {
     /// bell's three settings. But a channel only reaches this inbox *because* its bell is on, so
     /// the channels that appear here are the ones you asked to hear about — with the one gap
     /// that a channel which hasn't uploaded lately isn't in the list to be found.
-    func importFromYouTube() async -> YouTubeImport {
+    func importFromYouTube(enableNotifications: Bool = true) async -> YouTubeImport {
+        guard !isImportingYouTube else { return YouTubeImport(failure: "An import is already in progress.") }
+        isImportingYouTube = true
+        lastYouTubeAttempt = Date()
+        defer { isImportingYouTube = false }
+        let result = await performYouTubeImport(enableNotifications: enableNotifications)
+        lastYouTubeImport = result
+        if result.failure == nil { lastYouTubeImportDate = Date() }
+        await NotificationService.shared.updateBadge()
+        return result
+    }
+
+    private func performYouTubeImport(enableNotifications: Bool) async -> YouTubeImport {
         do {
             let ids = try await YouTubeFeedReader.shared.harvest(from: YouTubeWebSession.notificationsURL)
+            guard !ids.isEmpty else { return YouTubeImport() }
             let videos = try await YouTubeAPIService.shared.videos(ids: ids)
             guard !videos.isEmpty else {
                 return YouTubeImport(failure: YouTubeFeedIssue.nothingFound.localizedDescription)
@@ -161,7 +190,7 @@ final class NotificationStore: ObservableObject {
 
             let channels = Set(videos.map(\.channelId).filter { !$0.isEmpty })
             channelOptIns.formUnion(channels)
-            if mode == .off { mode = .selected }
+            if enableNotifications, mode == .off { mode = .selected }
 
             // YouTube has already shown you these, so they land in the inbox read, and counted as
             // seen — announcing them again as banners would be the app shouting yesterday's news.

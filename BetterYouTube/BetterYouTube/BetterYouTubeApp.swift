@@ -36,6 +36,14 @@ struct BetterYouTubeApp: App {
         WindowGroup {
             RootTabView()
                 .appEnvironment()
+                .task(id: scenePhase) {
+                    guard scenePhase == .active else { return }
+                    while !Task.isCancelled {
+                        await NotificationStore.shared.importYouTubeIfDue()
+                        do { try await Task.sleep(for: .seconds(60)) }
+                        catch { return }
+                    }
+                }
                 #if os(macOS)
                 // A phone-shaped window is not a Mac app. This is wide enough for the sidebar
                 // and a two-column feed, and tall enough that the expanded player has the

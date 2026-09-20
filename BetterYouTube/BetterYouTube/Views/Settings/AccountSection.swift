@@ -88,8 +88,13 @@ struct AccountSection: View {
         // Bound straight to the store rather than through a draft. There is no Save button here —
         // the field always wrote through on every keystroke — so the draft was only ever a second
         // copy to keep in step, and one the app reset had to reach in and clear.
+#if os(macOS)
+        TextField("OAuth ID", text: $auth.clientId)
+            .identifierField()
+#else
         TextField("Click here to add YouTube OAuth client ID", text: $auth.clientId)
             .identifierField()
+#endif
 
         Button {
             signIn()

@@ -206,6 +206,7 @@ final class YouTubeFeedReader {
     /// The video ids on one of YouTube's own pages, in the order it puts them in — the home feed
     /// by default, or the notification inbox.
     func harvest(from url: URL = YouTubeWebSession.homeURL) async throws -> [String] {
+        await YouTubeWebSession.shared.refresh()
         guard YouTubeWebSession.shared.isSignedIn else { throw YouTubeFeedIssue.notSignedIn }
         // One web view, one page at a time: the home feed and the inbox would otherwise take
         // each other's load out from under them.
@@ -216,7 +217,14 @@ final class YouTubeFeedReader {
         let webView = attachedWebView()
         defer { webView.removeFromSuperview() }
 
-        try await waitForLoad(url, in: webView)
+        let isNotifications = url.path == "/feed/notifications"
+        // The desktop bell exposes the inbox as a panel, whereas the mobile feed route may
+        // render no notification links at all. Use the same signed-in cookie store.
+        webView.customUserAgent = isNotifications
+            ? "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
+            : YouTubeWebSession.userAgent
+        let destination = isNotifications ? URL(string: "https://www.youtube.com/")! : url
+        try await waitForLoad(destination, in: webView)
 
         if webView.url?.host?.contains("consent.") == true {
             throw YouTubeFeedIssue.consentNeeded
@@ -226,12 +234,24 @@ final class YouTubeFeedReader {
         var seen = Set<String>()
         // Passes that add nothing: two in a row and the page has no more to give.
         var barren = 0
+        var openedBell = false
+        var recognizedInbox = false
 
         for pass in 0..<Self.passes {
             // The feed hydrates after the load event, and again after every scroll.
-            try? await Task.sleep(nanoseconds: pass == 0 ? 1_200_000_000 : 700_000_000)
+            try await Task.sleep(nanoseconds: pass == 0 ? 1_200_000_000 : 700_000_000)
 
-            let found = (try? await videoIds(in: webView)) ?? []
+            let found: [String]
+            if isNotifications {
+                let result = try await webView.evaluateJavaScript(Self.notificationScript) as? [String: Any] ?? [:]
+                recognizedInbox = recognizedInbox || (result["recognized"] as? Bool == true)
+                found = result["ids"] as? [String] ?? []
+                if !recognizedInbox, !openedBell {
+                    openedBell = (try await webView.evaluateJavaScript(Self.openBellScript) as? Bool) == true
+                }
+            } else {
+                found = try await videoIds(in: webView)
+            }
             let before = ids.count
             for id in found where seen.insert(id).inserted { ids.append(id) }
 
@@ -239,9 +259,13 @@ final class YouTubeFeedReader {
             barren = ids.count == before ? barren + 1 : 0
             if barren >= 2, !ids.isEmpty { break }
 
-            _ = try? await webView.evaluateJavaScript(Self.scrollScript)
+            _ = try? await webView.evaluateJavaScript(isNotifications ? Self.notificationScrollScript : Self.scrollScript)
         }
 
+        if isNotifications, ids.isEmpty {
+            if recognizedInbox { return [] }
+            throw YouTubeFeedIssue.loadFailed("YouTube's notification panel could not be read. Open youtube.com from Settings, check that the bell opens your notifications, then retry.")
+        }
         guard !ids.isEmpty else { throw YouTubeFeedIssue.nothingFound }
         return Array(ids.prefix(Self.targetCount))
     }
@@ -373,6 +397,53 @@ final class YouTubeFeedReader {
     /// bring back an undefined result.
     private static let scrollScript = """
     window.scrollTo(0, document.documentElement.scrollHeight); true
+    """
+
+    // Only inspect notification renderers: home recommendations are not notifications.
+    private static let notificationScript = """
+    (() => {
+      const ids = new Set();
+      const nodes = document.querySelectorAll('ytd-notification-renderer, ytm-notification-renderer, ytm-notification-item-renderer');
+      const visited = new WeakSet();
+      let recognized = nodes.length > 0 || !!document.querySelector('ytd-notification-section-renderer, ytm-notification-section-renderer');
+      function walk(value, notification = false) {
+        if (!value || typeof value !== 'object' || visited.has(value)) return;
+        visited.add(value);
+        for (const [key, child] of Object.entries(value)) {
+          const inside = notification || /notificationRenderer|notificationItemRenderer/.test(key);
+          if (/notificationSectionRenderer/.test(key)) recognized = true;
+          if (inside && key === 'videoId' && typeof child === 'string' && /^[A-Za-z0-9_-]{11}$/.test(child)) ids.add(child);
+          walk(child, inside);
+        }
+      }
+      for (const node of nodes) {
+        walk(node.data || node.__data?.data, true);
+        for (const link of node.querySelectorAll('a[href]')) {
+          const url = new URL(link.href, location.origin);
+          const id = url.searchParams.get('v') || url.pathname.match(/^\\/shorts\\/([A-Za-z0-9_-]{11})/)?.[1];
+          if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) ids.add(id);
+        }
+      }
+      walk(window.ytInitialData);
+      return {ids: [...ids], recognized};
+    })()
+    """
+
+    private static let openBellScript = """
+    (() => {
+      const bell = document.querySelector('ytd-notification-topbar-button-renderer button, ytm-notification-topbar-button-renderer button, button[aria-label="Notifications"]');
+      if (!bell) return false;
+      bell.click(); return true;
+    })()
+    """
+
+    private static let notificationScrollScript = """
+    (() => {
+      const panel = document.querySelector('ytd-multi-page-menu-renderer #sections, ytd-notification-section-renderer, ytm-notification-section-renderer');
+      if (panel) panel.scrollTop = panel.scrollHeight;
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      return true;
+    })()
     """
 }
 

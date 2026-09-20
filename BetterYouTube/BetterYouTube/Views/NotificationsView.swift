@@ -90,6 +90,9 @@ struct NotificationsView: View {
     private func refresh() async {
         guard !isRefreshing else { return }
         isRefreshing = true
+        if YouTubeWebSession.shared.isSignedIn {
+            _ = await store.importFromYouTube()
+        }
         await BackgroundRefresh.checkForNewVideos()
         isRefreshing = false
     }

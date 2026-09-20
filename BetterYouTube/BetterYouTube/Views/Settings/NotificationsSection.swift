@@ -8,9 +8,6 @@ struct NotificationsSection: View {
     @EnvironmentObject private var notifications: NotificationService
     @EnvironmentObject private var webSession: YouTubeWebSession
 
-    @State private var isImportingBells = false
-    @State private var bellImport: NotificationStore.YouTubeImport?
-
     var body: some View {
         Section {
             Picker("New videos", selection: $notificationStore.mode) {
@@ -53,23 +50,28 @@ struct NotificationsSection: View {
             // Only on offer with a web session: the bell lives on YouTube's pages and nowhere
             // in the API.
             if webSession.isSignedIn {
+                Toggle("Automatically Import YouTube Notifications", isOn: $notificationStore.automaticallyImportYouTube)
+                Text("Refreshes every 15 minutes while the app is active. An unsuccessful import is retried after a minute.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                if let date = notificationStore.lastYouTubeImportDate {
+                    LabeledContent("Last import", value: date.formatted(date: .abbreviated, time: .shortened))
+                }
                 Button {
-                    isImportingBells = true
                     Task {
-                        bellImport = await notificationStore.importFromYouTube()
-                        isImportingBells = false
+                        _ = await notificationStore.importFromYouTube()
                     }
                 } label: {
                     HStack(spacing: 8) {
-                        if isImportingBells {
+                        if notificationStore.isImportingYouTube {
                             ProgressView().controlSize(.small)
                         }
                         Label("Import YouTube's Notifications", systemImage: "bell.badge")
                     }
                 }
-                .disabled(isImportingBells)
+                .disabled(notificationStore.isImportingYouTube)
 
-                if let bellImport {
+                if let bellImport = notificationStore.lastYouTubeImport {
                     Text(Self.describe(bellImport))
                         .font(.footnote)
                         .foregroundStyle(bellImport.failure == nil ? Color.secondary : Color.red)
