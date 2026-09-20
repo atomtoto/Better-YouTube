@@ -1,4 +1,5 @@
 import AVFoundation
+import AVKit
 import SwiftUI
 #if canImport(UIKit)
 import UIKit
@@ -29,7 +30,10 @@ struct LocalPlayerSurface: UIViewRepresentable {
     let playback: LocalPlayback
 
     func makeUIView(context: Context) -> LocalPlayerHostView {
-        LocalPlayerHostView(player: playback.player)
+        let view = LocalPlayerHostView(player: playback.player)
+        playback.attachPictureInPicture(to: view.layer as! AVPlayerLayer)
+        view.playback = playback
+        return view
     }
 
     func updateUIView(_ uiView: LocalPlayerHostView, context: Context) {
@@ -46,13 +50,16 @@ struct LocalPlayerSurface: UIViewRepresentable {
 /// video away from a layer that has scrolled out of sight or whose app is behind another one — a
 /// Mac app that is open is running — so the player simply stays where it is put.
 final class LocalPlayerHostView: NSView {
-    private var playerLayer: AVPlayerLayer? { layer as? AVPlayerLayer }
+    private let nativePlayer = AVPlayerView()
 
     init(player: AVPlayer) {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
-        playerLayer?.videoGravity = .resizeAspect
+        nativePlayer.allowsPictureInPicturePlayback = true
+        nativePlayer.controlsStyle = .floating
+        nativePlayer.autoresizingMask = [.width, .height]
+        addSubview(nativePlayer)
         adopt(player)
     }
 
@@ -61,16 +68,11 @@ final class LocalPlayerHostView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    /// `layerClass` is a UIKit idea; AppKit asks the view to make its own backing layer.
-    override func makeBackingLayer() -> CALayer {
-        AVPlayerLayer()
-    }
-
     override var isFlipped: Bool { true }
 
     func adopt(_ player: AVPlayer) {
-        guard playerLayer?.player !== player else { return }
-        playerLayer?.player = player
+        guard nativePlayer.player !== player else { return }
+        nativePlayer.player = player
     }
 }
 
@@ -84,6 +86,7 @@ final class LocalPlayerHostView: NSView {
 /// it back on return is the documented way round that, and it is what keeps a downloaded video
 /// playing with the screen locked, exactly as the embed does.
 final class LocalPlayerHostView: UIView {
+    weak var playback: LocalPlayback?
     override class var layerClass: AnyClass { AVPlayerLayer.self }
 
     private var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
@@ -126,9 +129,12 @@ final class LocalPlayerHostView: UIView {
             object: nil,
             queue: .main
         ) { [weak self] _ in
+            MainActor.assumeIsolated {
             guard let self, let player = self.playerLayer.player else { return }
+            guard self.playback?.pictureInPictureController?.isPictureInPictureActive != true else { return }
             self.detachedPlayer = player
             self.playerLayer.player = nil
+            }
         })
 
         observers.append(center.addObserver(

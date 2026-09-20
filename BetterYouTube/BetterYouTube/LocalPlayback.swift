@@ -1,4 +1,5 @@
 import AVFoundation
+import AVKit
 import Combine
 import Foundation
 
@@ -15,6 +16,27 @@ import Foundation
 @MainActor
 final class LocalPlayback {
     let player = AVPlayer()
+    #if os(iOS)
+    var pictureInPictureController: AVPictureInPictureController?
+    private let pictureInPictureDelegate = LocalPictureInPictureDelegate()
+
+    func attachPictureInPicture(to layer: AVPlayerLayer) {
+        guard AVPictureInPictureController.isPictureInPictureSupported() else { return }
+        pictureInPictureController = AVPictureInPictureController(playerLayer: layer)
+        pictureInPictureController?.delegate = pictureInPictureDelegate
+    }
+    #endif
+
+    func startPictureInPicture() -> Bool {
+        #if os(iOS)
+        guard let controller = pictureInPictureController,
+              controller.isPictureInPicturePossible else { return false }
+        controller.startPictureInPicture()
+        return true
+        #else
+        return false
+        #endif
+    }
 
     /// Position and duration, in seconds.
     var onProgress: ((Double, Double) -> Void)?
@@ -97,6 +119,9 @@ final class LocalPlayback {
     /// Stops and lets go of the file — called when the player closes, or when a video that isn't
     /// downloaded takes over and the embed becomes the one playing.
     func stop() {
+        #if os(iOS)
+        pictureInPictureController?.stopPictureInPicture()
+        #endif
         player.pause()
         player.replaceCurrentItem(with: nil)
         currentURL = nil
@@ -146,3 +171,26 @@ final class LocalPlayback {
         onProgress?(elapsed, total.isFinite ? total : 0)
     }
 }
+
+#if os(iOS)
+private final class LocalPictureInPictureDelegate: NSObject, AVPictureInPictureControllerDelegate {
+    func pictureInPictureController(
+        _ controller: AVPictureInPictureController,
+        failedToStartPictureInPictureWithError error: Error
+    ) {
+        Task { @MainActor in
+            PlayerManager.shared.pictureInPictureError = error.localizedDescription
+        }
+    }
+
+    func pictureInPictureController(
+        _ controller: AVPictureInPictureController,
+        restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void
+    ) {
+        Task { @MainActor in
+            PlayerManager.shared.expand()
+            completionHandler(true)
+        }
+    }
+}
+#endif

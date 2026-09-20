@@ -56,6 +56,10 @@ final class PlayerScriptBridge: NSObject, WKScriptMessageHandler {
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any],
               let type = body["type"] as? String else { return }
+        if type == "pipFrame" {
+            PlayerManager.shared.pictureInPictureFrame = message.frameInfo
+            return
+        }
 
         let event = PlayerEvent(
             type: type,
@@ -127,6 +131,39 @@ final class PlayerManager: ObservableObject {
     let webView: WKWebView
     /// The other player. Both exist for the app's lifetime; `source` says which one is live.
     let local = LocalPlayback()
+    var pictureInPictureFrame: WKFrameInfo?
+    @Published var pictureInPictureError: String?
+
+    func startPictureInPicture() {
+        if isLocal {
+            #if os(macOS)
+            expand()
+            pictureInPictureError = "Use the Picture in Picture button in the video's native playback controls."
+            #else
+            if !local.startPictureInPicture() {
+                pictureInPictureError = "Picture in Picture is not available yet for this video. Try again once playback has started."
+            }
+            #endif
+            return
+        }
+        guard let frame = pictureInPictureFrame else {
+            pictureInPictureError = "Wait for the YouTube video to load before starting Picture in Picture."
+            return
+        }
+        webView.callAsyncJavaScript("""
+        const video = document.querySelector('video');
+        if (!video) throw new Error('Video is not ready.');
+        if (video.webkitSupportsPresentationMode?.('picture-in-picture')) {
+            video.webkitSetPresentationMode('picture-in-picture');
+        } else if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
+            await video.requestPictureInPicture();
+        } else { throw new Error('YouTube does not allow Picture in Picture for this video.'); }
+        """, arguments: [:], in: frame, in: .page) { [weak self] result in
+            if case .failure(let error) = result {
+                self?.pictureInPictureError = error.localizedDescription
+            }
+        }
+    }
 
     /// True while a downloaded file is what is playing.
     var isLocal: Bool {
@@ -163,6 +200,7 @@ final class PlayerManager: ObservableObject {
         #if os(iOS)
         // A Mac never plays video anywhere but inline, so there is nothing to ask for there.
         configuration.allowsInlineMediaPlayback = true
+        configuration.allowsPictureInPictureMediaPlayback = true
         #endif
         configuration.mediaTypesRequiringUserActionForPlayback = []
         // Lets the page hand the video to the system's full-screen presentation, which is what
@@ -172,6 +210,12 @@ final class PlayerManager: ObservableObject {
 
         let controller = WKUserContentController()
         configuration.userContentController = controller
+        controller.addUserScript(WKUserScript(source: """
+        document.addEventListener('loadedmetadata', function(event) {
+            if (event.target instanceof HTMLVideoElement)
+                window.webkit.messageHandlers.player.postMessage({type: 'pipFrame'});
+        }, true);
+        """, injectionTime: .atDocumentStart, forMainFrameOnly: false))
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         // Black behind the page, so the letterboxing around a video that isn't the surface's

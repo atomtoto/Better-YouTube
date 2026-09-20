@@ -41,6 +41,8 @@ struct PlayerContainerView: View {
     @State private var drag = PlayerDragState()
     /// The separate flick that expands or dismisses the docked bar.
     @State private var barDragOffset: CGFloat = 0
+    @State private var floatingOnLeft = false
+    @State private var horizontalDrag: CGFloat = 0
     @AppStorage(MiniPlayerStyle.storageKey) private var miniPlayerStyle = MiniPlayerStyle.platformDefault
     #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -64,6 +66,8 @@ struct PlayerContainerView: View {
                 metrics: metrics,
                 compactness: player.isBarCompact ? 1 : 0,
                 style: miniPlayerStyle,
+                floatingOnLeft: floatingOnLeft,
+                horizontalDrag: horizontalDrag,
                 isFullScreen: player.isFullScreen
             )
             playerBody(in: layout)
@@ -75,6 +79,14 @@ struct PlayerContainerView: View {
         .opacity(player.currentVideo == nil ? 0 : 1)
         .allowsHitTesting(player.currentVideo != nil)
         .systemChromeHidden(player.isFullScreen)
+        .alert("Picture in Picture", isPresented: Binding(
+            get: { player.pictureInPictureError != nil },
+            set: { if !$0 { player.pictureInPictureError = nil } }
+        )) {
+            Button("OK", role: .cancel) { player.pictureInPictureError = nil }
+        } message: {
+            Text(player.pictureInPictureError ?? "")
+        }
         #if os(iOS)
         .onChange(of: isLandscape, initial: true) { _, landscape in
             player.setLandscape(landscape)
@@ -152,8 +164,7 @@ struct PlayerContainerView: View {
             )
             .frame(width: bar.width, height: bar.height)
             .clipShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
-            .position(x: bar.midX, y: bar.midY)
-            .opacity(Double(1 - expansion))
+            .simultaneousGesture(floatingDrag, including: miniPlayerStyle == .floatingVideo ? .all : .none)
             .contextMenu {
                 PlayerActions(
                     player: player,
@@ -163,6 +174,8 @@ struct PlayerContainerView: View {
                     onSwitchMiniPlayerStyle: switchMiniPlayerStyle
                 )
             }
+            .position(x: bar.midX, y: bar.midY)
+            .opacity(Double(1 - expansion))
             // Must stay last: contextMenu installs its own interaction wrapper. Disabling the
             // inner view before that wrapper leaves an invisible menu layer over the expanded
             // player and swallows its controls.
@@ -170,7 +183,26 @@ struct PlayerContainerView: View {
         }
     }
 
-    /// Called from the docked player's long-press menu.
+    /// Commit the anchor and clear the translation in the same animation transaction.
+    /// GestureState's automatic reset used to jump back before the snap animation began.
+    private var floatingDrag: some Gesture {
+        DragGesture(minimumDistance: 12, coordinateSpace: .global)
+            .onChanged { value in
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { horizontalDrag = value.translation.width }
+            }
+            .onEnded { value in
+                withAnimation(.snappy) {
+                    if abs(value.translation.width) > abs(value.translation.height) {
+                        floatingOnLeft = value.predictedEndTranslation.width < 0
+                    }
+                    horizontalDrag = 0
+                }
+            }
+    }
+
     private func switchMiniPlayerStyle() {
         guard !player.isExpanded else { return }
         withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
@@ -301,6 +333,9 @@ struct PlayerActions: View {
                 )
             }
         }
+        Button { player.startPictureInPicture() } label: {
+            Label("Picture in Picture", systemImage: "pip.enter")
+        }
         if let video = player.currentVideo {
             DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
         }
@@ -358,8 +393,17 @@ private struct PlayerMetrics {
     /// The pill drops into the tab bar's own row rather than hovering above it, and a little
     /// below its bottom edge to line up with the pill the tab bar minimizes to. By then the tab
     /// bar is minimized too — the same scroll shrinks both — so the space beside it is free.
-    let compactTabBarClearance: CGFloat = -6
+    let compactTabBarClearance: CGFloat = -7
     #endif
+
+    var compactLeadingClearance: CGFloat {
+        #if os(iOS)
+        // Collapsed system tab button plus a gap, on the same bottom row as the player.
+        return 68
+        #else
+        return 0
+        #endif
+    }
 
     let artworkPadding: CGFloat = 8
     let headerHeight: CGFloat = 44
@@ -386,6 +430,8 @@ private struct PlayerLayout {
     /// 0 the full-width bar, 1 the compact pill.
     let compactness: CGFloat
     let style: MiniPlayerStyle
+    let floatingOnLeft: Bool
+    let horizontalDrag: CGFloat
     /// Set in landscape, where the video has the screen to itself.
     let isFullScreen: Bool
 
@@ -406,8 +452,11 @@ private struct PlayerLayout {
                 compactness
             )
             let bottom = size.height - clearance
+            let trailingX = max(metrics.barInset, size.width - metrics.barInset - width)
+            let leadingX = min(trailingX, metrics.barInset + metrics.compactLeadingClearance * compactness)
+            let anchorX = floatingOnLeft ? leadingX : trailingX
             return CGRect(
-                x: size.width - metrics.barInset - width,
+                x: min(max(leadingX, anchorX + horizontalDrag), trailingX),
                 y: bottom - height,
                 width: width,
                 height: height
@@ -443,8 +492,8 @@ private struct PlayerLayout {
                 height: compactArtworkHeight
             )
             return CGRect(
-                x: lerp(expandedArtwork.minX, compactArtwork.minX, compactness),
-                y: lerp(expandedArtwork.minY, compactArtwork.minY, compactness),
+                x: bar.minX + metrics.artworkPadding,
+                y: bar.minY + metrics.artworkPadding,
                 width: lerp(expandedArtwork.width, compactArtwork.width, compactness),
                 height: lerp(expandedArtwork.height, compactArtwork.height, compactness)
             )
@@ -605,12 +654,12 @@ private struct MiniPlayerControls: View {
                     player.togglePlayPause()
                 } label: {
                     Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.title2)
-                        .foregroundStyle(.white)
-                        .frame(width: 46, height: 46)
-                        .background(.black.opacity(0.58), in: Circle())
+                        .font(.body.weight(.semibold))
+                        .padding(2)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .controlSize(.regular)
                 .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
                 .opacity(Double(1 - compactness))
                 .allowsHitTesting(!isCompact)
@@ -619,11 +668,11 @@ private struct MiniPlayerControls: View {
                 Button { player.close() } label: {
                     Image(systemName: "xmark")
                         .font(.footnote.bold())
-                        .foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
-                        .background(.black.opacity(0.62), in: Circle())
+                        .padding(2)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .controlSize(.small)
                 .padding(8)
                 .accessibilityLabel("Close player")
                 .opacity(Double(1 - compactness))
