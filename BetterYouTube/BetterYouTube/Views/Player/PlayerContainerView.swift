@@ -35,6 +35,8 @@ enum MiniPlayerStyle: String, CaseIterable, Identifiable {
 /// layout instead of a jump, and the finger can drive it directly.
 struct PlayerContainerView: View {
     @EnvironmentObject private var player: PlayerManager
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
     /// The pull-down that shrinks the expanded player back into the bar.
     @State private var drag = PlayerDragState()
     /// The separate flick that expands or dismisses the docked bar.
@@ -152,17 +154,23 @@ struct PlayerContainerView: View {
             .clipShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
             .position(x: bar.midX, y: bar.midY)
             .opacity(Double(1 - expansion))
+            .contextMenu {
+                PlayerActions(
+                    player: player,
+                    downloads: downloads,
+                    downloadManager: downloadManager,
+                    miniPlayerStyle: miniPlayerStyle,
+                    onSwitchMiniPlayerStyle: switchMiniPlayerStyle
+                )
+            }
+            // Must stay last: contextMenu installs its own interaction wrapper. Disabling the
+            // inner view before that wrapper leaves an invisible menu layer over the expanded
+            // player and swallows its controls.
             .allowsHitTesting(!player.isExpanded)
-            .contentShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
-            .highPriorityGesture(
-                LongPressGesture(minimumDuration: 0.55)
-                    .onEnded { _ in switchMiniPlayerStyle() }
-            )
         }
     }
 
-    /// A long press is deliberately shared by both compact shapes, so the current choice never
-    /// traps the user in a style whose Settings screen they have to go and find.
+    /// Called from the docked player's long-press menu.
     private func switchMiniPlayerStyle() {
         guard !player.isExpanded else { return }
         withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
@@ -269,7 +277,7 @@ struct PlayerCollapseDrag {
 // MARK: - The player's menu
 
 /// What you can do to the playing video, wherever the player offers a menu: the expanded
-/// player's ellipsis. The docked player's long press is reserved for switching its presentation.
+/// player's ellipsis and the docked player's long-press menu.
 struct PlayerActions: View {
     /// Handed in rather than read from the environment: this is built inside a menu, whose
     /// content is a presentation of its own, and an `@EnvironmentObject` resolved in there has
@@ -277,8 +285,22 @@ struct PlayerActions: View {
     @ObservedObject var player: PlayerManager
     @ObservedObject var downloads: DownloadStore
     @ObservedObject var downloadManager: DownloadManager
+    var miniPlayerStyle: MiniPlayerStyle? = nil
+    var onSwitchMiniPlayerStyle: (() -> Void)? = nil
 
     var body: some View {
+        if let miniPlayerStyle, let onSwitchMiniPlayerStyle {
+            Button(action: onSwitchMiniPlayerStyle) {
+                Label(
+                    miniPlayerStyle == .floatingVideo
+                        ? "Switch to Playback Bar"
+                        : "Switch to Floating",
+                    systemImage: miniPlayerStyle == .floatingVideo
+                        ? "rectangle.bottomthird.inset.filled"
+                        : "pip"
+                )
+            }
+        }
         if let video = player.currentVideo {
             DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
         }

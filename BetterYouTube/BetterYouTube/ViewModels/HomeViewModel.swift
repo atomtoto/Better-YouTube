@@ -57,6 +57,7 @@ final class HomeViewModel: ObservableObject {
 
     /// Choosing a segment by hand, which also settles the default for good.
     func select(_ feed: Feed) {
+        guard self.feed != feed else { return }
         hasPickedFeed = true
         self.feed = feed
     }

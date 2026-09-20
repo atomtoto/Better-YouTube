@@ -111,7 +111,7 @@ private struct PlaybackSection: View {
         } header: {
             Text("Player")
         } footer: {
-            Text("Floating keeps a rectangular 16:9 player in the bottom-right corner. Playback Bar shows the title and channel across the bottom. Long-press the mini player to switch between them.")
+            Text("Floating keeps a rectangular 16:9 player in the bottom-right corner. Playback Bar shows the title and channel across the bottom. Long-press the mini player and choose Switch to change style.")
         }
     }
 }
