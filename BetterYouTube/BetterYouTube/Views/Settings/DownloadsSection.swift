@@ -87,7 +87,7 @@ struct DownloadsSection: View {
         } header: {
             Text("Downloads")
         } footer: {
-            Text(Self.footer)
+            Text(footer)
         }
         .onAppear { adoptSavedService() }
         // A `betteryoutube://` link can configure the service from outside this screen, and a
@@ -122,11 +122,16 @@ struct DownloadsSection: View {
         didSave = false
     }
 
-    private static var footer: String {
-        """
-        On This Device downloads directly from YouTube and combines audio and video here, without a download server. Keep the app open while finding the video and finishing it. Media transfers can continue in the background. Some live or restricted videos may be unavailable.
+    private var footer: String {
+        let backendDescription: String = switch settings.backend {
+        case .local:
+            "On This Device downloads directly from YouTube and combines audio and video here, without a download server. Keep the app open while finding the video and finishing it. Media transfers can continue in the background. Some live or restricted videos may be unavailable."
+        case .server:
+            "My Server uses your saved resolver address and optional token. Addresses containing {id}, {videoId} or {url} are fetched directly; other addresses receive a JSON request. Share Setup shares only the server configuration."
+        }
 
-        My Server uses your saved resolver address and optional token. Addresses containing {id}, {videoId} or {url} are fetched directly; other addresses receive a JSON request. Share Setup shares only the server configuration.
+        return """
+        \(backendDescription)
 
         Quality is a maximum; the best compatible format below it is selected. \(Platform.downloadsLocationDescription) Downloaded videos play offline throughout the app.
         """
