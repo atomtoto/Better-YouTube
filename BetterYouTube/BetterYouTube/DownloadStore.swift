@@ -1,10 +1,7 @@
 import Foundation
 
-/// How much picture to ask the download service for.
-///
-/// These are a *request*, not a promise: what comes back is whatever the service decided to hand
-/// over, and the app plays it either way. The record keeps the quality that was asked for so the
-/// Downloads screen can say what it went looking for.
+/// Maximum requested picture height. The local engine chooses the best compatible format
+/// below it; a configured server is responsible for honoring the same ceiling.
 enum DownloadQuality: String, Codable, CaseIterable, Identifiable, Sendable {
     case low
     case medium
@@ -35,9 +32,10 @@ enum DownloadQuality: String, Codable, CaseIterable, Identifiable, Sendable {
 enum DownloadState: Codable, Equatable, Sendable {
     /// Waiting for a slot.
     case queued
-    /// Asking the download service where the media is.
+    /// Resolving media on the device or through the selected server.
     case resolving
     case downloading
+    case processing
     /// Stopped by hand, with the bytes so far kept on disk.
     case paused
     /// On disk and playable.
@@ -47,7 +45,7 @@ enum DownloadState: Codable, Equatable, Sendable {
 
     var isActive: Bool {
         switch self {
-        case .queued, .resolving, .downloading: return true
+        case .queued, .resolving, .downloading, .processing: return true
         case .paused, .ready, .failed: return false
         }
     }
@@ -72,6 +70,7 @@ struct DownloadRecord: Codable, Equatable, Identifiable, Sendable {
     /// Kept only to resume an interrupted transfer. These URLs are short-lived wherever they come
     /// from, so anything that restarts a download asks the service again rather than trusting it.
     var mediaURL: URL?
+    var transfer: DownloadTransfer?
 
     var id: String { video.id }
 
@@ -98,8 +97,9 @@ struct DownloadRecord: Codable, Equatable, Identifiable, Sendable {
     /// How far along, 0...1. Zero rather than a guess while the size is unknown — a bar that
     /// jumps backwards once the real total arrives is worse than one that waits.
     var fraction: Double {
-        guard totalBytes > 0 else { return 0 }
-        return min(1, max(0, Double(receivedBytes) / Double(totalBytes)))
+        let value = totalBytes > 0 ? min(1, max(0, Double(receivedBytes) / Double(totalBytes))) : 0
+        guard let transfer, transfer.audioURL != nil else { return value }
+        return transfer.downloadingAudio ? 0.8 + value * 0.15 : value * 0.8
     }
 
     var isReady: Bool { state == .ready }
@@ -138,8 +138,13 @@ final class DownloadStore: ObservableObject {
     /// See `bytesOnDisk()`.
     private var cachedBytes: Int64?
 
-    private init() {
-        Self.prepareFolders()
+    func invalidateSize() { cachedBytes = nil }
+
+    let paths: DownloadPaths
+
+    init(root: URL = DownloadStore.root) {
+        paths = DownloadPaths(root: root)
+        prepareFolders()
         load()
         reconcile()
     }
@@ -154,38 +159,33 @@ final class DownloadStore: ObservableObject {
     }
 
     /// Where a finished transfer is parked between the delegate callback and the move into place.
-    nonisolated static var staging: URL {
-        root.appendingPathComponent(".staging", isDirectory: true)
-    }
+    nonisolated static var staging: URL { DownloadPaths(root: root).staging }
 
     nonisolated static func folder(for videoId: String) -> URL {
-        root.appendingPathComponent(videoId, isDirectory: true)
+        DownloadPaths(root: root).folder(for: videoId)
     }
-
     nonisolated static func mediaURL(for videoId: String) -> URL {
-        folder(for: videoId).appendingPathComponent("video.mp4")
+        DownloadPaths(root: root).mediaURL(for: videoId)
     }
-
     nonisolated static func posterFileURL(for videoId: String) -> URL {
-        folder(for: videoId).appendingPathComponent("poster.jpg")
+        DownloadPaths(root: root).posterFileURL(for: videoId)
     }
-
     nonisolated static func resumeDataURL(for videoId: String) -> URL {
-        folder(for: videoId).appendingPathComponent("resume.dat")
+        DownloadPaths(root: root).resumeDataURL(for: videoId)
     }
 
-    private static var manifestURL: URL { root.appendingPathComponent("manifest.json") }
+    private var manifestURL: URL { paths.root.appendingPathComponent("manifest.json") }
 
     /// Creates the folders and keeps them out of iCloud. Video is the biggest thing this app will
     /// ever write and none of it is worth backing up — it can always be fetched again.
-    private nonisolated static func prepareFolders() {
+    private func prepareFolders() {
         let manager = FileManager.default
-        for folder in [root, staging] {
+        for folder in [paths.root, paths.staging] {
             try? manager.createDirectory(at: folder, withIntermediateDirectories: true)
         }
         var resourceValues = URLResourceValues()
         resourceValues.isExcludedFromBackup = true
-        var directory = root
+        var directory = paths.root
         try? directory.setResourceValues(resourceValues)
     }
 
@@ -209,14 +209,14 @@ final class DownloadStore: ObservableObject {
     /// back to streaming.
     func readyMediaURL(for videoId: String) -> URL? {
         guard isDownloaded(videoId) else { return nil }
-        let url = Self.mediaURL(for: videoId)
+        let url = paths.mediaURL(for: videoId)
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         return url
     }
 
     /// The cached thumbnail, so a downloaded video draws its artwork with no network.
     func posterURL(for videoId: String) -> URL? {
-        let url = Self.posterFileURL(for: videoId)
+        let url = paths.posterFileURL(for: videoId)
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         return url
     }
@@ -250,7 +250,7 @@ final class DownloadStore: ObservableObject {
     private func measureBytesOnDisk() -> Int64 {
         let manager = FileManager.default
         guard let walker = manager.enumerator(
-            at: Self.root,
+            at: paths.root,
             includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey]
         ) else { return 0 }
 
@@ -289,7 +289,7 @@ final class DownloadStore: ObservableObject {
     func remove(_ videoId: String) {
         cachedBytes = nil
         records.removeAll { $0.id == videoId }
-        try? FileManager.default.removeItem(at: Self.folder(for: videoId))
+        try? FileManager.default.removeItem(at: paths.folder(for: videoId))
         persist()
     }
 
@@ -297,26 +297,26 @@ final class DownloadStore: ObservableObject {
         cachedBytes = nil
         let manager = FileManager.default
         for record in records {
-            try? manager.removeItem(at: Self.folder(for: record.id))
+            try? manager.removeItem(at: paths.folder(for: record.id))
         }
         records.removeAll()
         // Anything the manifest had lost track of goes too, so "remove all" really empties the
         // folder rather than leaving orphans behind to puzzle over in the Files app.
-        try? manager.removeItem(at: Self.root)
-        Self.prepareFolders()
+        try? manager.removeItem(at: paths.root)
+        prepareFolders()
         persist()
     }
 
     /// Moves a finished transfer into place and marks the record playable.
     func install(_ videoId: String, from staged: URL, byteCount: Int64) throws {
         let manager = FileManager.default
-        let destination = Self.mediaURL(for: videoId)
-        try manager.createDirectory(at: Self.folder(for: videoId), withIntermediateDirectories: true)
+        let destination = paths.mediaURL(for: videoId)
+        try manager.createDirectory(at: paths.folder(for: videoId), withIntermediateDirectories: true)
         if manager.fileExists(atPath: destination.path) {
             try manager.removeItem(at: destination)
         }
         try manager.moveItem(at: staged, to: destination)
-        try? manager.removeItem(at: Self.resumeDataURL(for: videoId))
+        try? manager.removeItem(at: paths.resumeDataURL(for: videoId))
         cachedBytes = nil
 
         update(videoId) { record in
@@ -325,6 +325,7 @@ final class DownloadStore: ObservableObject {
             record.receivedBytes = byteCount
             record.totalBytes = byteCount
             record.mediaURL = nil
+            record.transfer = nil
         }
     }
 
@@ -332,11 +333,12 @@ final class DownloadStore: ObservableObject {
     /// with no poster is still a download, so nothing here is allowed to fail loudly.
     func cachePoster(for video: Video) async {
         guard let remote = video.thumbnailURL else { return }
-        let destination = Self.posterFileURL(for: video.id)
+        let destination = paths.posterFileURL(for: video.id)
         guard !FileManager.default.fileExists(atPath: destination.path) else { return }
-        guard let (data, _) = try? await URLSession.shared.data(from: remote), !data.isEmpty else { return }
+        guard let (data, _) = try? await URLSession.shared.data(from: remote), !data.isEmpty,
+              record(for: video.id) != nil else { return }
         try? FileManager.default.createDirectory(
-            at: Self.folder(for: video.id),
+            at: paths.folder(for: video.id),
             withIntermediateDirectories: true
         )
         try? data.write(to: destination, options: .atomic)
@@ -348,14 +350,14 @@ final class DownloadStore: ObservableObject {
     // MARK: - Persistence
 
     private func load() {
-        guard let data = try? Data(contentsOf: Self.manifestURL),
+        guard let data = try? Data(contentsOf: manifestURL),
               let stored = try? JSONDecoder().decode([DownloadRecord].self, from: data) else { return }
         records = stored
     }
 
     private func persist() {
         guard let data = try? JSONEncoder().encode(records) else { return }
-        try? data.write(to: Self.manifestURL, options: .atomic)
+        try? data.write(to: manifestURL, options: .atomic)
     }
 
     /// Squares the manifest with what is actually on disk, at launch.
@@ -373,13 +375,13 @@ final class DownloadStore: ObservableObject {
             let id = records[index].id
             switch records[index].state {
             case .ready:
-                if !manager.fileExists(atPath: Self.mediaURL(for: id).path) {
+                if !manager.fileExists(atPath: paths.mediaURL(for: id).path) {
                     records[index].state = .failed("The file is no longer on this device.")
                     records[index].receivedBytes = 0
                     records[index].completedAt = nil
                     changed = true
                 }
-            case .queued, .resolving, .downloading:
+            case .queued, .resolving, .downloading, .processing:
                 records[index].state = .paused
                 changed = true
             case .paused, .failed:
@@ -389,10 +391,37 @@ final class DownloadStore: ObservableObject {
 
         // A stray staged file belongs to a transfer that was interrupted between landing and
         // being installed; the resume data is what carries that on, not the fragment.
-        if let stale = try? manager.contentsOfDirectory(at: Self.staging, includingPropertiesForKeys: nil) {
+        if let stale = try? manager.contentsOfDirectory(at: paths.staging, includingPropertiesForKeys: nil) {
             for url in stale { try? manager.removeItem(at: url) }
         }
 
         if changed { persist() }
+    }
+}
+
+/// Persisted alongside the record so a background video transfer can be followed by audio
+/// even after the app has been relaunched. Missing on manifests from older versions.
+struct DownloadTransfer: Codable, Equatable, Sendable {
+    var audioURL: URL?
+    var downloadingAudio: Bool = false
+    var wifiOnly: Bool
+    var usesByteRanges: Bool? = nil
+    var videoByteCount: Int64? = nil
+    var audioByteCount: Int64? = nil
+    var offset: Int64? = nil
+
+    var currentByteCount: Int64? { downloadingAudio ? audioByteCount : videoByteCount }
+}
+
+/// Instances allow isolated stores and queue tests without touching the user's downloads.
+struct DownloadPaths: Sendable {
+    let root: URL
+    var staging: URL { root.appendingPathComponent(".staging", isDirectory: true) }
+    func folder(for id: String) -> URL { root.appendingPathComponent(id, isDirectory: true) }
+    func mediaURL(for id: String) -> URL { folder(for: id).appendingPathComponent("video.mp4") }
+    func posterFileURL(for id: String) -> URL { folder(for: id).appendingPathComponent("poster.jpg") }
+    func resumeDataURL(for id: String) -> URL { folder(for: id).appendingPathComponent("resume.dat") }
+    func componentURL(for id: String, audio: Bool) -> URL {
+        folder(for: id).appendingPathComponent(audio ? ".audio-track.m4a" : ".video-track.mp4")
     }
 }

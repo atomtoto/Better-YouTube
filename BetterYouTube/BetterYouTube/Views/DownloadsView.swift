@@ -150,10 +150,8 @@ struct DownloadsView: View {
                     Text("Downloads are off")
                         .font(.title3.bold())
                     Text("""
-                    The app plays video through YouTube's own embed, which never hands over a media \
-                    file, so it can't fetch one by itself. It needs a small service — a resolver — \
-                    to ask. There isn't one built in, because which one to trust isn't the app's \
-                    choice to make.
+                    Choose On This Device in Settings → Downloads to download directly from \
+                    YouTube. You can also configure your own server below.
                     """)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -259,7 +257,7 @@ struct DownloadProgressRow: View {
 
             HStack(spacing: 14) {
                 switch record.state {
-                case .downloading, .resolving, .queued:
+                case .downloading, .resolving, .queued, .processing:
                     Button("Pause") { manager.pause(record.id) }
                 case .paused:
                     Button("Resume") { manager.resume(record.id) }
@@ -302,6 +300,8 @@ struct DownloadProgressRow: View {
                 ? " of \(ByteCountFormatter.string(fromByteCount: record.totalBytes, countStyle: .file))"
                 : ""
             return record.totalBytes > 0 ? "\(percent)%\(size)" : "Downloading…"
+        case .processing:
+            return "Finishing video…"
         case .paused:
             return "Paused"
         case .ready:
@@ -448,7 +448,7 @@ struct DownloadConfigImportView: View {
                         )
                         .foregroundStyle(.orange)
                     }
-                    if settings.isConfigured {
+                    if settings.endpointURL != nil {
                         Label("This replaces the service already set up.", systemImage: "arrow.triangle.2.circlepath")
                     }
                 }
@@ -465,6 +465,7 @@ struct DownloadConfigImportView: View {
                 Spacer()
 
                 Button {
+                    settings.backend = .server
                     settings.endpoint = link.endpoint
                     settings.token = link.token
                     dismiss()

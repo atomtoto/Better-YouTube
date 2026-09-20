@@ -1,14 +1,5 @@
 import SwiftUI
 
-/// Downloading, and the one thing about it worth being plain about: the app cannot do it
-/// alone, and this is where you say what should do it for it.
-///
-/// No service ships with the app and none is suggested. Playback goes through YouTube's own
-/// embed, which never exposes a media file, so a download needs something that can resolve one
-/// — and which resolver to trust is the owner's call, not the app's. Running your own is also
-/// the only version that keeps working: a public instance goes dark, throttles you, or starts
-/// keeping a record of what you watch, while one on your own machine you can fix the day it
-/// breaks.
 struct DownloadsSection: View {
     @EnvironmentObject private var settings: DownloadSettings
     @EnvironmentObject private var store: DownloadStore
@@ -22,30 +13,39 @@ struct DownloadsSection: View {
 
     var body: some View {
         Section {
-            TextField("https://…", text: $draftEndpoint)
-                .identifierField(isURL: true)
-
-            SecureField("Bearer token (optional)", text: $draftToken)
-                .identifierField()
-
-            Button("Save Download Service") {
-                settings.endpoint = draftEndpoint.trimmingCharacters(in: .whitespacesAndNewlines)
-                settings.token = draftToken.trimmingCharacters(in: .whitespacesAndNewlines)
-                didSave = true
+            Picker("Download Using", selection: $settings.backend) {
+                ForEach(DownloadBackend.allCases) { backend in
+                    Text(backend.title).tag(backend)
+                }
             }
-            .disabled(!hasChanges)
 
-            if didSave {
-                // Which of the two shapes the address was read as is the one thing here that is
-                // easy to get wrong and impossible to see, so saving says so outright.
-                Label(
-                    status,
-                    systemImage: settings.isConfigured
-                        ? "checkmark.circle.fill"
-                        : "exclamationmark.triangle.fill"
-                )
-                .font(.footnote)
-                .foregroundStyle(settings.isConfigured ? Color.green : Color.orange)
+            if settings.backend == .server {
+                TextField("https://…", text: $draftEndpoint)
+                    .identifierField(isURL: true)
+
+                SecureField("Bearer token (optional)", text: $draftToken)
+                    .identifierField()
+
+                Button("Save Download Service") {
+                    settings.endpoint = draftEndpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+                    settings.token = draftToken.trimmingCharacters(in: .whitespacesAndNewlines)
+                    didSave = true
+                }
+                .disabled(!hasChanges)
+
+                if didSave {
+                    // Which of the two shapes the address was read as is the one thing here that is
+                    // easy to get wrong and impossible to see, so saving says so outright.
+                    Label(
+                        status,
+                        systemImage: settings.isConfigured
+                            ? "checkmark.circle.fill"
+                            : "exclamationmark.triangle.fill"
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(settings.isConfigured ? Color.green : Color.orange)
+                }
+
             }
 
             Picker("Quality", selection: $settings.quality) {
@@ -71,7 +71,7 @@ struct DownloadsSection: View {
                 )
             )
 
-            if settings.isConfigured {
+            if settings.backend == .server && settings.endpointURL != nil {
                 Button {
                     showsShare = true
                 } label: {
@@ -122,26 +122,13 @@ struct DownloadsSection: View {
         didSave = false
     }
 
-    /// Kept out of the view builder: it is four paragraphs, and inlining it buries the section.
-    ///
-    /// One line of it is the platform's — where the files end up is the Files app on a phone and
-    /// a folder in the Finder on a Mac — so `Platform` supplies that sentence.
     private static var footer: String {
         """
-        Playback goes through YouTube's own embed, which never hands over a media file, so the app \
-        has no way to fetch one by itself. Point this at a resolver you run and Download appears on \
-        every video; leave it empty and downloading stays off.
+        On This Device downloads directly from YouTube and combines audio and video here, without a download server. Keep the app open while finding the video and finishing it. Media transfers can continue in the background. Some live or restricted videos may be unavailable.
 
-        Two shapes work. An address carrying {id}, {videoId} or {url} is filled in and fetched \
-        directly, so https://box.local/yt/{id}.mp4 is a complete setup. Anything else is sent a POST \
-        of url, videoId, quality and maxHeight, and its reply is read for a media link — url, \
-        downloadUrl, link, or the first entry of urls, formats or streams.
+        My Server uses your saved resolver address and optional token. Addresses containing {id}, {videoId} or {url} are fetched directly; other addresses receive a JSON request. Share Setup shares only the server configuration.
 
-        \(Platform.downloadsLocationDescription) They stay out of iCloud backups, and a downloaded \
-        video plays from the file everywhere in the app, with no network at all.
-
-        Once it works, Share Setup hands the same service to another device as a link or a QR \
-        code, so nobody else has to type any of this.
+        Quality is a maximum; the best compatible format below it is selected. \(Platform.downloadsLocationDescription) Downloaded videos play offline throughout the app.
         """
     }
 

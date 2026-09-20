@@ -71,6 +71,11 @@
 		BEEFB2000000000000000000 /* DurationFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFF2000000000000000000 /* DurationFormatterTests.swift */; };
 		BEEFB3000000000000000000 /* TakeoutPlaylistCSVTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFF3000000000000000000 /* TakeoutPlaylistCSVTests.swift */; };
 		A1B2C3D4E5F600112288CC88 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112288BB88 /* Keychain.swift */; };
+		D10CA1000000000000000001 /* LocalDownloadResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA1000000000000000002; };
+		D10CA1000000000000000003 /* YouTubeKit in Frameworks */ = {isa = PBXBuildFile; productRef = D10CA1000000000000000004; };
+		D10CA2000000000000000001 /* LocalDownloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA2000000000000000002; };
+		D10CA2000000000000000003 /* Fixtures in Resources */ = {isa = PBXBuildFile; fileRef = D10CA2000000000000000004; };
+		D10CA3000000000000000001 /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = D10CA3000000000000000002; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -153,7 +158,22 @@
 		BEEFF3000000000000000000 /* TakeoutPlaylistCSVTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeoutPlaylistCSVTests.swift; sourceTree = "<group>"; };
 		BEEFPRODUCT0000000000000 /* BetterYouTubeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BetterYouTubeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F600112288BB88 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
+		D10CA1000000000000000002 /* LocalDownloadResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalDownloadResolver.swift; sourceTree = "<group>"; };
+		D10CA2000000000000000002 /* LocalDownloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalDownloadTests.swift; sourceTree = "<group>"; };
+		D10CA2000000000000000004 /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fixtures; sourceTree = "<group>"; };
+		D10CA3000000000000000002 /* ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D10CA1000000000000000005 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (D10CA1000000000000000003); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D10CA1000000000000000006 /* YouTubeKit */ = {isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/alexeichhorn/YouTubeKit.git"; requirement = {kind = exactVersion; version = 0.4.9; }; };
+/* End XCRemoteSwiftPackageReference section */
+/* Begin XCSwiftPackageProductDependency section */
+		D10CA1000000000000000004 /* YouTubeKit */ = {isa = XCSwiftPackageProductDependency; package = D10CA1000000000000000006; productName = YouTubeKit; };
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin PBXGroup section */
 		1BADDC1D73C1A20F347483E1 /* Products */ = {
@@ -226,6 +246,8 @@
 				F212278CDA1C2466E2A0C880 /* LocalPlayback.swift */,
 				3EDBA542F6162FE9537251BC /* DownloadManager.swift */,
 				D29E2556D0A833F15A04D6B0 /* DownloadService.swift */,
+				D10CA1000000000000000002 /* LocalDownloadResolver.swift */,
+				D10CA3000000000000000002 /* ThirdPartyNotices.txt */,
 				D9090FED0372DC1B642CEC83 /* DownloadStore.swift */,
 				2460DE7F50655C47F611B382 /* BetterYouTubeApp.swift */,
 				83D530576D5CF8B70831C69D /* Models.swift */,
@@ -287,6 +309,8 @@
 		BEEFGROUP000000000000000 /* BetterYouTubeTests */ = {
 			isa = PBXGroup;
 			children = (
+				D10CA2000000000000000002 /* LocalDownloadTests.swift */,
+				D10CA2000000000000000004 /* Fixtures */,
 				BEEFF0000000000000000000 /* CountFormatterTests.swift */,
 				BEEFF1000000000000000000 /* DownloadConfigLinkTests.swift */,
 				BEEFF2000000000000000000 /* DurationFormatterTests.swift */,
@@ -304,11 +328,13 @@
 			buildPhases = (
 				F680599402C0D80E245DE801 /* Sources */,
 				781C774F390DF12CD292A30B /* Resources */,
+				D10CA1000000000000000005 /* Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
+			packageProductDependencies = (D10CA1000000000000000004);
 			name = BetterYouTube;
 			productName = BetterYouTube;
 			productReference = 81918909E83595C8F4212CCC /* BetterYouTube.app */;
@@ -319,6 +345,7 @@
 			buildConfigurationList = BEEFCFGLIST0000000000000 /* Build configuration list for PBXNativeTarget "BetterYouTubeTests" */;
 			buildPhases = (
 				BEEFSOURCES0000000000000 /* Sources */,
+				D10CA2000000000000000005 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -359,6 +386,7 @@
 			);
 			mainGroup = 8D3FC6DB5D0827F168A73277;
 			productRefGroup = 1BADDC1D73C1A20F347483E1 /* Products */;
+			packageReferences = (D10CA1000000000000000006);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -369,11 +397,13 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		D10CA2000000000000000005 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (D10CA2000000000000000003); runOnlyForDeploymentPostprocessing = 0; };
 		781C774F390DF12CD292A30B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				D0687455C07D878E9DB04308 /* Assets.xcassets in Resources */,
+				D10CA3000000000000000001 /* ThirdPartyNotices.txt in Resources */,
 				03AB6715F4D5961DAE9D71E9 /* BetterYouTube.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -437,6 +467,7 @@
 				45ED48BFA8B901A1E97C89CA /* PlayerDetailsView.swift in Sources */,
 				4D49C9D7BE6519076FA011BB /* DownloadStore.swift in Sources */,
 				BF90A7E4C3175D350C572ED8 /* DownloadService.swift in Sources */,
+				D10CA1000000000000000001 /* LocalDownloadResolver.swift in Sources */,
 				D78B569CDE1F67ADF9AC73A7 /* DownloadManager.swift in Sources */,
 				61855544A58CD804FE142178 /* LocalPlayback.swift in Sources */,
 				77E26E4559CB67E2D529AD5D /* DownloadsView.swift in Sources */,
@@ -450,6 +481,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D10CA2000000000000000001 /* LocalDownloadTests.swift in Sources */,
 				BEEFB0000000000000000000 /* CountFormatterTests.swift in Sources */,
 				BEEFB1000000000000000000 /* DownloadConfigLinkTests.swift in Sources */,
 				BEEFB2000000000000000000 /* DurationFormatterTests.swift in Sources */,

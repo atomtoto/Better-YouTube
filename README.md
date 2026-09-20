@@ -25,8 +25,8 @@ queue, the on-device library — is the same code. See [Running on a Mac](#runni
   - *Signed in with Google*: your subscriptions, playlists and liked videos
   - *On this device*: favorites, watch later and watch history
 - **Downloads** — videos kept in a `Downloads` folder on the device and played from the file
-  wherever they turn up in the app, with no network at all. Needs a resolver, and
-  [one is included](#one-is-included) — see [Downloads](#downloads)
+  wherever they turn up in the app, with no network at all. Downloads run directly on the device;
+  a self-hosted resolver remains optional — see [Downloads](#downloads)
 - **Background playback** — the audio carries on when the app is backgrounded or the screen
   locks, with title, artwork, scrubber and transport on the lock screen and in Control Centre
   (on a Mac: the media widget in Control Centre and the keyboard's play/pause key)
@@ -154,31 +154,74 @@ it does: the same mini player, the same lock-screen controls, the same landscape
 **Download** sits in the long-press menu on every video in the app, and as a pill in the player.
 There is one Downloads screen, under Library, for the folder as a whole.
 
-What makes it dependable is that the app isn't the one doing the work. Transfers go through a
-**background `URLSession`**, so iOS owns them: they carry on with the app backgrounded, survive
-the app being killed, and relaunch it when they finish. An interrupted one leaves resume data and
-carries on from the bytes it already has rather than starting again. The queue runs two at a time,
-retries a dropped connection twice, and writes its state to a manifest as it goes — so a download
-is never quietly lost, only ever finished, paused or failed with a reason and a Try Again button.
+Choose **Settings → Downloads → Download Using**:
 
-Settings holds a quality, a Wi-Fi-only switch, a ceiling on the folder's size, and what it weighs
-today. Downloads are excluded from iCloud backups: they are the largest thing this app will ever
-write and none of it is worth backing up.
+- **On This Device** (the default on a new installation): resolves and downloads directly from
+  YouTube, then joins the video and audio on the device. No resolver URL, token, Python install,
+  FFmpeg install, or third-party download service is needed.
+- **My Server**: keeps the existing resolver workflow. Existing installations with a saved
+  endpoint keep this choice when upgrading; selecting local mode preserves the saved server.
+  Accepting a server setup link explicitly switches back to My Server.
 
-### The part the app can't do: a resolver
+Media transfers use a **background `URLSession`**, with up to two queued videos active at a time.
+Native media is fetched in bounded 4 MiB byte ranges (unbounded requests can be refused by
+YouTube). Each split download transfers video then audio; its current stage and completed byte
+offset are saved in the manifest, so
+background transfers can be adopted after relaunch. Native Resume starts at the last completed
+block; server downloads use available URLSession resume data. Retry resolves fresh links and
+restarts expired downloads. A failed attempt shows
+its reason and offers Retry. HTTP error pages and files without both audio and video are rejected.
 
-**No download service ships with the app, and none is suggested.** Playback goes through YouTube's
-own embed, which never exposes a media file, so the app has no way to reach one by itself. To
-download anything you point **Settings → Downloads** at a resolver **you run**, and the app treats
-it as an ordinary HTTP API.
+**Keep the app open during extraction and final assembly.** These stages execute in the app,
+with a short iOS background allowance. If that allowance expires, the job pauses. Completed audio
+and video tracks can be assembled on Resume, even offline. Force-quitting the app may cancel
+system transfers; background execution is ultimately controlled by iOS.
 
-That is a deliberate line rather than an omission. Getting at YouTube's media means defeating the
-rotating signature cipher and throttling parameter that exist to stop exactly that, which is
-circumvention — and it is also the code that breaks every few weeks when Google rotates them. A
-download button built on it works the week it ships and then rots silently, which is the opposite
-of what a download is for. A resolver of your own, on the other hand, is one you can fix the day it
-breaks; a stranger's public instance is one that goes dark, throttles you, or keeps a record of
-what you watch.
+Settings holds a maximum quality (360p, 720p, 1080p), a Wi-Fi-only switch, and a storage limit.
+The local engine selects compatible H.264/AAC MP4 tracks at or below that height, preserving audio;
+it does not silently fetch a higher resolution or a silent video. Separate tracks are joined
+without re-encoding using **AVFoundation**. Assembly temporarily needs room for both inputs and
+output, which counts against the storage limit. Media requests disallow expensive/cellular
+connections when Wi-Fi Only is enabled; local extraction checks the network before starting.
+Downloads are excluded from iCloud backups.
+
+### The on-device engine
+
+[YouTubeKit](https://github.com/alexeichhorn/YouTubeKit) **0.4.9** is pinned in the Xcode project
+and `Package.resolved`. The app always requests `methods: [.local]`: the library's optional remote
+fallback is never enabled. Its Swift extractor and JavaScriptCore solver run inside the app on
+iOS and macOS. The solver includes code from yt-dlp/ejs, but the app does not embed the Python
+`yt-dlp` executable or invoke a shell.
+
+This is lighter than embedding CPython and a separate JavaScript runtime on iOS. **yt-dlp remains
+a good fit for the optional server**, where updating the extractor independently is easy. The
+local extractor ships with the app: YouTube changes may require an app update, and live streams,
+private, age-restricted, or otherwise gated videos may not be available. A local failure never
+silently sends the request to the configured server; switch modes explicitly if needed.
+
+Xcode resolves the Swift package during the build. At runtime, there are no engines or tools to
+install. Dependency notices ship in Settings → About → Open Source Licenses.
+
+The offline Swift tests cover format selection, settings migration, old manifests, real local
+HTTP transfers, audio/video assembly, interrupted assembly recovery, late cancellation callbacks,
+and HTTP errors. Fixtures are synthetic one-second H.264/AAC files. For an optional real network
+check against Blender's public Big Buck Bunny video, run the usual macOS test command with
+`TEST_RUNNER_BETTERYOUTUBE_LIVE_DOWNLOAD=1` in the environment and
+`-only-testing:BetterYouTubeTests/LiveLocalDownloadTests`. For this live background-session test,
+keep the app's normal macOS sandbox entitlements: **omit** the `CODE_SIGN_ENTITLEMENTS=""`
+override used by the offline loopback tests. An unsandboxed test host can fail with
+“Cannot create file” in the system download service. Set `TEST_RUNNER_BETTERYOUTUBE_LIVE_VIDEO`
+to another public video ID if desired. The same opt-in test runs in the iOS Simulator.
+
+Validation: the offline suite passes on macOS and the iOS Simulator. The live test also downloads
+and assembles the complete demonstration video on both, using the production background-session
+configuration. Real-device iPhone background scheduling still needs device validation.
+
+### Optional resolver
+
+Select **My Server** and configure a resolver you run. The server receives the URL and requested
+quality and returns a media file URL. Server credentials stay in the keychain and are used only
+for the server request, never for local extraction or YouTube's media URLs.
 
 Two shapes work, told apart by the address alone:
 
@@ -195,10 +238,10 @@ of `formats`, `streams` or `medias`, one level inside `data` or `result` if that
 sit. A reply that says it failed — `status: "error"`, or an `error` of its own — is reported in
 the service's own words rather than as a generic failure.
 
-Two shapes are refused on purpose. A reply carrying the video and the audio as **separate
-streams** for the client to join is one the app can't use — it plays a single file — and taking
-the first of the two would download a silent video rather than fail, so it says what happened and
-what to change instead. And a media link that isn't absolute `http(s)` is dropped at the resolver
+The server API still expects a single file. A server reply with ambiguous **separate streams**
+is refused rather than guessing their codecs or which one contains audio. Native extraction
+provides the track metadata needed for local assembly; arbitrary server replies do not. A media
+link that isn't absolute `http(s)` is dropped at the resolver
 rather than handed to the downloader, which is a worse place to find out about it.
 
 A token can be set for a service that isn't open to the internet. One typed with its own scheme
@@ -254,8 +297,8 @@ one quietly would let a stranger route your downloads through their server.
 Be clear about what this is, the same way the home feed above is. Downloading a video is outside
 what YouTube's terms allow, whoever fetches it; keeping a personal copy of something you can
 already watch is the ordinary case for it, and the risk sits on your account and your resolver,
-not on anyone else. Nothing here runs until you fill that field in: no service, no Download in any
-menu, and the Downloads screen says so rather than offering a button that can't work.
+not on anyone else. The local mode is available without configuration; server mode requires a
+valid endpoint before it can start downloading.
 
 ## Running on a Mac
 
@@ -359,7 +402,8 @@ BetterYouTube/
     Persistence.swift            On-device library and recent searches
     QuotaTracker.swift           The day's quota spending, counted call by call
     DownloadStore.swift          The Downloads folder, its manifest and what is in it
-    DownloadService.swift        The configured resolver, and reading its reply
+    DownloadService.swift        Download modes, settings and the optional server API
+    LocalDownloadResolver.swift  On-device extraction, format selection and AVFoundation assembly
     DownloadManager.swift        The background download queue
     LocalPlayback.swift          AVPlayer half of the player, for downloaded files
     DownloadConfigLink.swift     betteryoutube:// setup links, and their QR codes
@@ -390,5 +434,5 @@ no device booted; the code under test has no platform in it either way.
 
 - Unofficial client; not affiliated with YouTube or Google.
 - Streaming playback uses the YouTube IFrame embed rather than extracting stream URLs. The app
-  never resolves a media URL itself — downloading goes through a resolver you configure and run,
-  and does nothing at all until you do. See [Downloads](#downloads).
+  resolves media URLs for downloads only, on-device by default or through your optional server.
+  See [Downloads](#downloads).

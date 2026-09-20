@@ -1,19 +1,24 @@
 import Foundation
 
-/// Where downloads come from, and the rules the app downloads under.
-///
-/// There is deliberately no service here by default. The app can play a video through YouTube's
-/// own embed, but it has no way to get at the media file behind one — that takes a resolver, and
-/// which resolver to trust is not a decision an app should make on its owner's behalf. So the
-/// endpoint is yours: a small service you run, which the app treats as an ordinary HTTP API. With
-/// the field empty, downloading is simply off, and the app says so rather than failing later.
-///
-/// Running your own is also the only version that stays working. A resolver is a moving target;
-/// one you control can be updated the day it breaks, where a stranger's public instance goes dark,
-/// rate-limits you, or quietly starts logging what you watch.
+enum DownloadBackend: String, CaseIterable, Identifiable, Sendable {
+    case local, server
+    var id: String { rawValue }
+    var title: String { self == .local ? "On This Device" : "My Server" }
+
+    static func restored(saved: String?, endpoint: String) -> Self {
+        saved.flatMap(Self.init(rawValue:))
+            ?? (endpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .local : .server)
+    }
+}
+
+/// Local extraction is the default; existing server installations keep their selected service.
 @MainActor
 final class DownloadSettings: ObservableObject {
     static let shared = DownloadSettings()
+
+    @Published var backend: DownloadBackend {
+        didSet { UserDefaults.standard.set(backend.rawValue, forKey: Self.backendKey) }
+    }
 
     /// The download service. Two shapes, told apart by whether it carries a placeholder — see
     /// `DownloadResolver`.
@@ -45,13 +50,16 @@ final class DownloadSettings: ObservableObject {
     }
 
     private static let endpointKey = "download_endpoint"
+    private static let backendKey = "download_backend"
     private static let qualityKey = "download_quality"
     private static let wifiOnlyKey = "download_wifi_only"
     private static let storageLimitKey = "download_storage_limit_gb"
 
     private init() {
         let defaults = UserDefaults.standard
-        endpoint = defaults.string(forKey: Self.endpointKey) ?? ""
+        let savedEndpoint = defaults.string(forKey: Self.endpointKey) ?? ""
+        endpoint = savedEndpoint
+        backend = .restored(saved: defaults.string(forKey: Self.backendKey), endpoint: savedEndpoint)
         token = Self.loadToken()
         quality = defaults.string(forKey: Self.qualityKey)
             .flatMap(DownloadQuality.init(rawValue:)) ?? .medium
@@ -96,7 +104,7 @@ final class DownloadSettings: ObservableObject {
         endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    var isConfigured: Bool { endpointURL != nil }
+    var isConfigured: Bool { backend == .local || endpointURL != nil }
 
     /// The endpoint as a URL, if it is one at all. Only `http` and `https` — a `file://` typed in
     /// here would otherwise have the app reading its own container as if it were a service.
@@ -119,7 +127,8 @@ final class DownloadSettings: ObservableObject {
         DownloadSourceSnapshot(
             endpoint: trimmedEndpoint,
             token: token.trimmingCharacters(in: .whitespacesAndNewlines),
-            wifiOnly: wifiOnly
+            wifiOnly: wifiOnly,
+            backend: backend
         )
     }
 }
@@ -130,6 +139,7 @@ struct DownloadSourceSnapshot: Sendable, Equatable {
     let endpoint: String
     let token: String
     let wifiOnly: Bool
+    var backend: DownloadBackend = .server
 }
 
 /// A media file the service pointed at.
@@ -137,6 +147,10 @@ struct ResolvedMedia: Sendable, Equatable {
     let url: URL
     /// What the service said it weighs, when it says.
     let byteCount: Int64?
+    /// When present, download both MP4 tracks and mux them on the device.
+    var audioURL: URL? = nil
+    var audioByteCount: Int64? = nil
+    var usesByteRanges = false
 }
 
 enum DownloadError: LocalizedError, Equatable {
@@ -155,7 +169,7 @@ enum DownloadError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return "Set a download service in Settings first. The app has no way to reach a video's media file on its own."
+            return "Choose On This Device in Settings → Downloads, or configure your download server."
         case .badEndpoint:
             return "That download service address isn't a valid http or https URL."
         case .service(let message):
@@ -163,7 +177,7 @@ enum DownloadError: LocalizedError, Equatable {
         case .noMedia:
             return "The download service replied, but there was no media link in its answer."
         case .http(let code):
-            return "The download service answered with status \(code)."
+            return "The media server answered with status \(code)."
         case .transport(let message):
             return message
         case .overStorageLimit(let message):
@@ -205,6 +219,9 @@ actor DownloadResolver {
         quality: DownloadQuality,
         source: DownloadSourceSnapshot
     ) async throws -> ResolvedMedia {
+        if source.backend == .local {
+            return try await LocalDownloadResolver.shared.resolve(videoID: video.id, quality: quality, wifiOnly: source.wifiOnly)
+        }
         let endpoint = source.endpoint
         guard !endpoint.isEmpty else { throw DownloadError.notConfigured }
 
@@ -263,6 +280,7 @@ actor DownloadResolver {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 30
+        request.allowsCellularAccess = !source.wifiOnly
         if !source.token.isEmpty {
             // A token carrying its own scheme ("Api-Key abc123", which is what cobalt wants) is
             // sent as typed; a bare one is assumed to be a bearer token. That covers both

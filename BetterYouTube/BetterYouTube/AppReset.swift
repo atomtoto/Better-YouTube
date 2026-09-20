@@ -52,6 +52,7 @@ enum AppReset {
         // stop its transfers before the folder is removed, or a background task iOS is still
         // running writes the file straight back after the delete.
         DownloadManager.shared.removeAll()
+        DownloadSettings.shared.backend = .local
         DownloadSettings.shared.endpoint = ""
         DownloadSettings.shared.token = ""
 
