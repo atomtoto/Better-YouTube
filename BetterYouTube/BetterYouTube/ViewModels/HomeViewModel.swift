@@ -39,6 +39,8 @@ final class HomeViewModel: ObservableObject {
     private var lastLoaded: Date?
     private var lastLoadedSignedIn = false
     private var lastLoadedYouTube: Date?
+    private var youTubeLoad: Task<Void, Never>?
+    private var restoredFeedGeneration: UUID?
     private static let reloadInterval: TimeInterval = 15 * 60
 
     init(service: YouTubeAPIService = .shared) {
@@ -57,6 +59,7 @@ final class HomeViewModel: ObservableObject {
 
     /// Choosing a segment by hand, which also settles the default for good.
     func select(_ feed: Feed) {
+        guard self.feed != feed else { return }
         hasPickedFeed = true
         self.feed = feed
     }
@@ -64,48 +67,93 @@ final class HomeViewModel: ObservableObject {
     /// With a youtube.com session on the device, the real feed is the one to open on — but only
     /// until you pick something else, and never once the session is gone.
     func adoptDefaultFeed(webSignedIn: Bool) {
-        if webSignedIn {
-            guard !hasPickedFeed else { return }
-            feed = .youTube
-        } else if feed == .youTube {
-            feed = .forYou
+        let session = YouTubeWebSession.shared
+        if restoredFeedGeneration != session.feedGeneration || !webSignedIn {
             youTubeVideos = []
             lastLoadedYouTube = nil
+            restoredFeedGeneration = session.feedGeneration
+        }
+        if webSignedIn {
+            if youTubeVideos.isEmpty, let cached = session.feedCache.load() {
+                avatars.merge(cached.avatars) { _, new in new }
+                youTubeVideos = cached.videos
+            }
+            if !hasPickedFeed { feed = .youTube }
+        } else if feed == .youTube {
+            feed = .forYou
         }
     }
 
     // MARK: - YouTube's own feed
 
     /// Reads the ordering off YouTube's home page and fills it in from the Data API — one
-    /// `videos.list` for the lot, so about 1 quota unit a refresh.
+    /// first batch immediately, then at most one more `videos.list` for the remaining IDs.
     ///
     /// Loaded when its segment is chosen rather than with the rest: it drives a web view, which
     /// is slower than the two API feeds and has no business holding them up.
     func loadYouTubeFeed(force: Bool = false) async {
-        guard !isLoadingYouTube else { return }
-        if !force,
-           let lastLoadedYouTube,
-           !youTubeVideos.isEmpty,
-           Date().timeIntervalSince(lastLoadedYouTube) < Self.reloadInterval {
-            return
-        }
+        // A SwiftUI task restarts when the selected segment changes. Share the in-flight work
+        // instead of cancelling a page load and immediately starting it again.
+        if let youTubeLoad { await youTubeLoad.value; return }
+        let session = YouTubeWebSession.shared
+        guard session.hasCheckedSession, session.isSignedIn else { return }
+        adoptDefaultFeed(webSignedIn: true)
+        if !force, let lastLoadedYouTube, !youTubeVideos.isEmpty,
+           Date().timeIntervalSince(lastLoadedYouTube) < Self.reloadInterval { return }
 
+        let generation = session.feedGeneration
         isLoadingYouTube = true
         youTubeIssue = nil
-
-        do {
-            let ids = try await YouTubeFeedReader.shared.harvest()
-            let videos = try await service.videos(ids: ids)
-            youTubeVideos = videos
-            youTubeIssue = videos.isEmpty ? YouTubeFeedIssue.nothingFound.localizedDescription : nil
-            lastLoadedYouTube = videos.isEmpty ? nil : Date()
-            await loadAvatars(for: videos, subscriptions: [])
-        } catch {
-            youTubeIssue = error.localizedDescription
-            lastLoadedYouTube = nil
+        let task = Task { [self] in
+            defer { isLoadingYouTube = false }
+            do {
+                var fetched: [String: Video] = [:]
+                let ids = try await YouTubeFeedReader.shared.harvest { firstIDs in
+                    let first = try await self.service.videos(ids: firstIDs)
+                    guard session.isSignedIn, session.feedGeneration == generation else { throw CancellationError() }
+                    fetched = Dictionary(first.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                    let ordered = firstIDs.compactMap { fetched[$0] }
+                    if !ordered.isEmpty { self.youTubeVideos = ordered }
+                }
+                let missing = ids.filter { fetched[$0] == nil }
+                if !missing.isEmpty {
+                    let rest = try await service.videos(ids: missing)
+                    for video in rest { fetched[video.id] = video }
+                }
+                guard session.isSignedIn, session.feedGeneration == generation else { return }
+                let videos = ids.compactMap { fetched[$0] }
+                if !videos.isEmpty {
+                    youTubeVideos = videos
+                    lastLoadedYouTube = Date()
+                    saveYouTubeCache(session: session)
+                    await loadAvatars(for: videos, subscriptions: [])
+                    guard session.isSignedIn, session.feedGeneration == generation else { return }
+                    saveYouTubeCache(session: session)
+                } else {
+                    youTubeIssue = YouTubeFeedIssue.nothingFound.localizedDescription
+                }
+            } catch is CancellationError {
+                // A sign-out/account change invalidates the result, including late API replies.
+            } catch {
+                guard session.isSignedIn, session.feedGeneration == generation else { return }
+                youTubeIssue = error.localizedDescription
+                lastLoadedYouTube = nil
+                // Keep the cached or first-batch cards visible when the network fails.
+            }
         }
+        youTubeLoad = task
+        await task.value
+        youTubeLoad = nil
+        // If the account changed during extraction, the new account still needs a refresh.
+        if session.isSignedIn, session.feedGeneration != generation {
+            await loadYouTubeFeed(force: force)
+        }
+    }
 
-        isLoadingYouTube = false
+    private func saveYouTubeCache(session: YouTubeWebSession) {
+        let channelIDs = Set(youTubeVideos.map(\.channelId))
+        session.feedCache.save(YouTubeHomeSnapshot(videos: youTubeVideos,
+            avatars: avatars.filter { channelIDs.contains($0.key) }, savedAt: lastLoadedYouTube ?? Date()))
     }
 
     func load(isSignedIn: Bool, library: LibraryStore, force: Bool = false) async {

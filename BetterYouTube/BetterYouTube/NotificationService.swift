@@ -1,5 +1,4 @@
 import Foundation
-import UIKit
 import UserNotifications
 
 /// File-scope so the nonisolated delegate methods can read them without hopping actors.
@@ -128,29 +127,36 @@ extension NotificationService: UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
+        // Everything needed is read out here, before the hop. `userInfo` is
+        // `[AnyHashable: Any]`, which is not Sendable, so carrying the dictionary itself into the
+        // main actor is an error under Swift 6 — the same reason `PlayerEvent` is kept to
+        // primitives. Strings and a URL cross on their own.
         let userInfo = response.notification.request.content.userInfo
         guard let videoId = userInfo["videoId"] as? String else { return }
         let actionIdentifier = response.actionIdentifier
+        let title = userInfo["title"] as? String ?? ""
+        let channelId = userInfo["channelId"] as? String ?? ""
+        let channelTitle = userInfo["channelTitle"] as? String ?? ""
+        let thumbnailURL = (userInfo["thumbnailURL"] as? String).flatMap(URL.init(string:))
 
-        await MainActor.run {
-            switch actionIdentifier {
-            case NotificationIdentifier.watchLater:
-                let video = Video(
-                    id: videoId,
-                    title: userInfo["title"] as? String ?? "",
-                    channelId: userInfo["channelId"] as? String ?? "",
-                    channelTitle: userInfo["channelTitle"] as? String ?? "",
-                    description: "",
-                    thumbnailURL: (userInfo["thumbnailURL"] as? String).flatMap(URL.init(string:)),
-                    publishedAt: nil
-                )
-                if !LibraryStore.shared.isInWatchLater(video) {
-                    LibraryStore.shared.toggleWatchLater(video)
-                }
-            default:
+        if actionIdentifier == NotificationIdentifier.watchLater {
+            let video = Video(
+                id: videoId,
+                title: title,
+                channelId: channelId,
+                channelTitle: channelTitle,
+                description: "",
+                thumbnailURL: thumbnailURL,
+                publishedAt: nil
+            )
+            await WatchLaterStore.shared.add(video)
+        } else {
+            await MainActor.run {
                 AppRouter.shared.open(videoId: videoId)
             }
+        }
 
+        await MainActor.run {
             if let item = NotificationStore.shared.items.first(where: { $0.videoId == videoId }) {
                 NotificationStore.shared.markRead(item)
             }

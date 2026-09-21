@@ -1,0 +1,39 @@
+services:
+  resolver:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # Only used when COOKIES_FILE points inside it; harmless otherwise.
+      - ./cookies:/cookies:ro
+    environment:
+      # Set this on anything reachable from outside a network you control: without it, whoever
+      # finds the address can use your resolver. The app never makes you type it — the setup page
+      # at / passes it over.
+      RESOLVER_TOKEN: "${RESOLVER_TOKEN:-}"
+
+      # A ceiling regardless of what the app asks for. 720 keeps the muxed path cheaper, since
+      # that is the one whose bytes go through this server.
+      MAX_HEIGHT: "${MAX_HEIGHT:-1080}"
+
+      # 0 refuses anything needing ffmpeg, so this server only ever answers questions and never
+      # carries video. Downloads are then capped at whatever YouTube already offers joined.
+      ALLOW_MUX: "${ALLOW_MUX:-1}"
+
+      # How long the setup page at / stays open after a restart. 0 turns it off.
+      SETUP_MINUTES: "${SETUP_MINUTES:-30}"
+
+      # 0 skips the yt-dlp update on boot.
+      UPDATE_YTDLP: "${UPDATE_YTDLP:-1}"
+
+      # Only needed where YouTube demands a sign-in, which is mostly at hosting providers. The
+      # downloads become the account that exported the cookies — see the README before using it.
+      COOKIES_FILE: "${COOKIES_FILE:-}"
+      PLAYER_CLIENT: "${PLAYER_CLIENT:-}"
+
+      # Deliberately passed through empty unless you set it. The server works its own address out
+      # from each request, which is right for a LAN address, a tunnel and a hosting domain alike;
+      # a default of "localhost" here would override that and hand the phone links it cannot
+      # follow — which is the exact failure this is meant to avoid.
+      PUBLIC_URL: "${PUBLIC_URL:-}"

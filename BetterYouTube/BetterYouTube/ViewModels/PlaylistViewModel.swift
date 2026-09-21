@@ -19,9 +19,18 @@ final class PlaylistViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         do {
-            videos = try await service.videos(inPlaylist: playlistId, maxResults: 50)
+            if YouTubeWebSession.shared.isSignedIn {
+                videos = try await YouTubeWebPlaylistService.shared.videos(inPlaylist: playlistId)
+            } else {
+                videos = try await service.videos(inPlaylist: playlistId, maxResults: 50)
+            }
         } catch {
-            errorMessage = error.localizedDescription
+            // Public playlists remain readable with the stable API if the website changes.
+            do {
+                videos = try await service.videos(inPlaylist: playlistId, maxResults: 50)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
         isLoading = false
     }

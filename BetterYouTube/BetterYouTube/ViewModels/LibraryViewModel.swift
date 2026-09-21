@@ -16,24 +16,55 @@ final class LibraryViewModel: ObservableObject {
         self.service = service
     }
 
-    func load() async {
+    func load(apiSignedIn: Bool, webSignedIn: Bool) async {
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
-        do {
-            async let accountResult = service.myChannel()
-            async let subscriptionsResult = service.mySubscriptions()
-            async let playlistsResult = service.myPlaylists()
-            async let likedResult = service.likedVideos()
+        var failures: [String] = []
+        var ownedPlaylists: [Playlist] = []
 
-            account = try await accountResult
-            subscriptions = try await subscriptionsResult
-            playlists = try await playlistsResult
-            likedVideos = try await likedResult
-        } catch {
-            errorMessage = error.localizedDescription
+        if apiSignedIn {
+            async let accountResult: Result<Channel?, Error> = capture { try await service.myChannel() }
+            async let subscriptionsResult: Result<[Channel], Error> = capture { try await service.mySubscriptions() }
+            async let playlistsResult: Result<[Playlist], Error> = capture { try await service.myPlaylists() }
+            async let likedResult: Result<[Video], Error> = capture { try await service.likedVideos() }
+
+            switch await accountResult { case .success(let value): account = value; case .failure(let error): failures.append(error.localizedDescription) }
+            switch await subscriptionsResult { case .success(let value): subscriptions = value; case .failure(let error): failures.append(error.localizedDescription) }
+            switch await playlistsResult { case .success(let value): ownedPlaylists = value; case .failure(let error): failures.append(error.localizedDescription) }
+            switch await likedResult { case .success(let value): likedVideos = value; case .failure(let error): failures.append(error.localizedDescription) }
+        } else {
+            account = nil
+            subscriptions = []
+            likedVideos = []
         }
+
+        var allPlaylists: [Playlist] = []
+        if webSignedIn {
+            do {
+                allPlaylists = try await YouTubeWebPlaylistService.shared.playlists()
+            } catch {
+                failures.append(error.localizedDescription)
+            }
+        }
+        // Prefer API metadata for owned playlists, while retaining every saved/system playlist
+        // only present in YouTube's aggregation page.
+        var byID = Dictionary(allPlaylists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        for playlist in ownedPlaylists { byID[playlist.id] = playlist }
+        var seen = Set<String>()
+        playlists = (allPlaylists + ownedPlaylists).compactMap { playlist in
+            guard seen.insert(playlist.id).inserted else { return nil }
+            return byID[playlist.id]
+        }
+        errorMessage = failures.first
         isLoading = false
+    }
+
+    private func capture<Value>(
+        _ operation: () async throws -> Value
+    ) async -> Result<Value, Error> {
+        do { return .success(try await operation()) }
+        catch { return .failure(error) }
     }
 
     func reset() {

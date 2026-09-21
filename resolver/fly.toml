@@ -1,0 +1,21 @@
+# fly launch --copy-config --no-deploy && fly secrets set RESOLVER_TOKEN=$(openssl rand -hex 16) && fly deploy
+#
+# PUBLIC_URL is deliberately absent: the resolver reads the address off each request, so it is
+# right whether it is reached at its .fly.dev name, a custom domain or through a tunnel.
+app = "betteryoutube-resolver"
+primary_region = "cdg"
+
+[build]
+
+[env]
+  MAX_HEIGHT = "1080"
+  ALLOW_MUX = "1"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+
+  [[http_service.checks]]
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"

@@ -8,6 +8,11 @@ final class VideoDetailViewModel: ObservableObject {
     @Published private(set) var isLoadingComments = false
     @Published var errorMessage: String?
     @Published var commentsError: String?
+    @Published var commentActionError: String?
+    @Published private(set) var repliesByParent: [String: [VideoComment]] = [:]
+    @Published private(set) var loadingReplies: Set<String> = []
+    @Published private(set) var isPostingComment = false
+    @Published private(set) var sendingReplyTo: Set<String> = []
     /// The account's own rating for this video, as YouTube holds it. `.unspecified` until it
     /// has been read back — the like button only fills in once it is known.
     @Published private(set) var rating: VideoRating = .unspecified
@@ -17,6 +22,7 @@ final class VideoDetailViewModel: ObservableObject {
     @Published var ratingError: String?
 
     private let service: YouTubeAPIService
+    private var loadedReplyParents: Set<String> = []
     /// What this session's likes have added to YouTube's own figure, so a refresh of the
     /// details doesn't quietly undo the tap that was made while it was in flight.
     private var likeCountAdjustment = 0
@@ -103,5 +109,55 @@ final class VideoDetailViewModel: ObservableObject {
             commentsError = error.localizedDescription
         }
         isLoadingComments = false
+    }
+
+    // MARK: - Comment conversations
+
+    func addComment(_ rawText: String) async -> Bool {
+        let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !isPostingComment else { return false }
+        isPostingComment = true
+        commentActionError = nil
+        defer { isPostingComment = false }
+
+        do {
+            let comment = try await service.addComment(videoId: video.id, text: text)
+            comments.insert(comment, at: 0)
+            return true
+        } catch {
+            commentActionError = error.localizedDescription
+            return false
+        }
+    }
+
+    func loadReplies(to parentId: String) async {
+        guard !loadedReplyParents.contains(parentId), !loadingReplies.contains(parentId) else { return }
+        loadingReplies.insert(parentId)
+        commentActionError = nil
+        defer { loadingReplies.remove(parentId) }
+
+        do {
+            repliesByParent[parentId] = try await service.replies(to: parentId)
+            loadedReplyParents.insert(parentId)
+        } catch {
+            commentActionError = error.localizedDescription
+        }
+    }
+
+    func reply(_ rawText: String, to parentId: String) async -> Bool {
+        let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !sendingReplyTo.contains(parentId) else { return false }
+        sendingReplyTo.insert(parentId)
+        commentActionError = nil
+        defer { sendingReplyTo.remove(parentId) }
+
+        do {
+            let reply = try await service.reply(to: parentId, text: text)
+            repliesByParent[parentId, default: []].append(reply)
+            return true
+        } catch {
+            commentActionError = error.localizedDescription
+            return false
+        }
     }
 }

@@ -63,6 +63,7 @@ struct VideoComment: Identifiable, Codable, Equatable, Hashable {
     let text: String
     let likeCount: Int
     let publishedAt: Date?
+    let totalReplyCount: Int
 }
 
 extension Array where Element == Video {
@@ -201,9 +202,11 @@ struct YTCommentThreadItem: Decodable {
 
 struct YTCommentThreadSnippet: Decodable {
     let topLevelComment: YTCommentItem
+    let totalReplyCount: Int?
 }
 
 struct YTCommentItem: Decodable {
+    let id: String
     let snippet: YTCommentSnippet
 }
 
@@ -330,12 +333,20 @@ extension Playlist {
 
 extension VideoComment {
     init(thread: YTCommentThreadItem) {
-        let snippet = thread.snippet.topLevelComment.snippet
-        self.id = thread.id
+        self.init(
+            item: thread.snippet.topLevelComment,
+            totalReplyCount: thread.snippet.totalReplyCount ?? 0
+        )
+    }
+
+    init(item: YTCommentItem, totalReplyCount: Int = 0) {
+        let snippet = item.snippet
+        self.id = item.id
         self.authorName = snippet.authorDisplayName
         self.authorAvatarURL = snippet.authorProfileImageUrl
         self.text = snippet.textDisplay
         self.likeCount = snippet.likeCount
         self.publishedAt = YTDateParser.parse(snippet.publishedAt)
+        self.totalReplyCount = totalReplyCount
     }
 }

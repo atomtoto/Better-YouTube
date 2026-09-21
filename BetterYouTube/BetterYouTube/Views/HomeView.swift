@@ -7,6 +7,7 @@ struct HomeView: View {
     @EnvironmentObject private var notificationStore: NotificationStore
     @EnvironmentObject private var webSession: YouTubeWebSession
     @StateObject private var viewModel = HomeViewModel()
+    @StateObject private var youTubeNavigation = YouTubeWebNavigationModel()
 
     @State private var showsNotifications = false
 
@@ -21,18 +22,31 @@ struct HomeView: View {
             if showsYouTubePage {
                 // The page scrolls itself, so the picker sits above it rather than inside it.
                 VStack(spacing: 12) {
-                    feedPicker
-                    YouTubeWebFeedView()
-                        .ignoresSafeArea(edges: .bottom)
+                    feedPickerInContent
+                    YouTubeWebFeedView(navigation: youTubeNavigation)
                 }
                 .padding(.top, 12)
             } else {
                 cardFeed
             }
         }
-        .background(Color(uiColor: .systemBackground))
+        .background(Color.appBackground)
         .navigationTitle("Home")
         .toolbar {
+            #if os(macOS)
+            ToolbarItem(placement: .principal) {
+                // `fixedSize` because a segmented picker in a toolbar is given the whole width
+                // otherwise, and hugs its titles with it.
+                feedNavigationBar
+                    .fixedSize()
+            }
+
+            // Pull-to-refresh below is the phone's affordance; a Mac needs somewhere to click.
+            ToolbarItem(placement: .primaryAction) {
+                RefreshButton { await refresh(force: true) }
+            }
+            #endif
+
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showsNotifications = true
@@ -52,17 +66,19 @@ struct HomeView: View {
         }
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
         .refreshable { await refresh(force: true) }
-        .task(id: auth.isSignedIn) {
-            await viewModel.load(isSignedIn: auth.isSignedIn, library: library)
+        .onChange(of: webSession.isSignedIn, initial: true) { _, signedIn in
+            viewModel.adoptDefaultFeed(webSignedIn: signedIn)
         }
-        .task(id: webSession.isSignedIn) {
+        .onChange(of: webSession.feedGeneration) { _, _ in
             viewModel.adoptDefaultFeed(webSignedIn: webSession.isSignedIn)
         }
-        // Keyed on the rendering too: switching back from YouTube's page to the cards has to
-        // fill them, and there is nothing to read while the page is showing itself.
-        .task(id: "\(viewModel.feed.rawValue)-\(webSession.rendering.rawValue)") {
-            guard viewModel.feed == .youTube, !showsYouTubePage else { return }
-            await viewModel.loadYouTubeFeed()
+        .task(id: "\(viewModel.feed.rawValue)-\(webSession.rendering.rawValue)-\(webSession.hasCheckedSession)-\(webSession.isSignedIn)-\(webSession.feedGeneration)-\(auth.isSignedIn)") {
+            guard webSession.hasCheckedSession else { return }
+            if viewModel.feed == .youTube {
+                if !showsYouTubePage { await viewModel.loadYouTubeFeed() }
+            } else {
+                await viewModel.load(isSignedIn: auth.isSignedIn, library: library)
+            }
         }
     }
 
@@ -79,6 +95,10 @@ struct HomeView: View {
 
     /// The segmented control. YouTube's own feed is only on offer once there is a session to
     /// read it with — signed out of that, Home is exactly what it was before.
+    ///
+    /// It carries no margins of its own because the two platforms put it in different places: on
+    /// a phone it scrolls with the feed, on a Mac it sits in the window's toolbar. See
+    /// `feedPickerInContent` and the toolbar below.
     private var feedPicker: some View {
         Picker("Feed", selection: Binding(get: { viewModel.feed }, set: viewModel.select)) {
             ForEach(HomeViewModel.Feed.allCases) { feed in
@@ -88,13 +108,46 @@ struct HomeView: View {
             }
         }
         .pickerStyle(.segmented)
-        .padding(.horizontal, Theme.Spacing.gutter)
+    }
+
+    /// Safari-style history control immediately beside the feed tabs. It is present only while
+    /// YouTube's live page is the selected feed, on both the in-content iPhone bar and the Mac
+    /// toolbar bar.
+    private var feedNavigationBar: some View {
+        HStack(spacing: 8) {
+            if showsYouTubePage {
+                Button { youTubeNavigation.goBack() } label: {
+                    Image(systemName: "chevron.backward")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(!youTubeNavigation.canGoBack)
+                .accessibilityLabel("Back")
+            }
+            feedPicker
+        }
+    }
+
+    /// The picker where it belongs *in the page*, which is nowhere on a Mac.
+    ///
+    /// A control that switches what the whole screen is showing belongs in the toolbar on macOS,
+    /// not in the scroll view: in the content it scrolls away with the feed, and it reads as a
+    /// row of tabs that has somehow ended up below the real title bar. A phone has no toolbar to
+    /// put it in, and there the segmented control at the top of the feed is the native answer.
+    @ViewBuilder
+    private var feedPickerInContent: some View {
+        #if os(iOS)
+        feedNavigationBar
+            .padding(.horizontal, Theme.Spacing.gutter)
+        #endif
     }
 
     private var cardFeed: some View {
         ScrollView {
             LazyVStack(spacing: 24) {
-                feedPicker
+                feedPickerInContent
 
                 if isLoadingCurrentFeed && viewModel.videos.isEmpty {
                     placeholderFeed
@@ -173,15 +226,15 @@ struct HomeView: View {
             ForEach(0..<3, id: \.self) { _ in
                 VStack(alignment: .leading, spacing: 10) {
                     RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-                        .fill(Color(uiColor: .tertiarySystemFill))
+                        .fill(Color.appTertiaryFill)
                         .aspectRatio(16.0 / 9.0, contentMode: .fit)
                     HStack(spacing: 10) {
                         Circle()
-                            .fill(Color(uiColor: .tertiarySystemFill))
+                            .fill(Color.appTertiaryFill)
                             .frame(width: 36, height: 36)
                         VStack(alignment: .leading, spacing: 6) {
-                            Capsule().fill(Color(uiColor: .tertiarySystemFill)).frame(height: 12)
-                            Capsule().fill(Color(uiColor: .tertiarySystemFill)).frame(width: 140, height: 10)
+                            Capsule().fill(Color.appTertiaryFill).frame(height: 12)
+                            Capsule().fill(Color.appTertiaryFill).frame(width: 140, height: 10)
                         }
                     }
                 }
@@ -195,35 +248,69 @@ struct HomeView: View {
 /// Long-press actions shared by every video presentation.
 struct VideoContextMenu: ViewModifier {
     let video: Video
-    @EnvironmentObject private var library: LibraryStore
-    @EnvironmentObject private var watchLater: WatchLaterStore
-
+    @State private var showsPlaylistPicker = false
+    @State private var saveError: String?
     func body(content: Content) -> some View {
         content.contextMenu {
-            Button {
-                library.toggleFavorite(video)
-            } label: {
-                Label(
-                    library.isFavorite(video) ? "Remove from Favorites" : "Add to Favorites",
-                    systemImage: library.isFavorite(video) ? "heart.slash" : "heart"
-                )
-            }
+            VideoMenuItems(
+                video: video,
+                showPlaylistPicker: { showsPlaylistPicker = true },
+                reportWatchLaterError: { saveError = $0 }
+            )
+        }
+        .sheet(isPresented: $showsPlaylistPicker) { PlaylistPickerView(video: video) }
+        .alert("Watch Later", isPresented: Binding(
+            get: { saveError != nil }, set: { if !$0 { saveError = nil } }
+        )) {
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: { Text(saveError ?? "") }
+    }
+}
 
-            Button {
-                // Signed in this is a write to the account playlist, so it leaves the main
-                // thread; the list updates optimistically and rolls back if YouTube refuses.
-                Task { await watchLater.toggle(video) }
-            } label: {
-                Label(
-                    watchLater.contains(video) ? "Remove from Watch Later" : "Add to Watch Later",
-                    systemImage: watchLater.contains(video) ? "clock.badge.xmark" : "clock"
-                )
-            }
+/// The single source of truth for both a video's long-press menu and its ellipsis menu.
+struct VideoMenuItems: View {
+    let video: Video
+    let showPlaylistPicker: () -> Void
+    let reportWatchLaterError: (String?) -> Void
 
-            if let url = video.watchURL {
-                ShareLink(item: url) {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                }
+    @EnvironmentObject private var library: LibraryStore
+    @EnvironmentObject private var watchLater: WatchLaterStore
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
+
+    @ViewBuilder
+    var body: some View {
+        DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
+
+        Button {
+            library.toggleFavorite(video)
+        } label: {
+            Label(
+                library.isFavorite(video) ? "Remove from Favorites" : "Add to Favorites",
+                systemImage: library.isFavorite(video) ? "heart.slash" : "heart"
+            )
+        }
+
+        Button {
+            Task {
+                await watchLater.toggle(video)
+                reportWatchLaterError(watchLater.errorMessage)
+            }
+        } label: {
+            Label(
+                watchLater.contains(video) ? "Remove from Watch Later" : "Add to Watch Later",
+                systemImage: watchLater.contains(video) ? "clock.badge.xmark" : "clock"
+            )
+        }
+        .disabled(watchLater.pendingVideoIDs.contains(video.id))
+
+        Button(action: showPlaylistPicker) {
+            Label("Add to Playlist…", systemImage: "text.badge.plus")
+        }
+
+        if let url = video.watchURL {
+            ShareLink(item: url) {
+                Label("Share", systemImage: "square.and.arrow.up")
             }
         }
     }

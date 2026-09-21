@@ -33,7 +33,7 @@ struct VideoListView: View {
             }
         }
         .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationBar()
     }
 }
 
@@ -59,7 +59,9 @@ struct SubscriptionsView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 20) {
                         ForEach(channels) { channel in
-                            NavigationLink(value: channel) {
+                            NavigationLink {
+                                ChannelView(channelId: channel.id, initialChannel: channel)
+                            } label: {
                                 VStack(spacing: 8) {
                                     AvatarView(url: channel.thumbnailURL, size: 76)
                                         .artworkShadow()
@@ -80,8 +82,7 @@ struct SubscriptionsView: View {
             }
         }
         .navigationTitle("Subscriptions")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
+        .inlineNavigationBar()
     }
 }
 
@@ -95,11 +96,13 @@ struct PlaylistsView: View {
                 EmptyStateView(
                     title: "No playlists",
                     systemImage: "music.note.list",
-                    message: "Playlists you create on YouTube appear here."
+                    message: "Playlists you create or save on YouTube appear here."
                 )
             } else {
                 List(playlists) { playlist in
-                    NavigationLink(value: playlist) {
+                    NavigationLink {
+                        PlaylistDetailView(playlist: playlist)
+                    } label: {
                         HStack(spacing: 12) {
                             ArtworkView(url: playlist.thumbnailURL)
                                 .frame(width: Theme.Size.compactThumbnail, height: Theme.Size.compactThumbnail * 9 / 16)
@@ -123,8 +126,7 @@ struct PlaylistsView: View {
             }
         }
         .navigationTitle("Playlists")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: Playlist.self) { PlaylistDetailView(playlist: $0) }
+        .inlineNavigationBar()
     }
 }
 
@@ -181,7 +183,7 @@ struct PlaylistDetailView: View {
             }
         }
         .navigationTitle(playlist.title)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationBar()
         .task {
             if viewModel.videos.isEmpty { await viewModel.load() }
         }

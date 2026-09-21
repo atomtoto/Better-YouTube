@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The Mac build runs in the App Sandbox. Three reasons, in order of how much they matter:
+
+	     1. It is what a signed Mac app that talks to the internet and holds an OAuth token
+	        should be doing at all.
+	     2. It gives the app a container of its own, so Documents/Downloads on a Mac means the
+	        same thing it means on a phone — the app's own folder, not the user's.
+	     3. It is what gets the app an `application-identifier`, and therefore a keychain access
+	        group of its own. `KeychainStore` asks for the data-protection keychain on macOS
+	        (see `kSecUseDataProtectionKeychain` there), which needs one; without it the token
+	        would land in the login keychain and the user would be asked for their password the
+	        first time the app read its own credentials back. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+
+	<!-- Everything the app fetches: the Data API, YouTube's pages, the thumbnails, and the
+	     download resolver. Nothing listens. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+
+	<!-- Settings → Import Watch Later reads one CSV the user picks out of a Takeout archive.
+	     Read-only, and only the file they chose. -->
+	<key>com.apple.security.files.user-selected.read-only</key>
+	<true/>
+</dict>
+</plist>
