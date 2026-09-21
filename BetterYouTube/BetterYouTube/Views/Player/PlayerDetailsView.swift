@@ -6,6 +6,7 @@ struct PlayerDetailsView: View {
     let video: Video
 
     @EnvironmentObject private var library: LibraryStore
+    @EnvironmentObject private var watchLater: WatchLaterStore
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var downloads: DownloadStore
@@ -13,6 +14,7 @@ struct PlayerDetailsView: View {
     @StateObject private var viewModel: VideoDetailViewModel
     @State private var isDescriptionExpanded = false
     @State private var newCommentText = ""
+    @State private var watchLaterError: String?
 
     init(video: Video) {
         self.video = video
@@ -64,6 +66,14 @@ struct PlayerDetailsView: View {
         }
         .scrollIndicators(.hidden)
         .task { await viewModel.loadAll() }
+        .alert("Watch Later", isPresented: Binding(
+            get: { watchLaterError != nil },
+            set: { if !$0 { watchLaterError = nil } }
+        )) {
+            Button("OK", role: .cancel) { watchLaterError = nil }
+        } message: {
+            Text(watchLaterError ?? "")
+        }
     }
 
     /// Surfaces what actually went wrong rather than leaving a silent black player.
@@ -164,10 +174,14 @@ struct PlayerDetailsView: View {
 
                     PlayerActionPill(
                         title: "Later",
-                        systemImage: library.isInWatchLater(displayed) ? "clock.fill" : "clock",
-                        isActive: library.isInWatchLater(displayed)
+                        systemImage: watchLater.contains(displayed) ? "clock.fill" : "clock",
+                        isActive: watchLater.contains(displayed),
+                        isBusy: watchLater.pendingVideoIDs.contains(displayed.id)
                     ) {
-                        library.toggleWatchLater(displayed)
+                        Task {
+                            await watchLater.toggle(displayed)
+                            watchLaterError = watchLater.errorMessage
+                        }
                     }
 
                     if let url = displayed.watchURL {

@@ -46,8 +46,8 @@ enum YouTubeFeedIssue: LocalizedError, Equatable {
 /// Data API retired `activities?home=true` in 2016 and `search.list?relatedToVideoId` in 2023, and
 /// YouTube's private endpoints answer a signed-out caller with an empty shell.
 ///
-/// Nothing here reads or copies a cookie value: the store is handed to a web view, which uses it
-/// the way a browser would. The app only ever learns *whether* a session cookie exists.
+/// Swift only checks whether a session cookie exists. Playlist authentication is computed
+/// inside the YouTube page; no cookie values are exported from WebKit.
 ///
 /// It stays dormant until you sign in from Settings — no session, no third segment on Home.
 @MainActor
@@ -72,8 +72,20 @@ final class YouTubeWebSession: ObservableObject {
     }
 
     @Published private(set) var isSignedIn = false
+    @Published private(set) var hasCheckedSession = false
+    @Published private(set) var feedGeneration = UUID()
+    let feedCache = YouTubeHomeCache()
+
+    func invalidateFeed() {
+        YouTubeFeedReader.playlists.invalidatePlaylistPage()
+        feedGeneration = UUID()
+        feedCache.clear()
+    }
     @Published var rendering: FeedRendering {
-        didSet { UserDefaults.standard.set(rendering.rawValue, forKey: Self.renderingKey) }
+        didSet {
+            UserDefaults.standard.set(rendering.rawValue, forKey: Self.renderingKey)
+            if oldValue == .youTubePage, rendering == .nativeCards { invalidateFeed() }
+        }
     }
 
     /// YouTube's own pages, in the edition that suits the screen they will be shown on.
@@ -136,13 +148,19 @@ final class YouTubeWebSession: ObservableObject {
     /// Asks the cookie jar whether a session is there. Called after the sign-in sheet closes.
     func refresh() async {
         let cookies = await dataStore.httpCookieStore.allCookies()
-        isSignedIn = cookies.contains { cookie in
-            cookie.domain.contains("youtube.com") && Self.sessionCookies.contains(cookie.name)
+        let signedIn = cookies.contains { cookie in
+            (cookie.domain == "youtube.com" || cookie.domain.hasSuffix(".youtube.com"))
+                && Self.sessionCookies.contains(cookie.name)
         }
+        if !signedIn, isSignedIn || !hasCheckedSession { invalidateFeed() }
+        isSignedIn = signedIn
+        hasCheckedSession = true
     }
 
     /// Forgets the session entirely — cookies, storage, caches.
     func signOut() async {
+        invalidateFeed()
+        isSignedIn = false
         await dataStore.removeData(
             ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(),
             modifiedSince: .distantPast
@@ -183,11 +201,16 @@ final class YouTubeWebSession: ObservableObject {
 @MainActor
 final class YouTubeFeedReader {
     static let shared = YouTubeFeedReader()
+    static let notifications = YouTubeFeedReader()
+    static let playlists = YouTubeFeedReader()
 
     private var webView: WKWebView?
     private var isHarvesting = false
-    private let bridge = FeedReaderNavigationBridge()
-    fileprivate var loadContinuation: CheckedContinuation<Void, Error>?
+    private lazy var bridge = FeedReaderNavigationBridge(owner: self)
+    private var loadContinuation: CheckedContinuation<Void, Error>?
+    private var loadingNavigation: WKNavigation?
+    private var committedLoad = false
+    private var activeLoadID: UUID?
 
     private init() {}
 
@@ -205,7 +228,7 @@ final class YouTubeFeedReader {
 
     /// The video ids on one of YouTube's own pages, in the order it puts them in — the home feed
     /// by default, or the notification inbox.
-    func harvest(from url: URL = YouTubeWebSession.homeURL) async throws -> [String] {
+    func harvest(from url: URL = YouTubeWebSession.homeURL, onFirstBatch: (([String]) async throws -> Void)? = nil) async throws -> [String] {
         await YouTubeWebSession.shared.refresh()
         guard YouTubeWebSession.shared.isSignedIn else { throw YouTubeFeedIssue.notSignedIn }
         // One web view, one page at a time: the home feed and the inbox would otherwise take
@@ -224,7 +247,7 @@ final class YouTubeFeedReader {
             ? "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
             : YouTubeWebSession.userAgent
         let destination = isNotifications ? URL(string: "https://www.youtube.com/")! : url
-        try await waitForLoad(destination, in: webView)
+        try await waitForLoad(destination, in: webView, readyWhenVideosAppear: !isNotifications)
 
         if webView.url?.host?.contains("consent.") == true {
             throw YouTubeFeedIssue.consentNeeded
@@ -236,10 +259,14 @@ final class YouTubeFeedReader {
         var barren = 0
         var openedBell = false
         var recognizedInbox = false
+        var deliveredFirstBatch = false
 
         for pass in 0..<Self.passes {
             // The feed hydrates after the load event, and again after every scroll.
-            try await Task.sleep(nanoseconds: pass == 0 ? 1_200_000_000 : 700_000_000)
+            try Task.checkCancellation()
+            if isNotifications || pass > 0 {
+                try await Task.sleep(nanoseconds: isNotifications && pass == 0 ? 1_200_000_000 : 700_000_000)
+            }
 
             let found: [String]
             if isNotifications {
@@ -255,6 +282,10 @@ final class YouTubeFeedReader {
             let before = ids.count
             for id in found where seen.insert(id).inserted { ids.append(id) }
 
+            if !isNotifications, !deliveredFirstBatch, !ids.isEmpty, let onFirstBatch {
+                deliveredFirstBatch = true
+                try await onFirstBatch(Array(ids.prefix(Self.targetCount)))
+            }
             if ids.count >= Self.targetCount { break }
             barren = ids.count == before ? barren + 1 : 0
             if barren >= 2, !ids.isEmpty { break }
@@ -274,6 +305,31 @@ final class YouTubeFeedReader {
         let result = try await webView.evaluateJavaScript(Self.harvestScript)
         guard let joined = result as? String, !joined.isEmpty else { return [] }
         return joined.split(separator: ",").map(String.init)
+    }
+
+    func invalidatePlaylistPage() {
+        finishLoad(with: CancellationError())
+        webView?.stopLoading()
+        // Replacing the document destroys pending JavaScript fetches and queued mutations.
+        webView?.loadHTMLString("", baseURL: nil)
+    }
+
+    /// A separate reader instance serves playlist operations so they cannot interrupt Home.
+    func withPlaylistPage<T>(
+        _ url: URL = URL(string: "https://www.youtube.com/playlist?list=WL&hl=en")!,
+        operation: (WKWebView) async throws -> T
+    ) async throws -> T {
+        await YouTubeWebSession.shared.refresh()
+        guard YouTubeWebSession.shared.isSignedIn else { throw YouTubeFeedIssue.notSignedIn }
+        guard !isHarvesting else { throw YouTubeFeedIssue.busy }
+        isHarvesting = true
+        defer { isHarvesting = false }
+        let webView = attachedWebView()
+        defer { webView.stopLoading(); webView.removeFromSuperview() }
+        webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
+        try await waitForLoad(url, in: webView, readyWhenVideosAppear: false)
+        guard webView.url?.host == "www.youtube.com" else { throw YouTubeFeedIssue.consentNeeded }
+        return try await operation(webView)
     }
 
     /// A web view that isn't really on screen doesn't lay out, and a feed only renders what it
@@ -324,25 +380,59 @@ final class YouTubeFeedReader {
         return webView
     }
 
-    private func waitForLoad(_ url: URL, in webView: WKWebView) async throws {
+    private func waitForLoad(_ url: URL, in webView: WKWebView, readyWhenVideosAppear: Bool) async throws {
+        let loadID = UUID()
+        activeLoadID = loadID
+        committedLoad = false
+        defer { activeLoadID = nil; loadingNavigation = nil }
+        // Recommendations can be usable before images and secondary page resources finish.
+        let earlyRead = Task {
+            guard readyWhenVideosAppear else { return }
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
+                guard self.activeLoadID == loadID, self.loadContinuation != nil else { return }
+                guard self.committedLoad else { continue }
+                if let ids = try? await self.videoIds(in: webView), !ids.isEmpty {
+                    guard self.activeLoadID == loadID, !Task.isCancelled else { return }
+                    self.finishLoad(with: nil)
+                    return
+                }
+            }
+        }
+        defer { earlyRead.cancel() }
         let watchdog = Task {
             try? await Task.sleep(nanoseconds: 20_000_000_000)
             guard !Task.isCancelled else { return }
-            YouTubeFeedReader.shared.finishLoad(with: YouTubeFeedIssue.timedOut)
+            self.finishLoad(with: YouTubeFeedIssue.timedOut)
         }
         defer { watchdog.cancel() }
 
         // Nobody should be waiting, but a cancelled harvest could have left someone behind.
         finishLoad(with: CancellationError())
 
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            loadContinuation = continuation
-            webView.load(URLRequest(url: url))
+        try Task.checkCancellation()
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                loadContinuation = continuation
+                loadingNavigation = webView.load(URLRequest(url: url))
+            }
+        } onCancel: {
+            Task { @MainActor in
+                guard self.activeLoadID == loadID else { return }
+                self.finishLoad(with: CancellationError())
+                webView.stopLoading()
+            }
         }
+        try Task.checkCancellation()
     }
 
     /// Resumes whoever is waiting on the page, once.
-    fileprivate func finishLoad(with error: Error?) {
+    fileprivate func didCommit(_ navigation: WKNavigation?) {
+        if navigation === loadingNavigation { committedLoad = true }
+    }
+
+    fileprivate func finishLoad(with error: Error?, navigation: WKNavigation? = nil) {
+        if let navigation, navigation !== loadingNavigation { return }
         guard let continuation = loadContinuation else { return }
         loadContinuation = nil
         if let error {
@@ -450,21 +540,58 @@ final class YouTubeFeedReader {
 /// Page-level load results, which never reach an `evaluateJavaScript` call. Kept off the main
 /// actor and forwarded, the way `PlayerNavigationBridge` does it for the player.
 private final class FeedReaderNavigationBridge: NSObject, WKNavigationDelegate {
+    weak var owner: YouTubeFeedReader?
+    init(owner: YouTubeFeedReader) { self.owner = owner }
+
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        MainActor.assumeIsolated { owner?.didCommit(navigation) }
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        Task { @MainActor in YouTubeFeedReader.shared.finishLoad(with: nil) }
+        MainActor.assumeIsolated { owner?.finishLoad(with: nil, navigation: navigation) }
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         let message = error.localizedDescription
         Task { @MainActor in
-            YouTubeFeedReader.shared.finishLoad(with: YouTubeFeedIssue.loadFailed(message))
+            self.owner?.finishLoad(with: YouTubeFeedIssue.loadFailed(message), navigation: navigation)
         }
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         let message = error.localizedDescription
         Task { @MainActor in
-            YouTubeFeedReader.shared.finishLoad(with: YouTubeFeedIssue.loadFailed(message))
+            self.owner?.finishLoad(with: YouTubeFeedIssue.loadFailed(message), navigation: navigation)
         }
     }
+}
+
+/// Only display this cache after the web session has been checked. Signing out or reopening
+/// sign-in invalidates it so recommendations cannot carry over to another account.
+struct YouTubeHomeSnapshot: Codable {
+    let videos: [Video]
+    let avatars: [String: URL]
+    let savedAt: Date
+}
+
+struct YouTubeHomeCache {
+    let url: URL
+    init(url: URL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("youtube-home-v1.json")) {
+        self.url = url
+    }
+    func load(now: Date = Date()) -> YouTubeHomeSnapshot? {
+        guard let data = try? Data(contentsOf: url),
+              let snapshot = try? JSONDecoder().decode(YouTubeHomeSnapshot.self, from: data),
+              !snapshot.videos.isEmpty,
+              now.timeIntervalSince(snapshot.savedAt) >= 0,
+              now.timeIntervalSince(snapshot.savedAt) < 24 * 60 * 60 else { return nil }
+        return snapshot
+    }
+    func save(_ snapshot: YouTubeHomeSnapshot) {
+        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: url, options: .atomic)
+    }
+    func clear() { try? FileManager.default.removeItem(at: url) }
 }

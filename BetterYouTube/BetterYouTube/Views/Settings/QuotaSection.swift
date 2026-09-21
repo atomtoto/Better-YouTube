@@ -25,8 +25,8 @@ struct QuotaSection: View {
             Text("""
             The Data API gives a Cloud project \(QuotaTracker.dailyLimit.formatted()) units a day \
             and no way to ask what is left, so this is the app's own tally of what it has spent: \
-            a search costs 100 units, every other read 1, and each change to the Watch Later \
-            playlist 50. Anything else using the same API key spends from the same allowance \
+            a search costs 100 units, every other read 1, and each change to a custom playlist \
+            costs 50. Anything else using the same API key spends from the same allowance \
             without appearing here. Google refills it at midnight Pacific time.
             """)
         }

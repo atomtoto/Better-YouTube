@@ -1,34 +1,23 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Watch Later, which YouTube closed to apps in 2016 — so the app keeps one of its own, and
-/// this is where what YouTube's list already holds gets brought across.
+/// The real Watch Later connection and a generic Takeout playlist importer.
 struct WatchLaterSection: View {
-    @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var watchLater: WatchLaterStore
 
     @State private var showsTakeoutImporter = false
-    @State private var importSummary: WatchLaterStore.ImportSummary?
+    @State private var showsDestinationPicker = false
+    @State private var importedVideos: [Video] = []
+    @State private var importSummary: WatchLaterStore.TakeoutImport?
 
     var body: some View {
         Section {
-            if auth.isSignedIn {
-                LabeledContent("Playlist", value: WatchLaterStore.playlistTitle)
+            LabeledContent(
+                "Playlist",
+                value: watchLater.usesYouTubeWatchLater ? "YouTube · Watch Later" : "On This Device"
+            )
 
-                let strays = watchLater.videosOnlyOnThisDevice.count
-                if strays > 0 {
-                    Button {
-                        Task { await watchLater.uploadVideosOnlyOnThisDevice() }
-                    } label: {
-                        Text(strays == 1
-                             ? "Add 1 video kept on this device"
-                             : "Add \(strays) videos kept on this device")
-                    }
-                    .disabled(watchLater.isLoading)
-                }
-            }
-
-            // Available signed out as well: the import lands on the device either way.
+            // Parsing is available signed out; destination choices are shown afterwards.
             Button {
                 importSummary = nil
                 showsTakeoutImporter = true
@@ -57,17 +46,7 @@ struct WatchLaterSection: View {
         } header: {
             Text("Watch Later")
         } footer: {
-            Text("""
-            YouTube's own Watch Later has been closed to apps since 2016. Signed in, this app keeps \
-            a private playlist of its own instead — it syncs across your devices and appears in the \
-            YouTube app like any other, at 50 of the 10,000 daily quota units per change, so \
-            roughly 200 a day. To bring across what YouTube's list already holds, export it from \
-            Google Takeout, unzip the archive, and import the CSV under “YouTube and YouTube \
-            Music” → “playlists” — Watch Later exports as “Vidéos de Watch later.csv”, named in \
-            your account's language. An import takes the \(WatchLaterStore.importLimit) most \
-            recently added and leaves the rest. Imported videos land on this device; the button \
-            above sends them up to the playlist.
-            """)
+            Text("Connect to youtube.com to use YouTube's actual Watch Later playlist. Otherwise, Watch Later stays on this device. A Google Takeout playlist can be imported into Watch Later or any custom playlist you choose.")
         }
         // Takeout's CSVs arrive as plain text as often as with a CSV type, so accept both.
         .fileImporter(
@@ -78,18 +57,27 @@ struct WatchLaterSection: View {
             switch result {
             case .success(let urls):
                 guard let url = urls.first else { return }
-                Task { importSummary = await watchLater.importTakeout(from: url) }
+                Task {
+                    let result = await watchLater.importTakeout(from: url)
+                    importSummary = result
+                    importedVideos = result.videos
+                    showsDestinationPicker = result.failure == nil && !result.videos.isEmpty
+                }
             case .failure(let error):
                 importSummary = .init(failure: error.localizedDescription)
             }
         }
+        .sheet(isPresented: $showsDestinationPicker) {
+            PlaylistPickerView(videos: importedVideos)
+        }
     }
 
     /// The result of an import, in the terms someone reading it cares about.
-    private static func describe(_ summary: WatchLaterStore.ImportSummary) -> String {
+    private static func describe(_ summary: WatchLaterStore.TakeoutImport) -> String {
         if let failure = summary.failure { return failure }
-        var parts = [summary.added == 1 ? "Added 1 video" : "Added \(summary.added) videos"]
-        if summary.alreadyThere > 0 { parts.append("\(summary.alreadyThere) already saved") }
+        var parts = [summary.videos.count == 1
+                     ? "Found 1 video — choose its destination"
+                     : "Found \(summary.videos.count) videos — choose their destination"]
         if summary.missing > 0 { parts.append("\(summary.missing) no longer on YouTube") }
         // Say what was left behind, or a truncated import looks like a botched one.
         if summary.skippedOlder > 0 { parts.append("\(summary.skippedOlder) older ones skipped") }

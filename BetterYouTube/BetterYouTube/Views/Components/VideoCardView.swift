@@ -37,12 +37,12 @@ struct VideoCardView: View {
 /// Full-width feed card: big artwork, then avatar + title + metadata, the way the YouTube app
 /// lays out its home feed — with Apple's type scale, corner radii and materials.
 struct FeedVideoCard: View {
+    @State private var saveError: String?
+    @State private var showsPlaylistPicker = false
     let video: Video
     var avatarURL: URL?
 
-    @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var downloads: DownloadStore
-    @EnvironmentObject private var downloadManager: DownloadManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -74,29 +74,11 @@ struct FeedVideoCard: View {
                 Spacer(minLength: 0)
 
                 Menu {
-                    DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
-
-                    Button {
-                        library.toggleWatchLater(video)
-                    } label: {
-                        Label(
-                            library.isInWatchLater(video) ? "Remove from Watch Later" : "Save to Watch Later",
-                            systemImage: library.isInWatchLater(video) ? "clock.badge.xmark" : "clock"
-                        )
-                    }
-                    Button {
-                        library.toggleFavorite(video)
-                    } label: {
-                        Label(
-                            library.isFavorite(video) ? "Remove from Favorites" : "Add to Favorites",
-                            systemImage: library.isFavorite(video) ? "heart.slash" : "heart"
-                        )
-                    }
-                    if let url = video.watchURL {
-                        ShareLink(item: url) {
-                            Label("Share", systemImage: "square.and.arrow.up")
-                        }
-                    }
+                    VideoMenuItems(
+                        video: video,
+                        showPlaylistPicker: { showsPlaylistPicker = true },
+                        reportWatchLaterError: { saveError = $0 }
+                    )
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.footnote.weight(.semibold))
@@ -108,6 +90,12 @@ struct FeedVideoCard: View {
         }
         .padding(.horizontal, Theme.Spacing.gutter)
         .contentShape(Rectangle())
+        .sheet(isPresented: $showsPlaylistPicker) { PlaylistPickerView(video: video) }
+        .alert("Watch Later", isPresented: Binding(
+            get: { saveError != nil }, set: { if !$0 { saveError = nil } }
+        )) {
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: { Text(saveError ?? "") }
     }
 
     private var metadataLine: String {

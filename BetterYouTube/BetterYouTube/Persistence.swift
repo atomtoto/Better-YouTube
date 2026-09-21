@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 /// Persists the on-device library (favorites, watch later, watch history) as JSON in Documents.
 ///
@@ -110,50 +111,48 @@ final class LibraryStore: ObservableObject {
     }
 }
 
-/// Watch Later, backed by a real playlist in the signed-in account.
-///
-/// The account's own `WL` playlist has been closed to the API since 2016 and no scope reopens it,
-/// so the app keeps a private playlist of its own instead: created on first use, found again by
-/// title on a second device or after a reinstall. It is an ordinary playlist, so it syncs
-/// everywhere and shows up in the YouTube app like any other. Signed out, this falls straight
-/// through to `LibraryStore`'s on-device list, which is what the app has always used.
-///
-/// The playlist is the source of truth and `entries` is a cache of it. A change is applied
-/// locally at once so nothing waits on the network, then sent; if the send fails the local change
-/// is rolled back and the reason surfaced. There is no offline queue — a write that failed is
-/// reported as failed rather than quietly remembered.
+/// The real YouTube Watch Later through the web session. Without that session, the app keeps the
+/// existing on-device list. It never creates a substitute playlist in the Google account.
 @MainActor
 final class WatchLaterStore: ObservableObject {
     static let shared = WatchLaterStore()
-
-    /// Also how the playlist is found again when its id isn't known: renaming it in YouTube means
-    /// the app will make a new one.
-    static let playlistTitle = "Watch Later — Better YouTube"
-    private static let playlistDescription =
-        "Your Watch Later list from Better YouTube. YouTube's own Watch Later is closed to apps, so this stands in for it."
-    private static let playlistIdKey = "watch_later_playlist_id"
 
     @Published private(set) var entries: [PlaylistEntry] = []
     @Published private(set) var isLoading = false
     /// Set when a write or a refresh failed, for the UI to show. Cleared by the next success.
     @Published private(set) var errorMessage: String?
 
-    private var playlistId: String? {
-        didSet { UserDefaults.standard.set(playlistId, forKey: Self.playlistIdKey) }
-    }
-
-    private var auth: GoogleAuthService { .shared }
     private var local: LibraryStore { .shared }
     private let service = YouTubeAPIService.shared
+    private var sessionObservation: AnyCancellable?
+    @Published private(set) var usesYouTubeWatchLater = false
+    @Published private(set) var sessionRevision = UUID()
+    @Published private(set) var pendingVideoIDs: Set<String> = []
 
     private init() {
-        playlistId = UserDefaults.standard.string(forKey: Self.playlistIdKey)
+        // Remove the obsolete pointer. The playlist itself belongs to the user, so the app does
+        // not delete it remotely; it simply never discovers, displays or writes to it again.
+        UserDefaults.standard.removeObject(forKey: "watch_later_playlist_id")
+        let session = YouTubeWebSession.shared
+        usesYouTubeWatchLater = session.isSignedIn
+        sessionObservation = session.$isSignedIn.combineLatest(session.$feedGeneration)
+            .removeDuplicates { $0.0 == $1.0 && $0.1 == $1.1 }
+            .dropFirst().sink { [weak self] signedIn, _ in
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.usesYouTubeWatchLater = signedIn
+                    self.entries = []
+                    self.errorMessage = nil
+                    // Library reloads on demand; do not compete with Home during app startup.
+                    self.sessionRevision = UUID()
+                }
+            }
     }
 
     // MARK: What the UI reads
 
     /// True when the list lives in the account rather than only on this device.
-    var isSynced: Bool { auth.isSignedIn }
+    var isSynced: Bool { usesYouTubeWatchLater }
 
     var videos: [Video] { isSynced ? entries.map(\.video) : local.watchLater }
 
@@ -161,34 +160,21 @@ final class WatchLaterStore: ObservableObject {
         isSynced ? entries.contains { $0.video.id == video.id } : local.isInWatchLater(video)
     }
 
-    /// Videos on this device that the account playlist doesn't have yet.
-    var videosOnlyOnThisDevice: [Video] {
-        guard isSynced else { return [] }
-        return local.watchLater.filter { video in !entries.contains { $0.video.id == video.id } }
-    }
-
     // MARK: Reading
 
     func refresh() async {
-        guard isSynced else { return }
-        guard let id = await existingPlaylistId() else {
-            entries = []
-            return
-        }
-
+        guard usesYouTubeWatchLater else { entries = []; return }
+        let generation = YouTubeWebSession.shared.feedGeneration
         isLoading = true
         defer { isLoading = false }
         do {
-            entries = try await service.entries(inPlaylist: id)
+            let fetched = try await YouTubeWebPlaylistService.shared.entries()
+            guard usesYouTubeWatchLater, generation == YouTubeWebSession.shared.feedGeneration else { return }
+            entries = fetched
             errorMessage = nil
-        } catch APIError.notFound {
-            // Deleted from YouTube, or belonging to the account that was signed in before. Forget
-            // it so the next add builds a fresh one instead of failing forever. Only a 404 means
-            // this — treating every failure as "gone" would make a quota error spawn a duplicate.
-            playlistId = nil
-            entries = []
-            errorMessage = nil
+        } catch is CancellationError {
         } catch {
+            guard generation == YouTubeWebSession.shared.feedGeneration else { return }
             errorMessage = error.localizedDescription
         }
     }
@@ -196,25 +182,20 @@ final class WatchLaterStore: ObservableObject {
     /// Clears the cached account state. Called when signing out, since the next account will have
     /// a playlist of its own.
     func reset() {
+        sessionRevision = UUID()
         entries = []
-        playlistId = nil
         errorMessage = nil
     }
 
     // MARK: Writing
 
     func toggle(_ video: Video) async {
-        guard isSynced else {
+        guard usesYouTubeWatchLater else {
             local.toggleWatchLater(video)
+            errorMessage = nil
             return
         }
-        if let existing = entries.first(where: { $0.video.id == video.id }) {
-            // Still on its way to YouTube: it has no item id yet, so there is nothing to delete.
-            guard !Self.isPending(existing) else { return }
-            await remove(existing)
-        } else {
-            await add(video)
-        }
+        await setWebSaved(!contains(video), video: video)
     }
 
     func remove(atOffsets offsets: IndexSet) async {
@@ -222,63 +203,33 @@ final class WatchLaterStore: ObservableObject {
             local.removeWatchLater(at: offsets)
             return
         }
-        // Resolved up front: each removal mutates `entries`, so the offsets go stale as we go.
+        // Resolve up front because every confirmed web removal replaces `entries`.
         let doomed = offsets.compactMap { index -> PlaylistEntry? in
             entries.indices.contains(index) ? entries[index] : nil
         }
-        for entry in doomed where !Self.isPending(entry) {
-            await remove(entry)
-        }
-    }
-
-    /// Sends the videos this device kept before the account playlist existed, oldest first so the
-    /// newest ends up on top. 50 quota units each, so it stops at the first refusal rather than
-    /// burning the day's allowance on retries.
-    func uploadVideosOnlyOnThisDevice() async {
-        guard isSynced else { return }
-        isLoading = true
-        defer { isLoading = false }
-
-        for video in videosOnlyOnThisDevice.reversed() {
-            do {
-                let id = try await resolvePlaylistId(creatingIfMissing: true)
-                let itemId = try await service.addToPlaylist(playlistId: id, videoId: video.id)
-                entries.insert(PlaylistEntry(id: itemId, video: video), at: 0)
-                errorMessage = nil
-            } catch {
-                errorMessage = error.localizedDescription
-                return
-            }
-        }
+        for entry in doomed { await setWebSaved(false, video: entry.video) }
     }
 
     // MARK: Importing a Takeout export
 
-    /// What an import did, in the terms the user cares about.
-    struct ImportSummary: Equatable {
-        var added = 0
-        var alreadyThere = 0
+    struct TakeoutImport: Equatable {
+        var videos: [Video] = []
         /// Ids the file listed that YouTube no longer serves — deleted or gone private.
         var missing = 0
         /// Older entries left behind by the cap below.
         var skippedOlder = 0
         var failure: String?
 
-        var isEmpty: Bool { added == 0 && alreadyThere == 0 && missing == 0 }
+        var isEmpty: Bool { videos.isEmpty && missing == 0 }
     }
 
-    /// How many of the export's videos an import takes. A Watch Later built over years is mostly
-    /// archaeology, and every one of them eventually costs 50 quota units to push to the playlist,
-    /// so the import keeps the recent end and says how much it left behind.
+    /// Keep imports bounded. Custom playlist writes cost 50 quota units each and the website path
+    /// also confirms every addition, so an unbounded historical import would be surprising.
     static let importLimit = 60
 
-    /// Reads a playlist CSV from a Google Takeout export into the on-device list, keeping the
-    /// `importLimit` most recently added.
-    ///
-    /// It lands on the device rather than in the account playlist on purpose: adding to a playlist
-    /// costs 50 quota units a video, so a list of any size would blow through the day's 10,000 in
-    /// one go. Settings pushes them up afterwards, at whatever pace the quota allows.
-    func importTakeout(from url: URL) async -> ImportSummary {
+    /// Reads a playlist CSV without choosing its destination. Settings presents the destination
+    /// afterwards, so importing a Takeout file can never recreate the removed substitute list.
+    func importTakeout(from url: URL) async -> TakeoutImport {
         isLoading = true
         defer { isLoading = false }
 
@@ -287,17 +238,17 @@ final class WatchLaterStore: ObservableObject {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
 
         guard let data = try? Data(contentsOf: url) else {
-            return ImportSummary(failure: "Couldn't read that file.")
+            return TakeoutImport(failure: "Couldn't read that file.")
         }
         // Takeout writes UTF-8; fall back to Latin-1 rather than refusing a file over one byte.
         guard let text = String(data: data, encoding: .utf8)
                 ?? String(data: data, encoding: .isoLatin1) else {
-            return ImportSummary(failure: "Couldn't read that file as text.")
+            return TakeoutImport(failure: "Couldn't read that file as text.")
         }
 
         let rows = TakeoutPlaylistCSV.rows(in: text)
         guard !rows.isEmpty else {
-            return ImportSummary(
+            return TakeoutImport(
                 failure: "No videos in that file. In the Takeout archive, look under “YouTube and YouTube Music” → “playlists” and pick the CSV for the playlist you want."
             )
         }
@@ -306,76 +257,49 @@ final class WatchLaterStore: ObservableObject {
         let ids = TakeoutPlaylistCSV.mostRecentlyAdded(in: rows, limit: Self.importLimit)
         let skippedOlder = rows.count - ids.count
 
-        let known = Set(local.watchLater.map(\.id))
-        let alreadyThere = ids.filter { known.contains($0) }.count
-        let wanted = ids.filter { !known.contains($0) }
-
         do {
-            let videos = try await service.videos(ids: wanted)
-            local.addToWatchLater(videos)
-            return ImportSummary(
-                added: videos.count,
-                alreadyThere: alreadyThere,
-                missing: wanted.count - videos.count,
+            let fetched = try await service.videos(ids: ids)
+            let byID = Dictionary(fetched.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            let videos = ids.compactMap { byID[$0] }
+            return TakeoutImport(
+                videos: videos,
+                missing: ids.count - videos.count,
                 skippedOlder: skippedOlder
             )
         } catch {
-            return ImportSummary(failure: error.localizedDescription)
+            return TakeoutImport(failure: error.localizedDescription)
         }
     }
 
     // MARK: Private
 
-    private static func pendingId(for video: Video) -> String { "pending:\(video.id)" }
-    private static func isPending(_ entry: PlaylistEntry) -> Bool { entry.id.hasPrefix("pending:") }
-
-    private func add(_ video: Video) async {
-        entries.insert(PlaylistEntry(id: Self.pendingId(for: video), video: video), at: 0)
-        do {
-            let id = try await resolvePlaylistId(creatingIfMissing: true)
-            let itemId = try await service.addToPlaylist(playlistId: id, videoId: video.id)
-            if let index = entries.firstIndex(where: { $0.id == Self.pendingId(for: video) }) {
-                entries[index] = PlaylistEntry(id: itemId, video: video)
-            }
+    /// Explicit save, unlike toggle: swiping twice must never remove a saved video.
+    func add(_ video: Video) async {
+        guard usesYouTubeWatchLater else {
+            local.addToWatchLater([video])
             errorMessage = nil
+            return
+        }
+        guard !contains(video) else { errorMessage = nil; return }
+        await setWebSaved(true, video: video)
+    }
+
+    private func setWebSaved(_ saved: Bool, video: Video) async {
+        guard pendingVideoIDs.insert(video.id).inserted else { return }
+        defer { pendingVideoIDs.remove(video.id) }
+        let generation = YouTubeWebSession.shared.feedGeneration
+        do {
+            let fetched = try await YouTubeWebPlaylistService.shared.setSaved(saved, videoID: video.id)
+            guard usesYouTubeWatchLater, generation == YouTubeWebSession.shared.feedGeneration else { return }
+            entries = fetched
+            errorMessage = nil
+        } catch is CancellationError {
         } catch {
-            entries.removeAll { $0.id == Self.pendingId(for: video) }
+            guard generation == YouTubeWebSession.shared.feedGeneration else { return }
             errorMessage = error.localizedDescription
         }
     }
 
-    private func remove(_ entry: PlaylistEntry) async {
-        guard let index = entries.firstIndex(of: entry) else { return }
-        entries.remove(at: index)
-        do {
-            try await service.removePlaylistItem(id: entry.id)
-            errorMessage = nil
-        } catch {
-            entries.insert(entry, at: min(index, entries.count))
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    /// The playlist's id if it exists, without creating one — so simply opening Library never
-    /// leaves a playlist behind in the account of someone who never used the feature.
-    private func existingPlaylistId() async -> String? {
-        if let playlistId { return playlistId }
-        guard let found = try? await service.myPlaylists().first(where: { $0.title == Self.playlistTitle })
-        else { return nil }
-        playlistId = found.id
-        return found.id
-    }
-
-    private func resolvePlaylistId(creatingIfMissing: Bool) async throws -> String {
-        if let id = await existingPlaylistId() { return id }
-        guard creatingIfMissing else { throw APIError.notSignedIn }
-        let created = try await service.createPlaylist(
-            title: Self.playlistTitle,
-            description: Self.playlistDescription
-        )
-        playlistId = created
-        return created
-    }
 }
 
 /// Recent search terms, mirroring the "Recently Searched" list in Apple's own apps.

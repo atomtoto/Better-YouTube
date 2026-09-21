@@ -40,30 +40,41 @@ The app talks to the public **YouTube Data API v3**. Two levels of access exist:
 | Access | Needs | Gives you |
 | --- | --- | --- |
 | API key | A key from the Google Cloud Console | Trending, search, video details, channels, comments, public playlists |
-| OAuth 2.0 sign-in | An iOS OAuth client ID | Your subscriptions, your playlists, your liked videos, your channel, liking a video, and the app's own Watch Later playlist |
+| OAuth 2.0 sign-in | An iOS OAuth client ID | Your subscriptions, your custom playlists, your liked videos, your channel, and liking a video |
 
-**Not available at any level:** the account's **Watch Later** (`WL`) and **watch history** (`HL`)
+**Not available through the public Data API:** the account's **Watch Later** (`WL`) and **watch history** (`HL`)
 playlists — Google removed API access to both in 2016 — and the personalized home feed. No scope
 reopens them, and they are absent from the Data Portability API's YouTube export too.
 **Recommendations** went the same way: `activities.list?home=true` in 2016 and
 `search.list?relatedToVideoId` in August 2023, so no endpoint returns YouTube's suggestions
 either. What the app does instead is under [Recommendations](#recommendations).
 
-Watch history therefore stays on the device. **Watch Later works around it**: rather than reading
-`WL`, the app creates and manages a private playlist of its own ("Watch Later — Better YouTube")
-through the ordinary playlist endpoints. It is a real playlist, so it syncs across your devices and
-shows up in the YouTube app — which the on-device list never did. Signed out, the on-device list is
-still what you get. The catch is quota: `playlistItems.insert` and `.delete` cost **50 units** each,
-so about 200 changes a day.
+Watch history stays on the device. With **Settings → YouTube Home → youtube.com** connected,
+**Watch Later uses the account's real `WL` playlist**, including reads, additions and removals.
+Requests run inside the signed-in website's WebKit context; authentication cookie values are
+not returned to Swift, persisted separately, logged or sent to another service. This uses
+YouTube's internal website endpoints, not a supported public API, and may break when YouTube
+changes them. Pagination and server confirmation are checked; failures never silently save to
+a different list. Live account behavior still needs verification on a signed-in device.
 
-Whatever your real Watch Later already holds can be carried over once, through **Google Takeout**:
+Without a web session, Watch Later stays on the device. The app no longer discovers, creates or
+writes to the former substitute playlist. A stale stored identifier is discarded on startup;
+the remote playlist itself remains in the user's account until they choose to delete it.
+
+Notifications offer **Watch Later** on a leading swipe. Long-press menus on videos, including
+notifications, offer **Add to Playlist…**, with a native picker for custom playlists from the
+Google OAuth account connected in Settings. This account can differ from the youtube.com account.
+Custom playlist selection is deliberately absent from swipe actions.
+
+Any playlist exported through **Google Takeout** can be imported:
 export *YouTube and YouTube Music → playlists*, unzip, and import the CSV from Settings. The
 importer only looks for video IDs, so it works for any playlist in the export, whatever Google has
 renamed the files to this year (Watch Later comes out as `Vidéos de Watch later.csv`, in the
 account's own language). An import takes the **60 most recently added** — decided by the add date
 the export carries, not by the order of the lines — and reports how many older ones it left behind.
-Imported videos land on the device; sending them up to the playlist is a separate, explicit step,
-because that part is what costs quota.
+After parsing the file, the app asks for a destination: the real Watch Later playlist when the web
+session is connected, or a custom playlist from the Google account. Custom playlist writes cost
+50 quota units per video and stop visibly if the quota or a request fails.
 
 ### Quota
 

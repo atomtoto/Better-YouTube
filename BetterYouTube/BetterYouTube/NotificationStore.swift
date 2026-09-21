@@ -11,6 +11,11 @@ struct NotificationItem: Identifiable, Codable, Equatable, Hashable {
     let date: Date
     var isRead: Bool
 
+    var video: Video {
+        Video(id: videoId, title: title, channelId: channelId, channelTitle: channelTitle,
+              description: "", thumbnailURL: thumbnailURL, publishedAt: nil)
+    }
+
     init(video: Video, date: Date = Date()) {
         self.id = video.id
         self.videoId = video.id
@@ -181,7 +186,7 @@ final class NotificationStore: ObservableObject {
 
     private func performYouTubeImport(enableNotifications: Bool) async -> YouTubeImport {
         do {
-            let ids = try await YouTubeFeedReader.shared.harvest(from: YouTubeWebSession.notificationsURL)
+            let ids = try await YouTubeFeedReader.notifications.harvest(from: YouTubeWebSession.notificationsURL)
             guard !ids.isEmpty else { return YouTubeImport() }
             let videos = try await YouTubeAPIService.shared.videos(ids: ids)
             guard !videos.isEmpty else {

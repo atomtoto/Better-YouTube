@@ -17,27 +17,19 @@ import Foundation
 final class LocalPlayback {
     let player = AVPlayer()
     #if os(iOS)
-    var pictureInPictureController: AVPictureInPictureController?
-    private let pictureInPictureDelegate = LocalPictureInPictureDelegate()
+    /// Installed by the inline AVPlayerViewController. Rotation requests are queued until the
+    /// surface exists, which also covers launching a downloaded video while already landscape.
+    var onFullScreenRequest: ((Bool) -> Void)? {
+        didSet { onFullScreenRequest?(wantsFullScreen) }
+    }
+    var onFullScreenChanged: ((Bool) -> Void)?
+    private(set) var wantsFullScreen = false
 
-    func attachPictureInPicture(to layer: AVPlayerLayer) {
-        guard AVPictureInPictureController.isPictureInPictureSupported() else { return }
-        pictureInPictureController = AVPictureInPictureController(playerLayer: layer)
-        pictureInPictureController?.delegate = pictureInPictureDelegate
+    func setFullScreen(_ active: Bool) {
+        wantsFullScreen = active
+        onFullScreenRequest?(active)
     }
     #endif
-
-    func startPictureInPicture() -> Bool {
-        #if os(iOS)
-        guard let controller = pictureInPictureController,
-              controller.isPictureInPicturePossible else { return false }
-        controller.startPictureInPicture()
-        return true
-        #else
-        return false
-        #endif
-    }
-
     /// Position and duration, in seconds.
     var onProgress: ((Double, Double) -> Void)?
     /// Playing, as opposed to paused or stalled.
@@ -120,7 +112,7 @@ final class LocalPlayback {
     /// downloaded takes over and the embed becomes the one playing.
     func stop() {
         #if os(iOS)
-        pictureInPictureController?.stopPictureInPicture()
+        setFullScreen(false)
         #endif
         player.pause()
         player.replaceCurrentItem(with: nil)
@@ -171,26 +163,3 @@ final class LocalPlayback {
         onProgress?(elapsed, total.isFinite ? total : 0)
     }
 }
-
-#if os(iOS)
-private final class LocalPictureInPictureDelegate: NSObject, AVPictureInPictureControllerDelegate {
-    func pictureInPictureController(
-        _ controller: AVPictureInPictureController,
-        failedToStartPictureInPictureWithError error: Error
-    ) {
-        Task { @MainActor in
-            PlayerManager.shared.pictureInPictureError = error.localizedDescription
-        }
-    }
-
-    func pictureInPictureController(
-        _ controller: AVPictureInPictureController,
-        restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void
-    ) {
-        Task { @MainActor in
-            PlayerManager.shared.expand()
-            completionHandler(true)
-        }
-    }
-}
-#endif

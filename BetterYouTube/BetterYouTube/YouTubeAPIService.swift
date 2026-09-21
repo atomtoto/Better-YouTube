@@ -552,7 +552,7 @@ actor YouTubeAPIService {
         return items.map(Playlist.init(resource:))
     }
 
-    // MARK: - The app's own playlist (OAuth, read/write)
+    // MARK: - Custom playlists (OAuth, read/write)
     //
     // The account's real Watch Later (`WL`) has been closed to the API since 2016 and no scope
     // reopens it, so the app keeps a playlist of its own instead — a normal private playlist,

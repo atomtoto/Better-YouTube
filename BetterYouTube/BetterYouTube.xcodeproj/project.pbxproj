@@ -14,11 +14,13 @@
 		1FFA8590CFC902B7376F16A8 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF161D8919053B290B75B5EB /* HomeViewModel.swift */; };
 		3E7B12A4C56D8F09B1470D2E /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41F60B8D2A93E571806C4BD /* NowPlaying.swift */; };
 		7B0C934FE18A2D6053BF71AC /* AppReset.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9A257E3016BC4F82A3E85D1 /* AppReset.swift */; };
+		D10CA5100000000000000001 /* YouTubeWebPlaylistService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA5100000000000000002 /* YouTubeWebPlaylistService.swift */; };
 		2C9E5A71D48B3F0617AE22B4 /* YouTubeWebSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F1D34C6B27E509AC4D6713F /* YouTubeWebSession.swift */; };
 		5D2A61B0E39C4A7182FB5C60 /* YouTubeWebFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E90B23F165D8C40E2B94A1 /* YouTubeWebFeed.swift */; };
 		3CFA4EEAB6309A184C48E69D /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6A4A758FCEBAA99EF9A975 /* LibraryViewModel.swift */; };
 		42B657DF6DFAEEA144B002EE /* VideoDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96B410CBE5CAEC145B8691C5 /* VideoDetailViewModel.swift */; };
 		45ED48BFA8B901A1E97C89CA /* PlayerDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B4B4AE0B4B4787493604FC2 /* PlayerDetailsView.swift */; };
+		D10CA5200000000000000001 /* PlaylistPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA5200000000000000002 /* PlaylistPickerView.swift */; };
 		4700337B5FAC53BFA757672E /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7F28A6D4028554035CB0ECA /* HomeView.swift */; };
 		5AF94EA3A63C6046811F06CD /* ExpandedPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE2744C99CF77303B5A53C52 /* ExpandedPlayerView.swift */; };
 		60BFD607DBBB1AC2BA82A92B /* ChannelViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC2AB4BA1EE45E903DE78F4 /* ChannelViewModel.swift */; };
@@ -66,6 +68,8 @@
 		A1B2C3D4E5F600112211CC11 /* WatchLaterSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112211BB11 /* WatchLaterSection.swift */; };
 		A1B2C3D4E5F600112212CC12 /* YouTubeHomeSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112212BB12 /* YouTubeHomeSection.swift */; };
 		A1B2C3D4E5F600112299CC99 /* SettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F600112299BB99 /* SettingsPane.swift */; };
+		D10CA5300000000000000001 /* YouTubeWebPlaylistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA5300000000000000002 /* YouTubeWebPlaylistTests.swift */; };
+		D10CA4000000000000000001 /* YouTubeHomeCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA4000000000000000002 /* YouTubeHomeCacheTests.swift */; };
 		BEEFB0000000000000000000 /* CountFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFF0000000000000000000 /* CountFormatterTests.swift */; };
 		BEEFB1000000000000000000 /* DownloadConfigLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFF1000000000000000000 /* DownloadConfigLinkTests.swift */; };
 		BEEFB2000000000000000000 /* DurationFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFF2000000000000000000 /* DurationFormatterTests.swift */; };
@@ -103,6 +107,7 @@
 		6B4B4AE0B4B4787493604FC2 /* PlayerDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlayerDetailsView.swift; path = PlayerDetailsView.swift; sourceTree = "<group>"; };
 		6BD1CCEBA5BC1F5564078632 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		6E5D48A1C0B72F934D18A5C7 /* QuotaTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaTracker.swift; sourceTree = "<group>"; };
+		D10CA5100000000000000002 /* YouTubeWebPlaylistService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeWebPlaylistService.swift; sourceTree = "<group>"; };
 		8F1D34C6B27E509AC4D6713F /* YouTubeWebSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeWebSession.swift; sourceTree = "<group>"; };
 		A7E90B23F165D8C40E2B94A1 /* YouTubeWebFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = YouTubeWebFeed.swift; path = YouTubeWebFeed.swift; sourceTree = "<group>"; };
 		C41F60B8D2A93E571806C4BD /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
@@ -128,6 +133,7 @@
 		F07915B6C44135B78F0C9D66 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
 		F2AB4B2A9355C5BE1085AE20 /* PlayerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlayerManager.swift; path = PlayerManager.swift; sourceTree = "<group>"; };
 		F3BA485BDDB7D18FEDC8D887 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D10CA5200000000000000002 /* PlaylistPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistPickerView.swift; sourceTree = "<group>"; };
 		F7F28A6D4028554035CB0ECA /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		FA6A4A758FCEBAA99EF9A975 /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryViewModel.swift; path = LibraryViewModel.swift; sourceTree = "<group>"; };
 		D9090FED0372DC1B642CEC83 /* DownloadStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DownloadStore.swift; path = DownloadStore.swift; sourceTree = "<group>"; };
@@ -152,6 +158,8 @@
 		A1B2C3D4E5F600112211BB11 /* WatchLaterSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLaterSection.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F600112212BB12 /* YouTubeHomeSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeHomeSection.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F600112299BB99 /* SettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPane.swift; sourceTree = "<group>"; };
+		D10CA5300000000000000002 /* YouTubeWebPlaylistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeWebPlaylistTests.swift; sourceTree = "<group>"; };
+		D10CA4000000000000000002 /* YouTubeHomeCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeHomeCacheTests.swift; sourceTree = "<group>"; };
 		BEEFF0000000000000000000 /* CountFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountFormatterTests.swift; sourceTree = "<group>"; };
 		BEEFF1000000000000000000 /* DownloadConfigLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadConfigLinkTests.swift; sourceTree = "<group>"; };
 		BEEFF2000000000000000000 /* DurationFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DurationFormatterTests.swift; sourceTree = "<group>"; };
@@ -212,6 +220,7 @@
 				E53F5E3377E0D4B22DB8C3CF /* DownloadsView.swift */,
 				6389BFBA5B84E6680E8B48C2 /* ChannelView.swift */,
 				A21370A0999F08944A80A55D /* EmptyStateView.swift */,
+				D10CA5200000000000000002 /* PlaylistPickerView.swift */,
 				F7F28A6D4028554035CB0ECA /* HomeView.swift */,
 				205910A80EFBDFAD9310F5CD /* LibraryView.swift */,
 				5A988341166DB56C3D423057 /* RootTabView.swift */,
@@ -254,6 +263,7 @@
 				61B079CDDB3B2E4D7C531283 /* Persistence.swift */,
 				6E5D48A1C0B72F934D18A5C7 /* QuotaTracker.swift */,
 				CD881385B495588F558E961F /* Utilities.swift */,
+				D10CA5100000000000000002 /* YouTubeWebPlaylistService.swift */,
 				8F1D34C6B27E509AC4D6713F /* YouTubeWebSession.swift */,
 				C41F60B8D2A93E571806C4BD /* NowPlaying.swift */,
 				D9A257E3016BC4F82A3E85D1 /* AppReset.swift */,
@@ -311,6 +321,8 @@
 			children = (
 				D10CA2000000000000000002 /* LocalDownloadTests.swift */,
 				D10CA2000000000000000004 /* Fixtures */,
+				D10CA5300000000000000002 /* YouTubeWebPlaylistTests.swift */,
+				D10CA4000000000000000002 /* YouTubeHomeCacheTests.swift */,
 				BEEFF0000000000000000000 /* CountFormatterTests.swift */,
 				BEEFF1000000000000000000 /* DownloadConfigLinkTests.swift */,
 				BEEFF2000000000000000000 /* DurationFormatterTests.swift */,
@@ -418,6 +430,7 @@
 				E83091452729593944F09C0A /* BetterYouTubeApp.swift in Sources */,
 				729A150EAE4793319564AD3F /* Models.swift in Sources */,
 				DD9C34817BEF71E78E3483E7 /* Persistence.swift in Sources */,
+				D10CA5100000000000000001 /* YouTubeWebPlaylistService.swift in Sources */,
 				2C9E5A71D48B3F0617AE22B4 /* YouTubeWebSession.swift in Sources */,
 				3E7B12A4C56D8F09B1470D2E /* NowPlaying.swift in Sources */,
 				7B0C934FE18A2D6053BF71AC /* AppReset.swift in Sources */,
@@ -431,6 +444,7 @@
 				42B657DF6DFAEEA144B002EE /* VideoDetailViewModel.swift in Sources */,
 				D48F23EB00D70C7A8F59E083 /* ChannelView.swift in Sources */,
 				C137247EE09FF7F5BE9BAB52 /* EmptyStateView.swift in Sources */,
+				D10CA5200000000000000001 /* PlaylistPickerView.swift in Sources */,
 				4700337B5FAC53BFA757672E /* HomeView.swift in Sources */,
 				883E82C72D4B8774B0085056 /* LibraryView.swift in Sources */,
 				7A740261748970FEF044EFF9 /* RootTabView.swift in Sources */,
@@ -482,6 +496,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				D10CA2000000000000000001 /* LocalDownloadTests.swift in Sources */,
+				D10CA5300000000000000001 /* YouTubeWebPlaylistTests.swift in Sources */,
+				D10CA4000000000000000001 /* YouTubeHomeCacheTests.swift in Sources */,
 				BEEFB0000000000000000000 /* CountFormatterTests.swift in Sources */,
 				BEEFB1000000000000000000 /* DownloadConfigLinkTests.swift in Sources */,
 				BEEFB2000000000000000000 /* DurationFormatterTests.swift in Sources */,

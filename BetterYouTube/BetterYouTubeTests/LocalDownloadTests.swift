@@ -338,3 +338,47 @@ struct LiveLocalDownloadTests {
         #expect((store.record(for: id)?.totalBytes ?? 0) > 0)
     }
 }
+
+#if os(iOS)
+import AVKit
+import UIKit
+
+@MainActor
+struct NativeLocalPlayerTests {
+    @Test("Full-screen requests are retained until the native surface is attached")
+    func queuedFullScreenRequest() {
+        let playback = LocalPlayback()
+        playback.setFullScreen(true)
+        var received: [Bool] = []
+        playback.onFullScreenRequest = { received.append($0) }
+        #expect(received == [true])
+        playback.stop()
+        #expect(received == [true, false])
+    }
+
+    @Test("Background audio detaches only the presentation and restores the same player item")
+    func backgroundPreservesPlayback() {
+        let playback = LocalPlayback()
+        playback.load(url: fixture("video.mp4"))
+        let item = playback.player.currentItem
+        let controller = AVPlayerViewController()
+        controller.player = playback.player
+        let coordinator = LocalPlayerSurface.Coordinator(playback: playback)
+        coordinator.attach(controller)
+        defer { coordinator.detach(); playback.stop() }
+
+        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        #expect(controller.player == nil)
+        #expect(playback.player.currentItem === item)
+        NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
+        #expect(controller.player === playback.player)
+        #expect(controller.player?.currentItem === item)
+
+        // An active PiP presentation must keep its player even while the app is away.
+        coordinator.playerViewControllerWillStartPictureInPicture(controller)
+        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        #expect(controller.player === playback.player)
+        coordinator.playerViewControllerDidStopPictureInPicture(controller)
+    }
+}
+#endif

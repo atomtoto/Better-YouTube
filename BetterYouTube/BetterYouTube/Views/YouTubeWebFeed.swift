@@ -12,6 +12,11 @@ struct YouTubeSignInView: View {
     var body: some View {
         NavigationStack {
             YouTubeWebPage(interceptsVideoTaps: false)
+                .onAppear { session.invalidateFeed() }
+                .onDisappear {
+                    session.invalidateFeed()
+                    Task { await session.refresh() }
+                }
                 .ignoresSafeArea(edges: .bottom)
                 .navigationTitle("youtube.com")
                 .inlineNavigationBar()
@@ -34,15 +39,32 @@ struct YouTubeSignInView: View {
 /// Taps on a video are caught and handed to the app's player, so the mini player, the history and
 /// the landscape full screen all keep working. Everything else navigates as YouTube intends.
 struct YouTubeWebFeedView: View {
+    @ObservedObject var navigation: YouTubeWebNavigationModel
+
     var body: some View {
-        YouTubeWebPage(interceptsVideoTaps: true)
+        YouTubeWebPage(interceptsVideoTaps: true, navigation: navigation)
     }
+}
+
+@MainActor
+final class YouTubeWebNavigationModel: ObservableObject {
+    @Published private(set) var canGoBack = false
+    weak var webView: WKWebView?
+
+    func adopt(_ webView: WKWebView) {
+        self.webView = webView
+        canGoBack = webView.canGoBack
+    }
+
+    func update() { canGoBack = webView?.canGoBack == true }
+    func goBack() { if webView?.canGoBack == true { webView?.goBack() } }
 }
 
 /// The web view behind both of the above.
 private struct YouTubeWebPage {
     /// Whether a tap on a video should open the app's player instead of YouTube's.
     let interceptsVideoTaps: Bool
+    var navigation: YouTubeWebNavigationModel? = nil
 
     /// Explicitly on the main actor: `makeUIView`/`makeNSView` are isolated by the representable
     /// protocol itself, and lifting the body out of them into a shared method left it nowhere.
@@ -75,20 +97,32 @@ private struct YouTubeWebPage {
         webView.customUserAgent = YouTubeWebSession.userAgent
         webView.navigationDelegate = coordinator
         webView.allowsBackForwardNavigationGestures = true
+        coordinator.attach(webView)
         webView.load(URLRequest(url: YouTubeWebSession.homeURL))
         return webView
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(interceptsVideoTaps: interceptsVideoTaps)
+        Coordinator(interceptsVideoTaps: interceptsVideoTaps, navigation: navigation)
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         static let handler = "youTubeVideoTap"
         private let interceptsVideoTaps: Bool
+        private weak var navigation: YouTubeWebNavigationModel?
+        private var backObservation: NSKeyValueObservation?
 
-        init(interceptsVideoTaps: Bool) {
+        init(interceptsVideoTaps: Bool, navigation: YouTubeWebNavigationModel?) {
             self.interceptsVideoTaps = interceptsVideoTaps
+            self.navigation = navigation
+        }
+
+        @MainActor
+        func attach(_ webView: WKWebView) {
+            navigation?.adopt(webView)
+            backObservation = webView.observe(\.canGoBack, options: [.initial, .new]) { [weak self] _, _ in
+                Task { @MainActor in self?.navigation?.update() }
+            }
         }
 
         /// Takes WebAuthn off the page, so signing in offers a password rather than a passkey.

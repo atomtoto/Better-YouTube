@@ -25,8 +25,8 @@ struct AccountSection: View {
             same type covers macOS — then open Google Auth Platform → Audience and add your own \
             Google account under Test users; while the consent screen is in Testing, every other \
             account is refused with "access_denied". Paste the client ID above to read your \
-            subscriptions, playlists and liked videos, and to keep your Watch Later as a playlist \
-            on your account. Watch history is not available through the API, so that list stays on \
+            subscriptions, custom playlists and liked videos. Watch Later uses the separate \
+            youtube.com session. Watch history is not available through the API, so that list stays on \
             this device.
 
             On the consent screen, tick the YouTube permission before Continue: left unticked, \

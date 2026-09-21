@@ -136,14 +136,8 @@ final class PlayerManager: ObservableObject {
 
     func startPictureInPicture() {
         if isLocal {
-            #if os(macOS)
             expand()
             pictureInPictureError = "Use the Picture in Picture button in the video's native playback controls."
-            #else
-            if !local.startPictureInPicture() {
-                pictureInPictureError = "Picture in Picture is not available yet for this video. Try again once playback has started."
-            }
-            #endif
             return
         }
         guard let frame = pictureInPictureFrame else {
@@ -247,6 +241,12 @@ final class PlayerManager: ObservableObject {
     /// above — the mini bar, the scrubber, the lock screen, the up-next queue — carries on
     /// working without knowing which player is behind it.
     private func wireLocalPlayback() {
+        #if os(iOS)
+        local.onFullScreenChanged = { [weak self] active in
+            guard let self, self.isLocal else { return }
+            self.setSystemFullScreen(active)
+        }
+        #endif
         local.onProgress = { [weak self] elapsed, duration in
             guard let self, self.isLocal else { return }
             if duration > 0, self.progress.duration != duration {
@@ -330,6 +330,11 @@ final class PlayerManager: ObservableObject {
         source = .local(file)
         local.load(url: file)
         local.play()
+        #if os(iOS)
+        // If playback starts while the phone is already on its side, setLandscape has already
+        // run. Queue the request here so AVKit still presents the same true full-screen player.
+        local.setFullScreen(isLandscape)
+        #endif
     }
 
     private func startEmbed(_ videoId: String) {
@@ -505,9 +510,12 @@ final class PlayerManager: ObservableObject {
             isFullScreen = landscape
         }
 
-        // A downloaded video has no page to hand anything to: `isFullScreen` above is already
-        // the whole story, and the layout fills the screen on its own.
-        guard !isLocal else { return }
+        #if os(iOS)
+        if isLocal {
+            local.setFullScreen(landscape)
+            return
+        }
+        #endif
         if landscape {
             requestSystemFullScreen()
         } else {

@@ -131,9 +131,10 @@ struct PlayerContainerView: View {
                         style: .continuous
                     )
                 )
+                // Local transport handles its own gestures; the header still allows collapse.
                 .simultaneousGesture(
                     collapseDrag(travel: layout.collapseTravel).gesture,
-                    including: player.isFullScreen ? .subviews : .all
+                    including: player.isFullScreen || player.isLocal ? .subviews : .all
                 )
                 .scaleEffect(scale)
                 .position(x: center.x, y: center.y)
@@ -160,7 +161,8 @@ struct PlayerContainerView: View {
                 artworkExtent: layout.artworkExtent,
                 labelWidth: layout.labelWidth,
                 compactness: layout.compactness,
-                style: layout.style
+                style: layout.style,
+                floatingControlDiameter: layout.floatingControlDiameter
             )
             .frame(width: bar.width, height: bar.height)
             .clipShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
@@ -216,7 +218,11 @@ struct PlayerContainerView: View {
     @ViewBuilder
     private var videoSurface: some View {
         if player.isLocal {
+            #if os(iOS)
+            LocalPlayerSurface(playback: player.local, showsControls: player.isExpanded)
+            #else
             LocalPlayerSurface(playback: player.local)
+            #endif
         } else {
             PlayerSurface(webView: player.webView)
         }
@@ -333,9 +339,18 @@ struct PlayerActions: View {
                 )
             }
         }
+        // AVKit exposes its own PiP button for local iOS playback.
+        #if os(iOS)
+        if !player.isLocal {
+            Button { player.startPictureInPicture() } label: {
+                Label("Picture in Picture", systemImage: "pip.enter")
+            }
+        }
+        #else
         Button { player.startPictureInPicture() } label: {
             Label("Picture in Picture", systemImage: "pip.enter")
         }
+        #endif
         if let video = player.currentVideo {
             DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
         }
@@ -416,8 +431,6 @@ private struct PlayerMetrics {
     let labelGap: CGFloat = 10
     #if os(macOS)
     let floatingVideoWidth: CGFloat = 320
-    #else
-    let floatingVideoWidth: CGFloat = 200
     #endif
 }
 
@@ -441,7 +454,14 @@ private struct PlayerLayout {
     func barFrame(at compactness: CGFloat) -> CGRect {
         if style == .floatingVideo {
             let availableWidth = max(0, size.width - metrics.barInset * 2)
-            let expandedWidth = min(metrics.floatingVideoWidth, availableWidth)
+            #if os(macOS)
+            let preferredWidth = metrics.floatingVideoWidth
+            #else
+            // Scale with the device instead of leaving Plus/Max phones and iPads with the same
+            // tiny 200-point card and controls as the smallest phone.
+            let preferredWidth = min(320, max(220, size.width * 0.54))
+            #endif
+            let expandedWidth = min(preferredWidth, availableWidth)
             let width = lerp(expandedWidth, compactBarWidth, compactness)
             let expandedVideoWidth = max(0, expandedWidth - metrics.artworkPadding * 2)
             let expandedHeight = expandedVideoWidth * 9 / 16 + metrics.artworkPadding * 2
@@ -560,6 +580,12 @@ private struct PlayerLayout {
         return max(0, full.width - artwork - controls - 4)
     }
 
+    var floatingControlDiameter: CGFloat {
+        // Visual size only. The buttons below keep a separate 44-point hit target and therefore
+        // do not need the oversized circles produced by a padded button style.
+        min(44, max(40, barFrame(at: 0).width * 0.14))
+    }
+
     func videoCenter(expansion: CGFloat) -> CGPoint {
         CGPoint(
             x: lerp(dockedVideoFrame.midX, expandedVideoFrame.midX, expansion),
@@ -621,6 +647,7 @@ private struct MiniPlayerControls: View {
     /// 0 the full-width bar, 1 the compact pill.
     let compactness: CGFloat
     let style: MiniPlayerStyle
+    let floatingControlDiameter: CGFloat
 
     @EnvironmentObject private var player: PlayerManager
 
@@ -653,32 +680,49 @@ private struct MiniPlayerControls: View {
                 Button {
                     player.togglePlayPause()
                 } label: {
-                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.body.weight(.semibold))
-                        .padding(2)
+                    floatingButtonFace(
+                        player.isPlaying ? "pause.fill" : "play.fill",
+                        diameter: floatingControlDiameter,
+                        iconSize: floatingControlDiameter * 0.36
+                    )
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
                 }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
-                .controlSize(.regular)
+                .buttonStyle(.plain)
                 .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
                 .opacity(Double(1 - compactness))
                 .allowsHitTesting(!isCompact)
             }
             .overlay(alignment: .topTrailing) {
                 Button { player.close() } label: {
-                    Image(systemName: "xmark")
-                        .font(.footnote.bold())
-                        .padding(2)
+                    floatingButtonFace("xmark", diameter: 32, iconSize: 12)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                 }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
-                .controlSize(.small)
-                .padding(8)
+                .buttonStyle(.plain)
+                .padding(4)
                 .accessibilityLabel("Close player")
                 .opacity(Double(1 - compactness))
                 .allowsHitTesting(!isCompact)
             }
             .overlay(alignment: .bottom) { progressLine }
+    }
+
+    private func floatingButtonFace(
+        _ systemImage: String,
+        diameter: CGFloat,
+        iconSize: CGFloat
+    ) -> some View {
+        ZStack {
+            Circle()
+                .fill(.black.opacity(0.58))
+                .overlay { Circle().stroke(.white.opacity(0.16), lineWidth: 0.5) }
+            Image(systemName: systemImage)
+                .font(.system(size: iconSize, weight: .semibold))
+                .foregroundStyle(.white)
+        }
+        .frame(width: diameter, height: diameter)
+        .shadow(color: .black.opacity(0.22), radius: 3, y: 1)
     }
 
     private var labels: some View {

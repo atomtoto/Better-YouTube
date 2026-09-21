@@ -1,19 +1,10 @@
 import AVFoundation
 import AVKit
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
-#if canImport(AppKit)
-import AppKit
-#endif
 
-/// Draws the downloaded-file player, in the same slot the embed's web view occupies.
-///
-/// It is the counterpart of `PlayerSurface`, and deliberately as thin: `PlayerContainerView` moves
-/// one video rectangle between the docked bar and full screen, and neither surface should know
-/// anything about that. What this one adds is the layer, and — on iOS — the background dance below.
 #if os(macOS)
+import AppKit
+
 struct LocalPlayerSurface: NSViewRepresentable {
     let playback: LocalPlayback
 
@@ -25,30 +16,7 @@ struct LocalPlayerSurface: NSViewRepresentable {
         nsView.adopt(playback.player)
     }
 }
-#else
-struct LocalPlayerSurface: UIViewRepresentable {
-    let playback: LocalPlayback
 
-    func makeUIView(context: Context) -> LocalPlayerHostView {
-        let view = LocalPlayerHostView(player: playback.player)
-        playback.attachPictureInPicture(to: view.layer as! AVPlayerLayer)
-        view.playback = playback
-        return view
-    }
-
-    func updateUIView(_ uiView: LocalPlayerHostView, context: Context) {
-        uiView.adopt(playback.player)
-    }
-}
-#endif
-
-#if os(macOS)
-
-/// A view whose backing layer *is* the player layer.
-///
-/// No background dance here, and that is the whole difference from iOS. macOS never takes the
-/// video away from a layer that has scrolled out of sight or whose app is behind another one — a
-/// Mac app that is open is running — so the player simply stays where it is put.
 final class LocalPlayerHostView: NSView {
     private let nativePlayer = AVPlayerView()
 
@@ -77,76 +45,195 @@ final class LocalPlayerHostView: NSView {
 }
 
 #else
+import UIKit
 
-/// A view whose layer *is* the player layer.
-///
-/// The background handling is the part worth knowing about. iOS stops video the moment the layer
-/// showing it leaves the screen — which is what backgrounding the app does — even with an audio
-/// session that would happily carry on. Letting go of the player while the app is away and taking
-/// it back on return is the documented way round that, and it is what keeps a downloaded video
-/// playing with the screen locked, exactly as the embed does.
-final class LocalPlayerHostView: UIView {
-    weak var playback: LocalPlayback?
-    override class var layerClass: AnyClass { AVPlayerLayer.self }
+/// AVKit owns the transport, full-screen presentation and Picture in Picture. The same
+/// AVPlayer remains attached while SwiftUI moves the surface into and out of the mini player.
+struct LocalPlayerSurface: UIViewControllerRepresentable {
+    let playback: LocalPlayback
+    var showsControls: Bool
 
-    private var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
-    /// Held onto while the layer isn't allowed to have it.
-    private var detachedPlayer: AVPlayer?
-    private var observers: [NSObjectProtocol] = []
+    func makeCoordinator() -> Coordinator { Coordinator(playback: playback) }
 
-    init(player: AVPlayer) {
-        super.init(frame: .zero)
-        backgroundColor = .black
-        playerLayer.videoGravity = .resizeAspect
-        adopt(player)
-        observeAppState()
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let controller = AVPlayerViewController()
+        controller.player = playback.player
+        controller.showsPlaybackControls = showsControls
+        controller.allowsPictureInPicturePlayback = true
+        controller.canStartPictureInPictureAutomaticallyFromInline = true
+        // PlayerManager owns the lock-screen metadata and remote commands.
+        controller.updatesNowPlayingInfoCenter = false
+        controller.videoGravity = .resizeAspect
+        controller.delegate = context.coordinator
+        context.coordinator.attach(controller)
+        return controller
     }
 
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    deinit {
-        for observer in observers { NotificationCenter.default.removeObserver(observer) }
-    }
-
-    func adopt(_ player: AVPlayer) {
-        // While the app is in the background the layer is meant to be empty; remember the player
-        // so coming back puts the right one back rather than a stale one.
-        if detachedPlayer != nil {
-            detachedPlayer = player
-            return
+    func updateUIViewController(_ controller: AVPlayerViewController, context: Context) {
+        // Do not hide the system controls during a full-screen transition or rotation.
+        if !context.coordinator.isFullScreen {
+            controller.showsPlaybackControls = showsControls
         }
-        guard playerLayer.player !== player else { return }
-        playerLayer.player = player
     }
 
-    private func observeAppState() {
-        let center = NotificationCenter.default
-        observers.append(center.addObserver(
-            forName: UIApplication.didEnterBackgroundNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated {
-            guard let self, let player = self.playerLayer.player else { return }
-            guard self.playback?.pictureInPictureController?.isPictureInPictureActive != true else { return }
-            self.detachedPlayer = player
-            self.playerLayer.player = nil
-            }
-        })
+    static func dismantleUIViewController(_ controller: AVPlayerViewController, coordinator: Coordinator) {
+        coordinator.detach()
+        controller.delegate = nil
+        controller.player = nil
+    }
 
-        observers.append(center.addObserver(
-            forName: UIApplication.willEnterForegroundNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self, let player = self.detachedPlayer else { return }
-            self.detachedPlayer = nil
-            self.playerLayer.player = player
-        })
+    @MainActor
+    final class Coordinator: NSObject, @preconcurrency AVPlayerViewControllerDelegate {
+        let playback: LocalPlayback
+        weak var controller: AVPlayerViewController?
+        private var fullScreenController: LocalFullScreenPlayerController?
+        private var avKitFullScreen = false
+        var isFullScreen: Bool { fullScreenController != nil || avKitFullScreen }
+        private var isInPictureInPicture = false
+        private var isDetachedForBackground = false
+
+        init(playback: LocalPlayback) { self.playback = playback }
+
+        func attach(_ controller: AVPlayerViewController) {
+            self.controller = controller
+            playback.onFullScreenRequest = { [weak self] active in
+                if active { self?.presentFullScreen() } else { self?.dismissFullScreen() }
+            }
+            NotificationCenter.default.addObserver(self, selector: #selector(background),
+                name: UIApplication.didEnterBackgroundNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(foreground),
+                name: UIApplication.willEnterForegroundNotification, object: nil)
+        }
+
+        func detach() {
+            NotificationCenter.default.removeObserver(self)
+            playback.onFullScreenRequest = nil
+            fullScreenController?.onDismiss = nil
+            fullScreenController?.player = nil
+            fullScreenController = nil
+            controller = nil
+        }
+
+        deinit { NotificationCenter.default.removeObserver(self) }
+
+        @objc private func background() {
+            guard !isInPictureInPicture else { return }
+            isDetachedForBackground = true
+            controller?.player = nil
+        }
+
+        @objc private func foreground() {
+            guard isDetachedForBackground else { return }
+            isDetachedForBackground = false
+            controller?.player = playback.player
+        }
+
+        private func presentFullScreen() {
+            guard fullScreenController == nil,
+                  let controller,
+                  controller.viewIfLoaded?.window != nil,
+                  controller.presentedViewController == nil else { return }
+            let fullScreen = LocalFullScreenPlayerController()
+            fullScreen.player = playback.player
+            fullScreen.showsPlaybackControls = true
+            fullScreen.allowsPictureInPicturePlayback = true
+            fullScreen.canStartPictureInPictureAutomaticallyFromInline = true
+            fullScreen.updatesNowPlayingInfoCenter = false
+            fullScreen.videoGravity = .resizeAspect
+            fullScreen.modalPresentationStyle = .fullScreen
+            fullScreen.delegate = self
+            fullScreen.onDismiss = { [weak self, weak fullScreen] in
+                guard let self, self.fullScreenController === fullScreen else { return }
+                guard !self.isInPictureInPicture else { return }
+                self.finishFullScreen()
+            }
+            fullScreenController = fullScreen
+            controller.player = nil
+            controller.present(fullScreen, animated: true) { [weak self] in
+                self?.playback.onFullScreenChanged?(true)
+            }
+        }
+
+        private func dismissFullScreen() {
+            guard let fullScreenController else { return }
+            fullScreenController.dismiss(animated: true)
+        }
+
+        private func finishFullScreen() {
+            fullScreenController?.delegate = nil
+            fullScreenController?.player = nil
+            fullScreenController = nil
+            if UIApplication.shared.applicationState != .background {
+                controller?.player = playback.player
+            }
+            controller?.showsPlaybackControls = PlayerManager.shared.isExpanded
+            playback.onFullScreenChanged?(false)
+        }
+
+        func playerViewController(_ playerViewController: AVPlayerViewController,
+            willBeginFullScreenPresentationWithAnimationCoordinator coordinator: UIViewControllerTransitionCoordinator) {
+            guard playerViewController === controller else { return }
+            avKitFullScreen = true
+            playback.onFullScreenChanged?(true)
+            coordinator.animate(alongsideTransition: nil) { [weak self] context in
+                if context.isCancelled {
+                    self?.avKitFullScreen = false
+                    self?.playback.onFullScreenChanged?(false)
+                }
+            }
+        }
+
+        func playerViewController(_ playerViewController: AVPlayerViewController,
+            willEndFullScreenPresentationWithAnimationCoordinator coordinator: UIViewControllerTransitionCoordinator) {
+            guard playerViewController === controller else { return }
+            coordinator.animate(alongsideTransition: nil) { [weak self] context in
+                guard !context.isCancelled else { return }
+                self?.avKitFullScreen = false
+                self?.playback.onFullScreenChanged?(false)
+                playerViewController.showsPlaybackControls = PlayerManager.shared.isExpanded
+            }
+        }
+
+        func playerViewControllerWillStartPictureInPicture(_ playerViewController: AVPlayerViewController) {
+            isInPictureInPicture = true
+        }
+
+        func playerViewControllerDidStopPictureInPicture(_ playerViewController: AVPlayerViewController) {
+            isInPictureInPicture = false
+            if fullScreenController != nil,
+               fullScreenController?.viewIfLoaded?.window == nil,
+               !playback.wantsFullScreen {
+                finishFullScreen()
+            }
+            if UIApplication.shared.applicationState == .background { background() }
+        }
+
+        func playerViewController(_ playerViewController: AVPlayerViewController,
+            failedToStartPictureInPictureWithError error: Error) {
+            isInPictureInPicture = false
+            PlayerManager.shared.pictureInPictureError = error.localizedDescription
+            if UIApplication.shared.applicationState == .background { background() }
+        }
+
+        func playerViewController(_ playerViewController: AVPlayerViewController,
+            restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
+            foreground()
+            PlayerManager.shared.expand()
+            completionHandler(true)
+        }
     }
 }
 
+/// AVPlayerViewController has no public programmatic "enter full screen" method on iOS. Presenting
+/// a second controller is Apple's supported full-screen shape; this hook restores the inline
+/// controller whether the user taps Done, rotates back, or the presentation is otherwise closed.
+@MainActor
+private final class LocalFullScreenPlayerController: AVPlayerViewController {
+    var onDismiss: (() -> Void)?
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        onDismiss?()
+    }
+}
 #endif

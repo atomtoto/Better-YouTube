@@ -139,25 +139,24 @@ extension NotificationService: UNUserNotificationCenterDelegate {
         let channelTitle = userInfo["channelTitle"] as? String ?? ""
         let thumbnailURL = (userInfo["thumbnailURL"] as? String).flatMap(URL.init(string:))
 
-        await MainActor.run {
-            switch actionIdentifier {
-            case NotificationIdentifier.watchLater:
-                let video = Video(
-                    id: videoId,
-                    title: title,
-                    channelId: channelId,
-                    channelTitle: channelTitle,
-                    description: "",
-                    thumbnailURL: thumbnailURL,
-                    publishedAt: nil
-                )
-                if !LibraryStore.shared.isInWatchLater(video) {
-                    LibraryStore.shared.toggleWatchLater(video)
-                }
-            default:
+        if actionIdentifier == NotificationIdentifier.watchLater {
+            let video = Video(
+                id: videoId,
+                title: title,
+                channelId: channelId,
+                channelTitle: channelTitle,
+                description: "",
+                thumbnailURL: thumbnailURL,
+                publishedAt: nil
+            )
+            await WatchLaterStore.shared.add(video)
+        } else {
+            await MainActor.run {
                 AppRouter.shared.open(videoId: videoId)
             }
+        }
 
+        await MainActor.run {
             if let item = NotificationStore.shared.items.first(where: { $0.videoId == videoId }) {
                 NotificationStore.shared.markRead(item)
             }

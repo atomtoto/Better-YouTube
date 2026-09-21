@@ -6,6 +6,8 @@ struct NotificationsView: View {
     @EnvironmentObject private var store: NotificationStore
     @EnvironmentObject private var notifications: NotificationService
     @EnvironmentObject private var auth: GoogleAuthService
+    @EnvironmentObject private var watchLater: WatchLaterStore
+    @State private var saveError: String?
     @EnvironmentObject private var player: PlayerManager
     @Environment(\.dismiss) private var dismiss
 
@@ -36,6 +38,19 @@ struct NotificationsView: View {
                                 NotificationRow(item: item, avatarURL: channelAvatars[item.channelId])
                             }
                             .buttonStyle(.plain)
+                            .videoContextMenu(item.video)
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                Button {
+                                    Task {
+                                        await watchLater.add(item.video)
+                                        saveError = watchLater.errorMessage
+                                    }
+                                } label: {
+                                    Label("Watch Later", systemImage: "clock.badge.plus")
+                                }
+                                .tint(.indigo)
+                                .disabled(watchLater.pendingVideoIDs.contains(item.videoId))
+                            }
                         }
                         .onDelete { store.remove(at: $0) }
                     }
@@ -43,6 +58,11 @@ struct NotificationsView: View {
                     .refreshable { await refresh() }
                 }
             }
+            .alert("Watch Later", isPresented: Binding(
+                get: { saveError != nil }, set: { if !$0 { saveError = nil } }
+            )) {
+                Button("OK", role: .cancel) { saveError = nil }
+            } message: { Text(saveError ?? "") }
             .navigationTitle("Notifications")
             .inlineNavigationBar()
             .toolbar {

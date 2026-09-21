@@ -6,17 +6,26 @@ struct LibraryView: View {
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var watchLater: WatchLaterStore
     @EnvironmentObject private var auth: GoogleAuthService
+    @EnvironmentObject private var webSession: YouTubeWebSession
     @EnvironmentObject private var downloads: DownloadStore
     @StateObject private var viewModel = LibraryViewModel()
 
     var body: some View {
         List {
-            if auth.isSignedIn {
-                Section {
-                    NavigationLink {
-                        SubscriptionsView(channels: viewModel.subscriptions)
-                    } label: {
-                        LibraryRow(icon: "person.2.fill", tint: .red, title: "Subscriptions", count: viewModel.subscriptions.count)
+            Section {
+                if auth.isSignedIn || webSession.isSignedIn {
+                    if auth.isSignedIn {
+                        NavigationLink {
+                            SubscriptionsView(channels: viewModel.subscriptions)
+                        } label: {
+                            LibraryRow(icon: "person.2.fill", tint: .red, title: "Subscriptions", count: viewModel.subscriptions.count)
+                        }
+
+                        NavigationLink {
+                            VideoListView(title: "Liked Videos", videos: viewModel.likedVideos)
+                        } label: {
+                            LibraryRow(icon: "hand.thumbsup.fill", tint: .blue, title: "Liked Videos", count: viewModel.likedVideos.count)
+                        }
                     }
 
                     NavigationLink {
@@ -24,28 +33,10 @@ struct LibraryView: View {
                     } label: {
                         LibraryRow(icon: "music.note.list", tint: .orange, title: "Playlists", count: viewModel.playlists.count)
                     }
-
-                    NavigationLink {
-                        VideoListView(title: "Liked Videos", videos: viewModel.likedVideos)
-                    } label: {
-                        LibraryRow(icon: "hand.thumbsup.fill", tint: .blue, title: "Liked Videos", count: viewModel.likedVideos.count)
-                    }
-                } header: {
-                    Text(viewModel.account?.title ?? "YouTube Account")
-                } footer: {
-                    if let message = viewModel.errorMessage {
-                        Text(message)
-                    }
-                }
-            } else {
-                Section {
+                } else {
                     signInPrompt
                 }
-            }
 
-            // Watch Later stands apart from the rest: signed in it is a real playlist in the
-            // account, signed out it is this device's own list.
-            Section {
                 NavigationLink {
                     VideoListView(
                         title: "Watch Later",
@@ -63,12 +54,17 @@ struct LibraryView: View {
                     )
                 }
             } header: {
-                Text(watchLater.isSynced ? "Watch Later · Synced with YouTube" : "Watch Later · On This Device")
+                Text(viewModel.account?.title ?? "YouTube Account")
             } footer: {
-                if let message = watchLater.errorMessage {
-                    Text(message)
-                } else if watchLater.isSynced {
-                    Text("Kept in the “\(WatchLaterStore.playlistTitle)” playlist on your account — YouTube's own Watch Later is closed to apps.")
+                VStack(alignment: .leading, spacing: 4) {
+                    if let message = viewModel.errorMessage { Text(message) }
+                    if let message = watchLater.errorMessage {
+                        Text(message)
+                    } else if watchLater.usesYouTubeWatchLater {
+                        Text("Watch Later is synced with the account connected to youtube.com.")
+                    } else {
+                        Text("Watch Later is stored on this device.")
+                    }
                 }
             }
 
@@ -116,7 +112,6 @@ struct LibraryView: View {
         .groupedListStyle()
         .minimizesPlayerBarOnScroll()
         .navigationTitle("Library")
-        .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
         .refreshable { await reload() }
         // The whole toolbar is the Mac's: on a phone the pull above is the affordance, and an
         // empty `toolbar` block isn't a thing the builder accepts.
@@ -125,10 +120,10 @@ struct LibraryView: View {
             ToolbarItem(placement: .primaryAction) { RefreshButton(action: reload) }
         }
         #endif
-        .task(id: auth.isSignedIn) {
+        .task(id: "\(auth.isSignedIn)-\(webSession.isSignedIn)-\(webSession.feedGeneration)-\(watchLater.sessionRevision)") {
             await watchLater.refresh()
-            if auth.isSignedIn {
-                await viewModel.load()
+            if auth.isSignedIn || webSession.isSignedIn {
+                await viewModel.load(apiSignedIn: auth.isSignedIn, webSignedIn: webSession.isSignedIn)
             } else {
                 viewModel.reset()
             }
@@ -138,7 +133,9 @@ struct LibraryView: View {
     /// What a pull — or, on a Mac, the Refresh button — asks for.
     private func reload() async {
         await watchLater.refresh()
-        if auth.isSignedIn { await viewModel.load() }
+        if auth.isSignedIn || webSession.isSignedIn {
+            await viewModel.load(apiSignedIn: auth.isSignedIn, webSignedIn: webSession.isSignedIn)
+        }
     }
 
     private var signInPrompt: some View {
@@ -188,6 +185,7 @@ private struct LibraryRow: View {
         .environmentObject(LibraryStore.shared)
         .environmentObject(WatchLaterStore.shared)
         .environmentObject(GoogleAuthService.shared)
+        .environmentObject(YouTubeWebSession.shared)
         .environmentObject(NotificationStore.shared)
         .environmentObject(DownloadStore.shared)
         .environmentObject(DownloadManager.shared)
