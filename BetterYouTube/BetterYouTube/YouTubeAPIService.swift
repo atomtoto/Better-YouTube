@@ -639,6 +639,29 @@ actor YouTubeAPIService {
         try await sendDiscardingResponse("DELETE", path: "playlistItems", query: ["id": id])
     }
 
+    /// Finds playlist item ids for a specific video in a playlist.
+    func playlistItemIds(playlistId: String, videoId: String) async throws -> [String] {
+        let response: YTListResponse<YTPlaylistItemResource> = try await request(
+            path: "playlistItems",
+            query: [
+                "part": "id",
+                "playlistId": playlistId,
+                "videoId": videoId,
+                "maxResults": "50"
+            ],
+            requiresAuth: true
+        )
+        return response.items.map(\.id)
+    }
+
+    /// Removes a video from a playlist by deleting its playlist items.
+    func removeFromPlaylist(playlistId: String, videoId: String) async throws {
+        let itemIds = try await playlistItemIds(playlistId: playlistId, videoId: videoId)
+        for itemId in itemIds {
+            try await removePlaylistItem(id: itemId)
+        }
+    }
+
     func likedVideos(limit: Int = 200) async throws -> [Video] {
         let items: [YTResourceItem] = try await allPages(
             path: "videos",

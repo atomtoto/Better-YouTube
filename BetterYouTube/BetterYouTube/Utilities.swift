@@ -141,7 +141,7 @@ enum TakeoutPlaylistCSV {
     private static func unwrap(_ field: Substring) -> String {
         field
             .trimmingCharacters(in: .whitespaces)
-            .trimmingCharacters(in: CharacterSet(charactersIn: "\"\u{FEFF}"))
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"﻿"))
             .trimmingCharacters(in: .whitespaces)
     }
 
@@ -153,5 +153,94 @@ enum TakeoutPlaylistCSV {
                 || character.isNumber && character.isASCII
                 || character == "-" || character == "_"
         }
+    }
+}
+
+/// An in-memory and persistent cache for channel avatars across screens.
+@MainActor
+final class ChannelAvatarCache {
+    static let shared = ChannelAvatarCache()
+
+    private var memoryCache: [String: URL] = [:]
+    private var inFlight: [String: Task<URL?, Never>] = [:]
+
+    private init() {
+        if let homeAvatars = YouTubeWebSession.shared.feedCache.load()?.avatars {
+            memoryCache = homeAvatars
+        }
+    }
+
+    func avatarURL(for channelId: String) -> URL? {
+        guard !channelId.isEmpty else { return nil }
+        return memoryCache[channelId]
+    }
+
+    func setAvatarURL(_ url: URL, for channelId: String) {
+        guard !channelId.isEmpty else { return }
+        memoryCache[channelId] = url
+    }
+
+    func setAvatarURLs(_ dict: [String: URL]) {
+        for (id, url) in dict where !id.isEmpty {
+            memoryCache[id] = url
+        }
+    }
+
+    func fetchAvatar(for channelId: String, service: YouTubeAPIService = .shared) async -> URL? {
+        guard !channelId.isEmpty else { return nil }
+        if let cached = memoryCache[channelId] {
+            return cached
+        }
+        if let existingTask = inFlight[channelId] {
+            return await existingTask.value
+        }
+
+        let task = Task<URL?, Never> {
+            // 1. Try API service (channels.list)
+            if let channel = try? await service.channel(id: channelId), let url = channel.thumbnailURL {
+                return url
+            }
+            // 2. Try API service (channelAvatars batch)
+            let avatars = await service.channelAvatars(ids: [channelId])
+            if let url = avatars[channelId] {
+                return url
+            }
+            // 3. Fallback to public channel web page meta tag og:image
+            return await Self.fetchWebAvatar(channelId: channelId)
+        }
+
+        inFlight[channelId] = task
+        let result = await task.value
+        inFlight[channelId] = nil
+
+        if let result {
+            memoryCache[channelId] = result
+        }
+        return result
+    }
+
+    private static func fetchWebAvatar(channelId: String) async -> URL? {
+        guard let url = URL(string: "https://www.youtube.com/channel/\(channelId)") else { return nil }
+        var request = URLRequest(url: url)
+        request.setValue(YouTubeWebSession.userAgent, forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 6
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse, http.statusCode == 200,
+              let html = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        // Match <meta property="og:image" content="(...)">
+        if let match = html.range(of: #"<meta property="og:image" content="([^"]+)""#, options: .regularExpression) {
+            let meta = String(html[match])
+            if let contentRange = meta.range(of: #"content="([^"]+)""#, options: .regularExpression) {
+                let contentString = String(meta[contentRange])
+                    .replacingOccurrences(of: "content=\"", with: "")
+                    .replacingOccurrences(of: "\"", with: "")
+                if let avatarURL = URL(string: contentString) {
+                    return avatarURL
+                }
+            }
+        }
+        return nil
     }
 }

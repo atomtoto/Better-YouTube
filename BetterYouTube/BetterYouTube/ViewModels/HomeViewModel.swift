@@ -76,6 +76,7 @@ final class HomeViewModel: ObservableObject {
         if webSignedIn {
             if youTubeVideos.isEmpty, let cached = session.feedCache.load() {
                 avatars.merge(cached.avatars) { _, new in new }
+                ChannelAvatarCache.shared.setAvatarURLs(cached.avatars)
                 youTubeVideos = cached.videos
             }
             if !hasPickedFeed { feed = .youTube }
@@ -353,5 +354,6 @@ final class HomeViewModel: ObservableObject {
             known.merge(fetched) { _, new in new }
         }
         avatars = known
+        ChannelAvatarCache.shared.setAvatarURLs(known)
     }
 }

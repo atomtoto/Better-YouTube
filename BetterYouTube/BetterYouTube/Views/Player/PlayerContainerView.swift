@@ -133,9 +133,7 @@ struct PlayerContainerView: View {
                 .frame(width: bar.width, height: bar.height)
                 .position(x: bar.midX, y: bar.midY)
                 .opacity(Double(1 - expansion))
-                .onTapGesture { player.expand() }
-                .gesture(barDragGesture)
-                .allowsHitTesting(!player.isExpanded)
+                .allowsHitTesting(false)
 
             // 2. The one and only video surface. It keeps its full-screen layout size in every
             //    state and is *scaled* into the bar rather than resized: re-laying out a web view
@@ -181,11 +179,16 @@ struct PlayerContainerView: View {
                 labelWidth: layout.labelWidth,
                 compactness: layout.compactness,
                 style: layout.style,
-                floatingControlDiameter: layout.floatingControlDiameter
+                floatingControlDiameter: layout.floatingControlDiameter,
+                barCornerRadius: layout.barCornerRadius
             )
             .frame(width: bar.width, height: bar.height)
             .clipShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
+            .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
             .simultaneousGesture(floatingDrag, including: miniPlayerStyle == .floatingVideo ? .all : .none)
+            .gesture(barDragGesture)
+            .onTapGesture { player.expand() }
             .contextMenu {
                 PlayerActions(
                     player: player,
@@ -193,6 +196,14 @@ struct PlayerContainerView: View {
                     downloadManager: downloadManager,
                     miniPlayerStyle: miniPlayerStyle,
                     onSwitchMiniPlayerStyle: switchMiniPlayerStyle
+                )
+            } preview: {
+                MiniPlayerBoxPreview(
+                    video: player.currentVideo,
+                    isPlaying: player.isPlaying,
+                    progress: player.progress,
+                    layout: layout,
+                    metrics: metrics
                 )
             }
             .position(x: bar.midX, y: bar.midY)
@@ -265,7 +276,7 @@ struct PlayerContainerView: View {
 
     /// Flick the docked bar up to go full screen, down to dismiss it.
     private var barDragGesture: some Gesture {
-        DragGesture()
+        DragGesture(minimumDistance: 10)
             .onChanged { value in
                 barDragOffset = value.translation.height / (value.translation.height < 0 ? 4 : 2)
             }
@@ -344,6 +355,7 @@ struct PlayerActions: View {
     @ObservedObject var downloadManager: DownloadManager
     var miniPlayerStyle: MiniPlayerStyle? = nil
     var onSwitchMiniPlayerStyle: (() -> Void)? = nil
+    var onAddToPlaylist: (() -> Void)? = nil
 
     var body: some View {
         if let miniPlayerStyle, let onSwitchMiniPlayerStyle {
@@ -372,6 +384,11 @@ struct PlayerActions: View {
         #endif
         if let video = player.currentVideo {
             DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
+            if let onAddToPlaylist {
+                Button(action: onAddToPlaylist) {
+                    Label("Add to Playlist…", systemImage: "text.badge.plus")
+                }
+            }
         }
         if let url = player.currentVideo?.watchURL {
             ShareLink(item: url) {
@@ -660,6 +677,27 @@ private struct MiniPlayerBackground: View {
     }
 }
 
+/// Floating Liquid Glass button face used for transport controls.
+private struct FloatingPlayerButtonFace: View {
+    let systemImage: String
+    let diameter: CGFloat
+    let iconSize: CGFloat
+
+    init(_ systemImage: String, diameter: CGFloat, iconSize: CGFloat) {
+        self.systemImage = systemImage
+        self.diameter = diameter
+        self.iconSize = iconSize
+    }
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: iconSize, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: diameter, height: diameter)
+            .glassEffect(.regular.interactive(), in: Circle())
+    }
+}
+
 /// Labels and transport of the docked player, laid out like Apple Music's: artwork, title and
 /// artist, then play/pause and close. Drawn over the video surface, which stands in for artwork.
 ///
@@ -675,6 +713,7 @@ private struct MiniPlayerControls: View {
     let compactness: CGFloat
     let style: MiniPlayerStyle
     let floatingControlDiameter: CGFloat
+    let barCornerRadius: CGFloat
 
     @EnvironmentObject private var player: PlayerManager
 
@@ -682,32 +721,33 @@ private struct MiniPlayerControls: View {
     private var isCompact: Bool { compactness > 0.5 }
 
     var body: some View {
-        if style == .floatingVideo {
-            floatingControls
-                .overlay(alignment: .trailing) {
-                    transport
-                        .opacity(Double(compactness))
-                        .allowsHitTesting(isCompact)
-                }
-        } else {
-            Color.clear
-                .allowsHitTesting(false)
-                .overlay(alignment: .leading) { labels }
-                .overlay(alignment: .trailing) { transport }
-                .overlay(alignment: .bottom) { progressLine }
+        Group {
+            if style == .floatingVideo {
+                floatingControls
+                    .overlay(alignment: .trailing) {
+                        transport
+                            .opacity(Double(compactness))
+                            .allowsHitTesting(isCompact)
+                    }
+            } else {
+                Color.clear
+                    .overlay(alignment: .leading) { labels }
+                    .overlay(alignment: .trailing) { transport }
+                    .overlay(alignment: .bottom) { progressLine }
+            }
         }
+        .contentShape(RoundedRectangle(cornerRadius: barCornerRadius, style: .continuous))
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: barCornerRadius, style: .continuous))
     }
 
     /// YouTube's current mini-player shape: the picture is the card, with controls over it.
     private var floatingControls: some View {
         Color.clear
-            .contentShape(Rectangle())
-            .onTapGesture { player.expand() }
             .overlay {
                 Button {
                     player.togglePlayPause()
                 } label: {
-                    floatingButtonFace(
+                    FloatingPlayerButtonFace(
                         player.isPlaying ? "pause.fill" : "play.fill",
                         diameter: floatingControlDiameter,
                         iconSize: floatingControlDiameter * 0.36
@@ -722,7 +762,7 @@ private struct MiniPlayerControls: View {
             }
             .overlay(alignment: .topTrailing) {
                 Button { player.close() } label: {
-                    floatingButtonFace("xmark", diameter: 32, iconSize: 12)
+                    FloatingPlayerButtonFace("xmark", diameter: 32, iconSize: 12)
                         .frame(width: 44, height: 44)
                         .contentShape(Circle())
                 }
@@ -733,23 +773,6 @@ private struct MiniPlayerControls: View {
                 .allowsHitTesting(!isCompact)
             }
             .overlay(alignment: .bottom) { progressLine }
-    }
-
-    private func floatingButtonFace(
-        _ systemImage: String,
-        diameter: CGFloat,
-        iconSize: CGFloat
-    ) -> some View {
-        ZStack {
-            Circle()
-                .fill(.black.opacity(0.58))
-                .overlay { Circle().stroke(.white.opacity(0.16), lineWidth: 0.5) }
-            Image(systemName: systemImage)
-                .font(.system(size: iconSize, weight: .semibold))
-                .foregroundStyle(.white)
-        }
-        .frame(width: diameter, height: diameter)
-        .shadow(color: .black.opacity(0.22), radius: 3, y: 1)
     }
 
     private var labels: some View {
@@ -764,10 +787,8 @@ private struct MiniPlayerControls: View {
         }
         .frame(width: labelWidth, alignment: .leading)
         .padding(.leading, artworkExtent + metrics.labelGap)
-        .contentShape(Rectangle())
-        .onTapGesture { player.expand() }
         .opacity(Double(1 - compactness))
-        .allowsHitTesting(!isCompact)
+        .allowsHitTesting(false)
     }
 
     private var transport: some View {
@@ -808,6 +829,112 @@ private struct MiniPlayerControls: View {
             .padding(.horizontal, 14)
             .padding(.bottom, 3)
             .allowsHitTesting(false)
+    }
+}
+
+/// The complete card preview shown during a long-press on the docked player.
+/// Lifts the entire box (background, artwork, labels, transport, progress) rather than just individual subviews.
+private struct MiniPlayerBoxPreview: View {
+    let video: Video?
+    let isPlaying: Bool
+    @ObservedObject var progress: PlaybackProgress
+    let layout: PlayerLayout
+    let metrics: PlayerMetrics
+
+    private var isCompact: Bool { layout.compactness > 0.5 }
+    private var bar: CGRect { layout.barFrame }
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            MiniPlayerBackground(cornerRadius: layout.barCornerRadius)
+
+            if layout.style == .floatingVideo {
+                if let url = video?.thumbnailURL {
+                    ArtworkView(
+                        url: url,
+                        cornerRadius: layout.barCornerRadius
+                    )
+                }
+
+                FloatingPlayerButtonFace(
+                    isPlaying ? "pause.fill" : "play.fill",
+                    diameter: layout.floatingControlDiameter,
+                    iconSize: layout.floatingControlDiameter * 0.36
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                VStack {
+                    HStack {
+                        Spacer()
+                        FloatingPlayerButtonFace("xmark", diameter: 32, iconSize: 12)
+                            .padding(4)
+                    }
+                    Spacer()
+                }
+
+                VStack {
+                    Spacer()
+                    MiniProgressLine(progress: progress)
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 3)
+                }
+            } else {
+                HStack(spacing: 0) {
+                    if let url = video?.thumbnailURL {
+                        ArtworkView(
+                            url: url,
+                            cornerRadius: 10
+                        )
+                        .frame(
+                            width: (metrics.barHeight - metrics.artworkPadding * 2) * 16 / 9,
+                            height: metrics.barHeight - metrics.artworkPadding * 2
+                        )
+                        .padding(.leading, metrics.artworkPadding)
+                    }
+
+                    if !isCompact {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(video?.title ?? "")
+                                .font(.subheadline.weight(.semibold))
+                                .lineLimit(1)
+                            Text(video?.channelTitle ?? "")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, metrics.labelGap)
+                    } else {
+                        Spacer(minLength: 0)
+                    }
+
+                    HStack(spacing: 0) {
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                            .font(.title3)
+                            .frame(width: metrics.playButtonWidth, height: 44)
+
+                        if !isCompact {
+                            Image(systemName: "xmark")
+                                .font(.footnote.weight(.bold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: metrics.closeButtonWidth, height: 44)
+                        }
+                    }
+                    .padding(.trailing, metrics.controlsTrailingPadding)
+                }
+
+                if !isCompact {
+                    VStack {
+                        Spacer()
+                        MiniProgressLine(progress: progress)
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 3)
+                    }
+                }
+            }
+        }
+        .frame(width: bar.width, height: bar.height)
+        .clipShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
     }
 }
 

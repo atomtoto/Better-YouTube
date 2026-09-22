@@ -18,6 +18,7 @@ struct ExpandedPlayerView: View {
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var downloads: DownloadStore
     @EnvironmentObject private var downloadManager: DownloadManager
+    @State private var showsPlaylistPicker = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,6 +38,11 @@ struct ExpandedPlayerView: View {
             }
 
             Spacer(minLength: 0)
+        }
+        .sheet(isPresented: $showsPlaylistPicker) {
+            if let video = player.currentVideo {
+                PlaylistPickerView(video: video)
+            }
         }
     }
 
@@ -67,7 +73,12 @@ struct ExpandedPlayerView: View {
             Spacer()
 
             Menu {
-                PlayerActions(player: player, downloads: downloads, downloadManager: downloadManager)
+                PlayerActions(
+                    player: player,
+                    downloads: downloads,
+                    downloadManager: downloadManager,
+                    onAddToPlaylist: { showsPlaylistPicker = true }
+                )
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.headline)

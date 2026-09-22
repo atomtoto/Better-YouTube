@@ -284,6 +284,19 @@ final class WatchLaterStore: ObservableObject {
         await setWebSaved(true, video: video)
     }
 
+    /// Explicit removal: removing a video from Watch Later.
+    func remove(_ video: Video) async {
+        guard usesYouTubeWatchLater else {
+            if let index = local.watchLater.firstIndex(of: video) {
+                local.removeWatchLater(at: IndexSet(integer: index))
+            }
+            errorMessage = nil
+            return
+        }
+        guard contains(video) else { errorMessage = nil; return }
+        await setWebSaved(false, video: video)
+    }
+
     private func setWebSaved(_ saved: Bool, video: Video) async {
         guard pendingVideoIDs.insert(video.id).inserted else { return }
         defer { pendingVideoIDs.remove(video.id) }

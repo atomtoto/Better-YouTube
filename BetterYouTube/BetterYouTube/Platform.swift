@@ -248,6 +248,45 @@ extension View {
     }
 }
 
+// MARK: - Haptic Feedback
+
+enum Haptics {
+    @MainActor
+    static func light() {
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
+    }
+
+    @MainActor
+    static func medium() {
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
+    }
+
+    @MainActor
+    static func rigid() {
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+        #endif
+    }
+
+    @MainActor
+    static func success() {
+        #if os(iOS)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        #endif
+    }
+
+    @MainActor
+    static func selection() {
+        #if os(iOS)
+        UISelectionFeedbackGenerator().selectionChanged()
+        #endif
+    }
+}
+
 #if os(macOS)
 
 /// A Refresh button for the toolbar.

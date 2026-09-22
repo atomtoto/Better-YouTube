@@ -4,6 +4,8 @@ import Foundation
 @MainActor
 final class VideoDetailViewModel: ObservableObject {
     @Published private(set) var video: Video
+    @Published private(set) var channel: Channel?
+    @Published private(set) var channelAvatarURL: URL?
     @Published private(set) var comments: [VideoComment] = []
     @Published private(set) var isLoadingComments = false
     @Published var errorMessage: String?
@@ -30,6 +32,7 @@ final class VideoDetailViewModel: ObservableObject {
     init(video: Video, service: YouTubeAPIService = .shared) {
         self.video = video
         self.service = service
+        self.channelAvatarURL = ChannelAvatarCache.shared.avatarURL(for: video.channelId)
     }
 
     var isLiked: Bool { rating == .like }
@@ -38,7 +41,40 @@ final class VideoDetailViewModel: ObservableObject {
         async let details: Void = refreshDetails()
         async let comments: Void = loadComments()
         async let ratingState: Void = loadRating()
-        _ = await (details, comments, ratingState)
+        async let channelInfo: Void = loadChannel()
+        _ = await (details, comments, ratingState, channelInfo)
+        if channel == nil && !video.channelId.isEmpty {
+            await loadChannel()
+        }
+    }
+
+    // MARK: - Channel
+
+    func loadChannel() async {
+        let channelId = video.channelId
+        guard !channelId.isEmpty else { return }
+
+        if channel != nil && channelAvatarURL != nil { return }
+
+        if channelAvatarURL == nil, let cached = ChannelAvatarCache.shared.avatarURL(for: channelId) {
+            channelAvatarURL = cached
+        }
+
+        if channel == nil {
+            if let fetched = try? await service.channel(id: channelId) {
+                channel = fetched
+                if let url = fetched.thumbnailURL {
+                    channelAvatarURL = url
+                    ChannelAvatarCache.shared.setAvatarURL(url, for: channelId)
+                }
+            }
+        }
+
+        if channelAvatarURL == nil {
+            if let fetchedURL = await ChannelAvatarCache.shared.fetchAvatar(for: channelId, service: service) {
+                channelAvatarURL = fetchedURL
+            }
+        }
     }
 
     // MARK: - The like
@@ -94,6 +130,9 @@ final class VideoDetailViewModel: ObservableObject {
             // have been tapped; YouTube's count won't carry it for minutes yet, so re-apply it.
             updated.likeCount = updated.likeCount.map { max(0, $0 + likeCountAdjustment) }
             video = updated
+            if channelAvatarURL == nil {
+                channelAvatarURL = ChannelAvatarCache.shared.avatarURL(for: updated.channelId)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

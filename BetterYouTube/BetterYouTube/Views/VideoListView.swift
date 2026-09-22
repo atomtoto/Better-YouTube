@@ -150,43 +150,147 @@ struct PlaylistDetailView: View {
             } else {
                 List {
                     Section {
-                        ForEach(viewModel.videos) { video in
-                            Button {
-                                player.play(video, upNext: viewModel.videos.after(video))
-                            } label: {
-                                VideoRowView(video: video)
+                        PlaylistHeaderView(
+                            playlist: playlist,
+                            videoCount: viewModel.videos.count,
+                            onPlay: {
+                                if let first = viewModel.videos.first {
+                                    player.play(first, upNext: viewModel.videos.after(first))
+                                }
+                            },
+                            onShuffle: {
+                                let shuffled = viewModel.videos.shuffled()
+                                if let first = shuffled.first {
+                                    player.play(first, upNext: Array(shuffled.dropFirst()))
+                                }
                             }
-                            .buttonStyle(.plain)
-                            .videoContextMenu(video)
-                        }
-                    } header: {
-                        VStack(alignment: .leading, spacing: 10) {
-                            ArtworkView(url: playlist.thumbnailURL, cornerRadius: Theme.Radius.card)
-                                .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                                .artworkShadow()
-                            Text(playlist.title)
-                                .font(.title3.bold())
-                                .foregroundStyle(.primary)
-                            if !playlist.description.isEmpty {
-                                Text(playlist.description)
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(3)
+                        )
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                    }
+
+                    Section {
+                        if viewModel.videos.isEmpty && !viewModel.isLoading {
+                            Text("This playlist has no videos.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, 24)
+                                .listRowSeparator(.hidden)
+                        } else {
+                            ForEach(viewModel.videos) { video in
+                                Button {
+                                    player.play(video, upNext: viewModel.videos.after(video))
+                                } label: {
+                                    VideoRowView(video: video)
+                                }
+                                .buttonStyle(.plain)
+                                .videoContextMenu(video)
                             }
                         }
-                        .textCase(nil)
-                        .padding(.bottom, 8)
                     }
                 }
                 .listStyle(.plain)
                 .minimizesPlayerBarOnScroll()
+                .refreshable {
+                    await viewModel.load()
+                }
             }
         }
         .navigationTitle(playlist.title)
         .inlineNavigationBar()
+        #if os(macOS)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                RefreshButton { await viewModel.load() }
+            }
+        }
+        #endif
         .task {
             if viewModel.videos.isEmpty { await viewModel.load() }
         }
+    }
+}
+
+struct PlaylistHeaderView: View {
+    let playlist: Playlist
+    let videoCount: Int
+    let onPlay: () -> Void
+    let onShuffle: () -> Void
+    @State private var isDescriptionExpanded = false
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ArtworkView(url: playlist.thumbnailURL, cornerRadius: Theme.Radius.card)
+                .frame(width: 176, height: 99)
+                .artworkShadow()
+
+            VStack(spacing: 4) {
+                Text(playlist.title)
+                    .font(.title2.bold())
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+
+                HStack(spacing: 6) {
+                    if let channel = playlist.channelTitle, !channel.isEmpty {
+                        Text(channel)
+                        Text("•")
+                    }
+                    let count = playlist.itemCount ?? videoCount
+                    if count > 0 {
+                        Text("\(count) \(count == 1 ? "video" : "videos")")
+                    }
+                }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+                if !playlist.description.isEmpty {
+                    Text(playlist.description)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(isDescriptionExpanded ? nil : 2)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 2)
+                        .onTapGesture {
+                            withAnimation(.snappy) {
+                                isDescriptionExpanded.toggle()
+                            }
+                        }
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.gutter)
+
+            if videoCount > 0 {
+                HStack(spacing: 12) {
+                    Button(action: onPlay) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "play.fill")
+                                .foregroundStyle(.white)
+                            Text("Play")
+                                .foregroundStyle(.white)
+                        }
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+
+                    Button(action: onShuffle) {
+                        Label("Shuffle", systemImage: "shuffle")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 44)
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding(.horizontal, Theme.Spacing.gutter)
+                .padding(.top, 4)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
     }
 }
 

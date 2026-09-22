@@ -109,11 +109,21 @@ struct NotificationsView: View {
                 await notifications.updateBadge()
             }
             .task(id: channelIDs) {
+                var initial: [String: URL] = [:]
+                for id in channelIDs {
+                    if let url = ChannelAvatarCache.shared.avatarURL(for: id) {
+                        initial[id] = url
+                    }
+                }
+                if !initial.isEmpty {
+                    channelAvatars.merge(initial, uniquingKeysWith: { _, new in new })
+                }
                 let missing = channelIDs.filter { channelAvatars[$0] == nil }
                 guard !missing.isEmpty else { return }
                 let fetched = await YouTubeAPIService.shared.channelAvatars(ids: missing)
                 guard !Task.isCancelled else { return }
                 channelAvatars.merge(fetched, uniquingKeysWith: { _, new in new })
+                ChannelAvatarCache.shared.setAvatarURLs(fetched)
             }
         }
     }
@@ -149,41 +159,33 @@ private struct NotificationRow: View {
                 .overlay(alignment: .bottomTrailing) {
                     if !item.isRead {
                         Circle()
-                            .fill(Color.red)
-                            .frame(width: 8, height: 8)
-                            .overlay(Circle().stroke(Color.appBackground, lineWidth: 2))
+                            .fill(Color.blue)
+                            .frame(width: 10, height: 10)
+                            .overlay(Circle().stroke(Color(UIColor.systemBackground), lineWidth: 2))
                     }
                 }
-                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(item.channelTitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
                 Text(item.title)
-                    .font(.footnote.weight(item.isRead ? .regular : .medium))
+                    .font(.subheadline.weight(item.isRead ? .regular : .semibold))
                     .lineLimit(2)
                     .foregroundStyle(.primary)
-                Text(RelativeDateFormatter.string(from: item.date))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-            .multilineTextAlignment(.leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-            ArtworkView(url: item.thumbnailURL)
-                .frame(width: 112, height: 63)
-                .accessibilityHidden(true)
+                HStack(spacing: 4) {
+                    Text(item.channelTitle)
+                        .lineLimit(1)
+                    Text("·")
+                    Text(RelativeDateFormatter.string(from: item.date))
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 8)
+
+            ArtworkView(url: item.video.thumbnailURL, duration: item.video.duration)
+                .frame(width: 80, height: 45)
         }
         .padding(.vertical, 4)
     }
-}
-
-#Preview {
-    NotificationsView()
-        .environmentObject(NotificationStore.shared)
-        .environmentObject(NotificationService.shared)
-        .environmentObject(GoogleAuthService.shared)
-        .environmentObject(PlayerManager.shared)
 }
