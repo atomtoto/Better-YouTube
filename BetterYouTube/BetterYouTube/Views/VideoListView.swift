@@ -6,6 +6,7 @@ struct VideoListView: View {
     let title: String
     let videos: [Video]
     var onDelete: ((IndexSet) -> Void)?
+    var onRefresh: (@Sendable () async -> Void)? = nil
 
     var body: some View {
         Group {
@@ -30,6 +31,7 @@ struct VideoListView: View {
                 }
                 .listStyle(.plain)
                 .minimizesPlayerBarOnScroll()
+                .optionalRefreshable(action: onRefresh)
             }
         }
         .navigationTitle(title)
@@ -40,6 +42,7 @@ struct VideoListView: View {
 /// Grid of subscribed channels.
 struct SubscriptionsView: View {
     let channels: [Channel]
+    var onRefresh: (@Sendable () async -> Void)? = nil
 
     private let columns = [
         GridItem(.flexible(), spacing: 16),
@@ -79,6 +82,7 @@ struct SubscriptionsView: View {
                 }
                 .scrollIndicators(.hidden)
                 .minimizesPlayerBarOnScroll()
+                .optionalRefreshable(action: onRefresh)
             }
         }
         .navigationTitle("Subscriptions")
@@ -89,6 +93,7 @@ struct SubscriptionsView: View {
 /// The signed-in account's playlists.
 struct PlaylistsView: View {
     let playlists: [Playlist]
+    var onRefresh: (@Sendable () async -> Void)? = nil
 
     private var displayedPlaylists: [Playlist] {
         playlists.filter { !$0.isLikedVideos }
@@ -127,6 +132,7 @@ struct PlaylistsView: View {
                 }
                 .listStyle(.plain)
                 .minimizesPlayerBarOnScroll()
+                .optionalRefreshable(action: onRefresh)
             }
         }
         .navigationTitle("Playlists")
@@ -304,4 +310,16 @@ struct PlaylistHeaderView: View {
     }
     .environmentObject(LibraryStore.shared)
     .environmentObject(WatchLaterStore.shared)
+}
+
+
+private extension View {
+    @ViewBuilder
+    func optionalRefreshable(action: (@Sendable () async -> Void)?) -> some View {
+        if let action {
+            self.refreshable(action: action)
+        } else {
+            self
+        }
+    }
 }

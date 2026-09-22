@@ -164,7 +164,7 @@ private struct NotificationRow: View {
                         Circle()
                             .fill(Color.blue)
                             .frame(width: 10, height: 10)
-                            .overlay(Circle().stroke(Color(UIColor.systemBackground), lineWidth: 2))
+                            .overlay(Circle().stroke(Color.appBackground, lineWidth: 2))
                     }
                 }
 
@@ -187,7 +187,8 @@ private struct NotificationRow: View {
             Spacer(minLength: 8)
 
             ArtworkView(url: item.video.thumbnailURL, duration: item.video.duration)
-                .frame(width: 80, height: 45)
+//                .frame(width: 80, height: 45)
+                .frame(width: 112, height: 63)
         }
         .padding(.vertical, 4)
     }

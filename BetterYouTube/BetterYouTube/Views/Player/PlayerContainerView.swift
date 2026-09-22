@@ -185,7 +185,9 @@ struct PlayerContainerView: View {
             .frame(width: bar.width, height: bar.height)
             .clipShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
+            #if !os(macOS)
             .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
+#endif
             .simultaneousGesture(floatingDrag, including: miniPlayerStyle == .floatingVideo ? .all : .none)
             .gesture(barDragGesture)
             .onTapGesture { player.expand() }
@@ -737,7 +739,9 @@ private struct MiniPlayerControls: View {
             }
         }
         .contentShape(RoundedRectangle(cornerRadius: barCornerRadius, style: .continuous))
+        #if !os(macOS)
         .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: barCornerRadius, style: .continuous))
+#endif
     }
 
     /// YouTube's current mini-player shape: the picture is the card, with controls over it.

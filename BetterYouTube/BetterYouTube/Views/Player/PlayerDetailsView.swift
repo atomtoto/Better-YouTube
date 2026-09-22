@@ -576,14 +576,15 @@ struct CommentRowView: View {
 
             HStack(spacing: 16) {
                 Button {
-                    if let url = youTubeURL(for: comment.id) { openURL(url) }
+                    Haptics.light()
+                    Task { await viewModel.toggleCommentLike(comment) }
                 } label: {
                     Label(
                         comment.likeCount > 0 ? CountFormatter.abbreviated(comment.likeCount) : "Like",
-                        systemImage: "hand.thumbsup"
+                        systemImage: comment.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup"
                     )
                 }
-                .accessibilityHint("Opens this comment on YouTube to like it")
+                .accessibilityHint("Likes or unlikes this comment")
 
                 Button("Reply") {
                     withAnimation(.easeInOut(duration: 0.2)) { showsReplyComposer.toggle() }

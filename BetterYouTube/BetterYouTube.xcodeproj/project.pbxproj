@@ -68,6 +68,7 @@
 		D10CA3000000000000000001 /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = D10CA3000000000000000002 /* ThirdPartyNotices.txt */; };
 		D10CA4000000000000000001 /* YouTubeHomeCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA4000000000000000002 /* YouTubeHomeCacheTests.swift */; };
 		D10CA5100000000000000001 /* YouTubeWebPlaylistService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA5100000000000000002 /* YouTubeWebPlaylistService.swift */; };
+		D10CA5400000000000000001 /* YouTubeWebCommentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA5400000000000000002 /* YouTubeWebCommentService.swift */; };
 		D10CA5200000000000000001 /* PlaylistPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA5200000000000000002 /* PlaylistPickerView.swift */; };
 		D10CA5300000000000000001 /* YouTubeWebPlaylistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA5300000000000000002 /* YouTubeWebPlaylistTests.swift */; };
 		D48F23EB00D70C7A8F59E083 /* ChannelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6389BFBA5B84E6680E8B48C2 /* ChannelView.swift */; };
@@ -153,6 +154,7 @@
 		D10CA3000000000000000002 /* ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.txt; sourceTree = "<group>"; };
 		D10CA4000000000000000002 /* YouTubeHomeCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeHomeCacheTests.swift; sourceTree = "<group>"; };
 		D10CA5100000000000000002 /* YouTubeWebPlaylistService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeWebPlaylistService.swift; sourceTree = "<group>"; };
+		D10CA5400000000000000002 /* YouTubeWebCommentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeWebCommentService.swift; sourceTree = "<group>"; };
 		D10CA5200000000000000002 /* PlaylistPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistPickerView.swift; sourceTree = "<group>"; };
 		D10CA5300000000000000002 /* YouTubeWebPlaylistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeWebPlaylistTests.swift; sourceTree = "<group>"; };
 		D29E2556D0A833F15A04D6B0 /* DownloadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadService.swift; sourceTree = "<group>"; };
@@ -299,6 +301,7 @@
 				6E5D48A1C0B72F934D18A5C7 /* QuotaTracker.swift */,
 				CD881385B495588F558E961F /* Utilities.swift */,
 				D10CA5100000000000000002 /* YouTubeWebPlaylistService.swift */,
+				D10CA5400000000000000002 /* YouTubeWebCommentService.swift */,
 				8F1D34C6B27E509AC4D6713F /* YouTubeWebSession.swift */,
 				C41F60B8D2A93E571806C4BD /* NowPlaying.swift */,
 				D9A257E3016BC4F82A3E85D1 /* AppReset.swift */,
@@ -456,6 +459,7 @@
 				729A150EAE4793319564AD3F /* Models.swift in Sources */,
 				DD9C34817BEF71E78E3483E7 /* Persistence.swift in Sources */,
 				D10CA5100000000000000001 /* YouTubeWebPlaylistService.swift in Sources */,
+				D10CA5400000000000000001 /* YouTubeWebCommentService.swift in Sources */,
 				2C9E5A71D48B3F0617AE22B4 /* YouTubeWebSession.swift in Sources */,
 				3E7B12A4C56D8F09B1470D2E /* NowPlaying.swift in Sources */,
 				7B0C934FE18A2D6053BF71AC /* AppReset.swift in Sources */,

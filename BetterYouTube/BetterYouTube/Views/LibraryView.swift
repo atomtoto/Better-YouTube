@@ -16,20 +16,20 @@ struct LibraryView: View {
                 if auth.isSignedIn || webSession.isSignedIn {
                     if auth.isSignedIn {
                         NavigationLink {
-                            SubscriptionsView(channels: viewModel.subscriptions)
+                            SubscriptionsView(channels: viewModel.subscriptions, onRefresh: reload)
                         } label: {
                             LibraryRow(icon: "person.2.fill", tint: .red, title: "Subscriptions", count: viewModel.subscriptions.count)
                         }
 
                         NavigationLink {
-                            VideoListView(title: "Liked Videos", videos: viewModel.likedVideos)
+                            VideoListView(title: "Liked Videos", videos: viewModel.likedVideos, onRefresh: reload)
                         } label: {
                             LibraryRow(icon: "hand.thumbsup.fill", tint: .blue, title: "Liked Videos", count: viewModel.likedVideos.count)
                         }
                     }
 
                     NavigationLink {
-                        PlaylistsView(playlists: viewModel.playlists)
+                        PlaylistsView(playlists: viewModel.playlists, onRefresh: reload)
                     } label: {
                         LibraryRow(icon: "music.note.list", tint: .orange, title: "Playlists", count: viewModel.playlists.count)
                     }
@@ -43,7 +43,8 @@ struct LibraryView: View {
                         videos: watchLater.videos,
                         onDelete: { offsets in
                             Task { await watchLater.remove(atOffsets: offsets) }
-                        }
+                        },
+                        onRefresh: reload
                     )
                 } label: {
                     LibraryRow(

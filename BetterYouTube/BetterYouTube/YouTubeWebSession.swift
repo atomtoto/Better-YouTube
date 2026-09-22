@@ -203,6 +203,7 @@ final class YouTubeFeedReader {
     static let shared = YouTubeFeedReader()
     static let notifications = YouTubeFeedReader()
     static let playlists = YouTubeFeedReader()
+    static let comments = YouTubeFeedReader()
 
     private var webView: WKWebView?
     private var isHarvesting = false

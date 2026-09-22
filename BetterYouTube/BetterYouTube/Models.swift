@@ -66,8 +66,9 @@ struct VideoComment: Identifiable, Codable, Equatable, Hashable {
     let authorName: String
     let authorAvatarURL: URL?
     let text: String
-    let likeCount: Int
+    var likeCount: Int
     let publishedAt: Date?
+    var isLiked: Bool = false
     let totalReplyCount: Int
 }
 
@@ -221,6 +222,7 @@ struct YTCommentSnippet: Decodable {
     let textDisplay: String
     let likeCount: Int
     let publishedAt: String?
+    let viewerRating: String?
 }
 
 struct YTErrorResponse: Decodable {
@@ -351,6 +353,7 @@ extension VideoComment {
         self.authorAvatarURL = snippet.authorProfileImageUrl
         self.text = snippet.textDisplay
         self.likeCount = snippet.likeCount
+        self.isLiked = snippet.viewerRating == "like"
         self.publishedAt = YTDateParser.parse(snippet.publishedAt)
         self.totalReplyCount = totalReplyCount
     }
