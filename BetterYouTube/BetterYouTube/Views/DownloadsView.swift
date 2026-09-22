@@ -383,12 +383,13 @@ struct DownloadMenuButton: View {
 /// recognised without being read.
 struct DownloadedBadge: View {
     var body: some View {
-        Image(systemName: "arrow.down.circle.fill")
-            .font(.caption)
+        Image(systemName: "arrow.down")
+            .font(.system(size: 11, weight: .bold))
             .foregroundStyle(.white)
-            .padding(4)
-            .background(.black.opacity(0.55), in: Circle())
+            .frame(width: 22, height: 22)
+            .glassEffect(.regular, in: Circle())
             .padding(6)
+            .environment(\.colorScheme, .dark)
     }
 }
 

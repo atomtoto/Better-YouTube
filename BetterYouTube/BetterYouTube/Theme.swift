@@ -61,10 +61,11 @@ struct ArtworkView: View {
                 Text(duration)
                     .font(.caption2.weight(.semibold))
                     .monospacedDigit()
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(.black.opacity(0.72), in: Capsule())
                     .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .glassEffect(.regular, in: Capsule())
+                    .environment(\.colorScheme, .dark)
                     .padding(6)
             }
         }

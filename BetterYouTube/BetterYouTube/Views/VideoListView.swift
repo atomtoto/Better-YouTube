@@ -90,16 +90,20 @@ struct SubscriptionsView: View {
 struct PlaylistsView: View {
     let playlists: [Playlist]
 
+    private var displayedPlaylists: [Playlist] {
+        playlists.filter { !$0.isLikedVideos }
+    }
+
     var body: some View {
         Group {
-            if playlists.isEmpty {
+            if displayedPlaylists.isEmpty {
                 EmptyStateView(
                     title: "No playlists",
                     systemImage: "music.note.list",
                     message: "Playlists you create or save on YouTube appear here."
                 )
             } else {
-                List(playlists) { playlist in
+                List(displayedPlaylists) { playlist in
                     NavigationLink {
                         PlaylistDetailView(playlist: playlist)
                     } label: {

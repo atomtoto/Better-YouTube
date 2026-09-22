@@ -54,6 +54,11 @@ struct Playlist: Identifiable, Codable, Equatable, Hashable {
     let thumbnailURL: URL?
     var itemCount: Int?
     var channelTitle: String?
+
+    var isLikedVideos: Bool {
+        id.caseInsensitiveCompare("LL") == .orderedSame ||
+        id.caseInsensitiveCompare("VLLL") == .orderedSame
+    }
 }
 
 struct VideoComment: Identifiable, Codable, Equatable, Hashable {

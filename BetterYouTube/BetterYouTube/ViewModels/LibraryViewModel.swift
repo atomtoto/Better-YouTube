@@ -53,6 +53,7 @@ final class LibraryViewModel: ObservableObject {
         for playlist in ownedPlaylists { byID[playlist.id] = playlist }
         var seen = Set<String>()
         playlists = (allPlaylists + ownedPlaylists).compactMap { playlist in
+            guard !playlist.isLikedVideos else { return nil }
             guard seen.insert(playlist.id).inserted else { return nil }
             return byID[playlist.id]
         }

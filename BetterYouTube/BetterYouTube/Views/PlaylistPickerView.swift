@@ -113,11 +113,11 @@ struct PlaylistPickerView: View {
                             ProgressView()
                                 .controlSize(.small)
                         } else if watchLater.contains(video) {
-                            Image(systemName: "checkmark.square.fill")
+                            Image(systemName: "checkmark.circle.fill")
                                 .font(.title3)
                                 .foregroundStyle(Color.accentColor)
                         } else {
-                            Image(systemName: "square")
+                            Image(systemName: "circle")
                                 .font(.title3)
                                 .foregroundStyle(.secondary)
                         }
@@ -146,11 +146,11 @@ struct PlaylistPickerView: View {
                                 ProgressView()
                                     .controlSize(.small)
                             } else if isContained {
-                                Image(systemName: "checkmark.square.fill")
+                                Image(systemName: "checkmark.circle.fill")
                                     .font(.title3)
                                     .foregroundStyle(Color.accentColor)
                             } else {
-                                Image(systemName: "square")
+                                Image(systemName: "circle")
                                     .font(.title3)
                                     .foregroundStyle(.secondary)
                             }

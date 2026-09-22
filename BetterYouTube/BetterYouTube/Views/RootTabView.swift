@@ -70,7 +70,7 @@ struct RootTabView: View {
                 .tag(AppRouter.Tab.search)
 
             screen(for: .library)
-                .tabItem { Label("Library", systemImage: "rectangle.stack.badge.play.fill") }
+                .tabItem { Label("Library", systemImage: "tray.full.fill") }
                 .tag(AppRouter.Tab.library)
 
             screen(for: .settings)

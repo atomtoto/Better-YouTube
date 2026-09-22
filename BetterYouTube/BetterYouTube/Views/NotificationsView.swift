@@ -39,7 +39,7 @@ struct NotificationsView: View {
                             }
                             .buttonStyle(.plain)
                             .videoContextMenu(item.video)
-                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                 if !item.isRead {
                                     Button {
                                         store.markRead(item)
@@ -49,13 +49,16 @@ struct NotificationsView: View {
                                     }
                                     .tint(.blue)
                                 }
+                                
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
                                     Task {
                                         await watchLater.add(item.video)
                                         saveError = watchLater.errorMessage
                                     }
                                 } label: {
-                                    Label("Watch Later", systemImage: "clock.badge.plus")
+                                    Label("Watch Later", systemImage: "clock.fill")
                                 }
                                 .tint(.indigo)
                                 .disabled(watchLater.pendingVideoIDs.contains(item.videoId))
