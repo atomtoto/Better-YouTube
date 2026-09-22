@@ -40,6 +40,15 @@ struct NotificationsView: View {
                             .buttonStyle(.plain)
                             .videoContextMenu(item.video)
                             .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                if !item.isRead {
+                                    Button {
+                                        store.markRead(item)
+                                        Task { await notifications.updateBadge() }
+                                    } label: {
+                                        Label("Mark as Read", systemImage: "envelope.open")
+                                    }
+                                    .tint(.blue)
+                                }
                                 Button {
                                     Task {
                                         await watchLater.add(item.video)

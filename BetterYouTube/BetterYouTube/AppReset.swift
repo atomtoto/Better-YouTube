@@ -37,6 +37,7 @@ enum AppReset {
         // history entry to belong to.
         PlayerManager.shared.close()
         UserDefaults.standard.removeObject(forKey: MiniPlayerStyle.storageKey)
+        UserDefaults.standard.removeObject(forKey: FloatingMiniPlayerSize.storageKey)
 
         // The two sign-ins. The web session's cookies live in a data store of their own, which
         // is why this one is async.

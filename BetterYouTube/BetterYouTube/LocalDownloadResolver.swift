@@ -7,6 +7,29 @@ import YouTubeKit
 actor LocalDownloadResolver {
     static let shared = LocalDownloadResolver()
 
+    /// Resolves one muxed H.264/AAC stream that AVPlayer can keep feeding while WebKit is
+    /// suspended by iOS. This is prepared in the foreground and used only when the app leaves it.
+    func resolvePlaybackURL(videoID: String, maxHeight: Int = 720) async throws -> URL {
+        let streams = try await YouTube(videoID: videoID, methods: [.local]).streams
+        try Task.checkCancellation()
+        let candidates = streams.map { stream in
+            LocalMediaCandidate(
+                url: stream.url,
+                height: stream.videoResolution,
+                bitrate: stream.bitrate ?? 0,
+                hasVideo: stream.includesVideoTrack,
+                hasAudio: stream.includesAudioTrack,
+                compatible: stream.fileExtension == .mp4
+                    && stream.videoCodec == .avc1
+                    && stream.audioCodec == .mp4a
+            )
+        }
+        guard let url = Self.progressivePlaybackURL(candidates, maxHeight: maxHeight) else {
+            throw DownloadError.service("No native background stream is available for this video.")
+        }
+        return url
+    }
+
     func resolve(videoID: String, quality: DownloadQuality, wifiOnly: Bool) async throws -> ResolvedMedia {
         if wifiOnly { try await Self.requireUnmeteredConnection() }
         try Task.checkCancellation()
@@ -57,6 +80,19 @@ actor LocalDownloadResolver {
             throw DownloadError.service("No compatible video with audio is available at this quality. Try a higher quality or your server. Live and restricted videos may not be downloadable on this device.")
         }
         return ResolvedMedia(url: video.url, byteCount: nil, audioURL: video.hasAudio ? nil : audio?.url)
+    }
+
+    nonisolated static func progressivePlaybackURL(
+        _ candidates: [LocalMediaCandidate], maxHeight: Int
+    ) -> URL? {
+        candidates.filter {
+            $0.compatible && $0.hasVideo && $0.hasAudio
+                && $0.url.scheme == "https" && $0.url.host != nil
+                && ($0.height ?? 0) > 0 && ($0.height ?? Int.max) <= maxHeight
+        }.sorted {
+            if $0.height != $1.height { return ($0.height ?? 0) > ($1.height ?? 0) }
+            return $0.bitrate > $1.bitrate
+        }.first?.url
     }
 
     /// YouTube may accept bounded byte ranges while refusing an unbounded GET. Probe a single

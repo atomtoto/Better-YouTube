@@ -266,6 +266,7 @@ extension View {
     }
     .environmentObject(DownloadStore.shared)
     .environmentObject(DownloadManager.shared)
+    .environmentObject(PlayerManager.shared)
 }
 
 extension Video {

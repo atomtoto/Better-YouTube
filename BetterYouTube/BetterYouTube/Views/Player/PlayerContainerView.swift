@@ -25,6 +25,21 @@ enum MiniPlayerStyle: String, CaseIterable, Identifiable {
     }
 }
 
+enum FloatingMiniPlayerSize: String, CaseIterable, Identifiable {
+    case compact, standard, large
+
+    static let storageKey = "floating_mini_player_size"
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .compact: return "Compact"
+        case .standard: return "Standard"
+        case .large: return "Large"
+        }
+    }
+}
+
 /// The player that lives above every screen. It morphs between a bar docked over the tab bar and
 /// a full-screen player, moving one shared video surface between the two positions rather than
 /// rebuilding it — so the video never restarts.
@@ -44,6 +59,7 @@ struct PlayerContainerView: View {
     @State private var floatingOnLeft = false
     @State private var horizontalDrag: CGFloat = 0
     @AppStorage(MiniPlayerStyle.storageKey) private var miniPlayerStyle = MiniPlayerStyle.platformDefault
+    @AppStorage(FloatingMiniPlayerSize.storageKey) private var floatingSize = FloatingMiniPlayerSize.standard
     #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     #endif
@@ -66,6 +82,7 @@ struct PlayerContainerView: View {
                 metrics: metrics,
                 compactness: player.isBarCompact ? 1 : 0,
                 style: miniPlayerStyle,
+                floatingSize: floatingSize,
                 floatingOnLeft: floatingOnLeft,
                 horizontalDrag: horizontalDrag,
                 isFullScreen: player.isFullScreen
@@ -77,6 +94,8 @@ struct PlayerContainerView: View {
         // and the home indicator too, so the video reaches both edges.
         .ignoresSafeArea(.container, edges: player.isFullScreen ? .all : [])
         .opacity(player.currentVideo == nil ? 0 : 1)
+        .scaleEffect(player.currentVideo == nil ? 0.96 : 1, anchor: .bottom)
+        .animation(.spring(response: 0.42, dampingFraction: 0.88), value: player.currentVideo?.id)
         .allowsHitTesting(player.currentVideo != nil)
         .systemChromeHidden(player.isFullScreen)
         .alert("Picture in Picture", isPresented: Binding(
@@ -443,6 +462,7 @@ private struct PlayerLayout {
     /// 0 the full-width bar, 1 the compact pill.
     let compactness: CGFloat
     let style: MiniPlayerStyle
+    let floatingSize: FloatingMiniPlayerSize
     let floatingOnLeft: Bool
     let horizontalDrag: CGFloat
     /// Set in landscape, where the video has the screen to itself.
@@ -455,11 +475,18 @@ private struct PlayerLayout {
         if style == .floatingVideo {
             let availableWidth = max(0, size.width - metrics.barInset * 2)
             #if os(macOS)
-            let preferredWidth = metrics.floatingVideoWidth
+            let preferredWidth: CGFloat = switch floatingSize {
+            case .compact: 260
+            case .standard: metrics.floatingVideoWidth
+            case .large: 400
+            }
             #else
-            // Scale with the device instead of leaving Plus/Max phones and iPads with the same
-            // tiny 200-point card and controls as the smallest phone.
-            let preferredWidth = min(320, max(220, size.width * 0.54))
+            let (minimum, maximum, fraction): (CGFloat, CGFloat, CGFloat) = switch floatingSize {
+            case .compact: (190, 260, 0.44)
+            case .standard: (220, 320, 0.54)
+            case .large: (260, 400, 0.66)
+            }
+            let preferredWidth = min(maximum, max(minimum, size.width * fraction))
             #endif
             let expandedWidth = min(preferredWidth, availableWidth)
             let width = lerp(expandedWidth, compactBarWidth, compactness)

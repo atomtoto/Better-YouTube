@@ -100,6 +100,7 @@ struct SettingsPaneView: View {
 
 private struct PlaybackSection: View {
     @AppStorage(MiniPlayerStyle.storageKey) private var miniPlayerStyle = MiniPlayerStyle.platformDefault
+    @AppStorage(FloatingMiniPlayerSize.storageKey) private var floatingSize = FloatingMiniPlayerSize.standard
 
     var body: some View {
         Section {
@@ -108,10 +109,19 @@ private struct PlaybackSection: View {
                     Text(style.title).tag(style)
                 }
             }
+
+            if miniPlayerStyle == .floatingVideo {
+                Picker("Floating Size", selection: $floatingSize) {
+                    ForEach(FloatingMiniPlayerSize.allCases) { size in
+                        Text(size.title).tag(size)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
         } header: {
             Text("Player")
         } footer: {
-            Text("Floating keeps a rectangular 16:9 player in the bottom-right corner. Playback Bar shows the title and channel across the bottom. Long-press the mini player and choose Switch to change style.")
+            Text("Floating keeps a resizable 16:9 player in a bottom corner. Playback Bar shows the title and channel across the bottom. Long-press the mini player and choose Switch to change style.")
         }
     }
 }

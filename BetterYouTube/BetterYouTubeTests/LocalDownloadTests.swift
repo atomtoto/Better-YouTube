@@ -31,6 +31,16 @@ struct LocalDownloadSelectionTests {
         #expect(media.audioURL == nil)
     }
 
+    @Test func backgroundPlaybackUsesBestMuxedStream() {
+        let url = LocalDownloadResolver.progressivePlaybackURL([
+            candidate("video-only", height: 720, bitrate: 9000),
+            candidate("muxed-360", height: 360, audio: true, bitrate: 500),
+            candidate("muxed-720", height: 720, audio: true, bitrate: 800),
+            candidate("muxed-1080", height: 1080, audio: true, bitrate: 1200)
+        ], maxHeight: 720)
+        #expect(url?.lastPathComponent == "muxed-720")
+    }
+
     @Test func neverDownloadsSilentOrOversizedVideo() {
         #expect(throws: DownloadError.self) {
             try LocalDownloadResolver.select([candidate("silent", height: 720)], maxHeight: 720)

@@ -46,6 +46,7 @@ final class LocalPlayback {
     private var itemStatusObservation: NSKeyValueObservation?
     private var endObserver: NSObjectProtocol?
     private var currentURL: URL?
+    private var pendingSeek: Double?
 
     init() {
         // The app's own transport and the lock screen drive playback; nothing should autoplay the
@@ -102,6 +103,10 @@ final class LocalPlayback {
     }
 
     func seek(to seconds: Double) {
+        guard player.currentItem?.status == .readyToPlay else {
+            pendingSeek = max(0, seconds)
+            return
+        }
         let target = CMTime(seconds: max(0, seconds), preferredTimescale: 600)
         // Exact, because this is also what the lock screen's scrubber and a 15-second skip land
         // on, and snapping to the nearest keyframe makes both feel like they missed.
@@ -117,6 +122,7 @@ final class LocalPlayback {
         player.pause()
         player.replaceCurrentItem(with: nil)
         currentURL = nil
+        pendingSeek = nil
         itemStatusObservation = nil
         if let endObserver {
             NotificationCenter.default.removeObserver(endObserver)
@@ -145,6 +151,10 @@ final class LocalPlayback {
                 guard let self else { return }
                 switch item.status {
                 case .readyToPlay:
+                    if let seconds = self.pendingSeek {
+                        self.pendingSeek = nil
+                        self.seek(to: seconds)
+                    }
                     self.reportProgress(at: self.player.currentTime())
                 case .failed:
                     let reason = item.error?.localizedDescription

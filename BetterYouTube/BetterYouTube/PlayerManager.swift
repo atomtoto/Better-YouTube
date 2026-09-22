@@ -140,26 +140,52 @@ final class PlayerManager: ObservableObject {
             pictureInPictureError = "Use the Picture in Picture button in the video's native playback controls."
             return
         }
+        requestPictureInPicture(reportsFailure: true)
+    }
+
+    /// WKWebView is suspended when iOS locks the display. Hand playback to the native player,
+    /// whose stream was resolved while the app was active, before that suspension happens.
+    func prepareForBackgroundPlayback() {
+        #if os(iOS)
+        guard currentVideo != nil, isPlaying else { return }
+        NowPlaying.shared.begin()
+        guard !isLocal else { return }
+        backgroundPlaybackRequested = true
+        if let url = backgroundStreamURL, let videoID = currentVideo?.id {
+            switchToNativeBackgroundStream(url, videoID: videoID)
+        } else {
+            // Keep PiP as an immediate fallback if extraction has not finished or this video has
+            // no progressive stream. The native handoff still takes over if its URL arrives.
+            requestPictureInPicture(reportsFailure: false)
+        }
+        #endif
+    }
+
+    private func requestPictureInPicture(reportsFailure: Bool) {
         guard let frame = pictureInPictureFrame else {
-            pictureInPictureError = "Wait for the YouTube video to load before starting Picture in Picture."
+            if reportsFailure {
+                pictureInPictureError = "Wait for the YouTube video to load before starting Picture in Picture."
+            }
             return
         }
         webView.callAsyncJavaScript("""
         const video = document.querySelector('video');
         if (!video) throw new Error('Video is not ready.');
+        if (video.webkitPresentationMode === 'picture-in-picture' || document.pictureInPictureElement === video)
+            return;
         if (video.webkitSupportsPresentationMode?.('picture-in-picture')) {
             video.webkitSetPresentationMode('picture-in-picture');
         } else if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
             await video.requestPictureInPicture();
         } else { throw new Error('YouTube does not allow Picture in Picture for this video.'); }
         """, arguments: [:], in: frame, in: .page) { [weak self] result in
-            if case .failure(let error) = result {
+            if reportsFailure, case .failure(let error) = result {
                 self?.pictureInPictureError = error.localizedDescription
             }
         }
     }
 
-    /// True while a downloaded file is what is playing.
+    /// True while AVPlayer is active, for either a downloaded file or a background stream.
     var isLocal: Bool {
         if case .local = source { return true }
         return false
@@ -188,6 +214,11 @@ final class PlayerManager: ObservableObject {
     private var fullScreenRequest: Task<Void, Never>?
     /// WebKit's own account of whether its full-screen window is up.
     private var fullScreenObserver: NSKeyValueObservation?
+    /// A muxed stream is prepared while WebKit is still allowed to run. It is consumed only if
+    /// iOS backgrounds the app, so normal foreground playback retains YouTube's own player.
+    private var backgroundStreamTask: Task<Void, Never>?
+    private var backgroundStreamURL: URL?
+    private var backgroundPlaybackRequested = false
 
     private init() {
         let configuration = WKWebViewConfiguration()
@@ -319,6 +350,7 @@ final class PlayerManager: ObservableObject {
     /// Hands over to the file player, and quiets the embed — two soundtracks at once is the
     /// failure mode here, and it is not a subtle one.
     private func startLocal(_ file: URL) {
+        clearBackgroundStream()
         if isShellLoaded { evaluate("stopVideo()") }
         desiredVideoId = nil
         loadedVideoId = nil
@@ -338,13 +370,48 @@ final class PlayerManager: ObservableObject {
     }
 
     private func startEmbed(_ videoId: String) {
+        clearBackgroundStream()
         if isLocal { local.stop() }
         source = .embed
 
         desiredVideoId = videoId
         sync()
+        backgroundStreamTask = Task { [weak self] in
+            guard let url = try? await LocalDownloadResolver.shared.resolvePlaybackURL(videoID: videoId),
+                  !Task.isCancelled, let self,
+                  self.currentVideo?.id == videoId, !self.isLocal else { return }
+            self.backgroundStreamURL = url
+            if self.backgroundPlaybackRequested {
+                self.switchToNativeBackgroundStream(url, videoID: videoId)
+            }
+        }
         // Started with the phone already on its side: hand it over as soon as the embed is up.
         if isLandscape { wantsSystemFullScreen = true }
+    }
+
+    private func switchToNativeBackgroundStream(_ url: URL, videoID: String) {
+        guard !isLocal, currentVideo?.id == videoID else { return }
+        let position = progress.currentTime
+        if isShellLoaded { evaluate("pauseVideo()") }
+        desiredVideoId = nil
+        loadedVideoId = nil
+        watchdog?.cancel()
+        wantsSystemFullScreen = false
+        fullScreenRequest?.cancel()
+        fullScreenRequest = nil
+
+        source = .local(url)
+        local.load(url: url)
+        local.seek(to: position)
+        local.play()
+        refreshNowPlaying()
+    }
+
+    private func clearBackgroundStream() {
+        backgroundStreamTask?.cancel()
+        backgroundStreamTask = nil
+        backgroundStreamURL = nil
+        backgroundPlaybackRequested = false
     }
 
     /// Publishes the lock screen's copy of what is playing. Called when something *jumps* — the
@@ -456,6 +523,7 @@ final class PlayerManager: ObservableObject {
     }
 
     func close() {
+        clearBackgroundStream()
         exitSystemFullScreen()
         NowPlaying.shared.end()
         if isLocal {
