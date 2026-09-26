@@ -397,7 +397,7 @@ struct PlayerActions: View {
                         : "Switch to Floating",
                     systemImage: miniPlayerStyle == .floatingVideo
                         ? "rectangle.bottomthird.inset.filled"
-                        : "rectangle.ratio.4.to.3"
+                        : "inset.filled.bottomtrailing.rectangle"
                 )
             }
         }

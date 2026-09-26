@@ -168,11 +168,21 @@ final class HomeViewModel: ObservableObject {
         pendingNotInterestedIDs.insert(video.id)
         defer { pendingNotInterestedIDs.remove(video.id) }
 
-        try await YouTubeFeedReader.shared.markNotInterested(videoID: video.id)
-        guard session.isSignedIn, session.feedGeneration == generation else { throw CancellationError() }
+        // Reflect the choice immediately. The web page may take several seconds to expose its
+        // menu, and a late feed load must not put this card back while that request is running.
         excludedYouTubeIDs.insert(video.id)
         youTubeVideos.removeAll { $0.id == video.id }
         saveYouTubeCache(session: session)
+
+        do {
+            try await YouTubeFeedReader.shared.markNotInterested(videoID: video.id)
+            guard session.isSignedIn, session.feedGeneration == generation else { throw CancellationError() }
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            guard session.isSignedIn, session.feedGeneration == generation else { throw CancellationError() }
+            throw YouTubeFeedIssue.loadFailed("Hidden from this feed, but could not send feedback to YouTube: \(error.localizedDescription)")
+        }
     }
 
     func load(isSignedIn: Bool, library: LibraryStore, force: Bool = false) async {

@@ -575,7 +575,7 @@ final class YouTubeFeedReader {
     private static let notInterestedScript = #"""
     const wanted = String(videoID);
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-    const cardSelector = 'ytd-rich-item-renderer,ytd-video-renderer,ytd-grid-video-renderer,ytm-rich-item-renderer,ytm-video-with-context-renderer,ytm-video-renderer';
+    const cardSelector = 'ytd-rich-item-renderer,ytd-rich-grid-media,ytd-video-renderer,ytd-grid-video-renderer,ytm-rich-item-renderer,ytm-rich-grid-media,ytm-video-with-context-renderer,ytm-video-renderer';
     function hasVideo(card) {
         return Array.from(card.querySelectorAll('a[href*="watch?v="]')).some(link => {
             try { return new URL(link.getAttribute('href'), location.href).searchParams.get('v') === wanted; }
@@ -583,18 +583,21 @@ final class YouTubeFeedReader {
         });
     }
     let card;
+    window.scrollTo(0, 0);
     for (let attempt = 0; attempt < 18; attempt++) {
         card = Array.from(document.querySelectorAll(cardSelector)).find(hasVideo);
         if (card) break;
-        window.scrollTo(0, document.documentElement.scrollHeight);
+        window.scrollBy(0, Math.max(window.innerHeight * 0.8, 400));
         await sleep(350);
     }
     if (!card) throw new Error('This recommendation is no longer on your YouTube home page. Refresh the feed and retry.');
 
-    const menu = card.querySelector('#menu, ytd-menu-renderer, ytm-menu');
+    const menu = card.querySelector('#menu, ytd-menu-renderer, ytm-menu, ytm-menu-renderer');
     const menuButton = menu?.querySelector('button,[role="button"]')
         || menu?.querySelector('yt-icon-button,yt-button-shape')
-        || card.querySelector('button[aria-label*="More"],button[aria-label*="Action menu"]');
+        || Array.from(card.querySelectorAll('button,[role="button"]')).find(node =>
+            /more|action|plus|options|menu/i.test(node.getAttribute('aria-label') || node.getAttribute('title') || '')
+        );
     if (!menuButton) throw new Error('YouTube changed its recommendation menu. Update the app and retry.');
     menuButton.click();
 
@@ -603,20 +606,17 @@ final class YouTubeFeedReader {
         item = Array.from(document.querySelectorAll('ytd-menu-service-item-renderer,ytm-menu-service-item-renderer,ytm-menu-item,tp-yt-paper-item,[role="menuitem"]'))
             .find(node => {
                 const label = (node.getAttribute('aria-label') || node.textContent || '').trim().toLowerCase();
-                return node.getClientRects().length && /^(not interested|pas intéressé)(\s|$)/i.test(label);
+                return node.getClientRects().length && /\bnot interested\b|pas intéressé/i.test(label);
             });
         if (item) break;
         await sleep(150);
     }
     if (!item) throw new Error('YouTube did not offer “Not interested” for this recommendation.');
-    (item.querySelector('button,[role="menuitem"]') || item).click();
-    for (let attempt = 0; attempt < 20; attempt++) {
-        if (!card.isConnected || !hasVideo(card) || card.getClientRects().length === 0) return true;
-        const message = (card.textContent || '').toLowerCase();
-        if (message.includes('video removed') || message.includes('vidéo supprimée')) return true;
-        await sleep(150);
-    }
-    throw new Error('YouTube did not remove this recommendation. Please retry.');
+    (item.querySelector('button,[role="menuitem"],tp-yt-paper-item') || item).click();
+    // The website may leave the card in the DOM while showing Undo. Its DOM state is not a
+    // reliable acknowledgment, so the native list handles removal after the menu item fires.
+    await sleep(500);
+    return true;
     """#
 
     /// Asks for the next screenful. `true` at the end because `evaluateJavaScript` refuses to

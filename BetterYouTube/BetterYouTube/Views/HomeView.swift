@@ -165,16 +165,12 @@ struct HomeView: View {
                         .padding(.top, 40)
                 } else {
                     ForEach(viewModel.videos) { video in
-                        Button {
-                            player.play(video, upNext: viewModel.videos.after(video))
-                        } label: {
-                            FeedVideoCard(
-                                video: video,
-                                avatarURL: viewModel.avatar(for: video.channelId),
-                                onNotInterested: notInterestedAction(for: video)
-                            )
-                        }
-                        .buttonStyle(.plain)
+                        FeedVideoCard(
+                            video: video,
+                            avatarURL: viewModel.avatar(for: video.channelId),
+                            onPlay: { player.play(video, upNext: viewModel.videos.after(video)) },
+                            onNotInterested: notInterestedAction(for: video)
+                        )
                         .videoContextMenu(video, onNotInterested: notInterestedAction(for: video))
                     }
 
@@ -313,7 +309,7 @@ struct VideoMenuItems: View {
     var body: some View {
         if let onNotInterested {
             Button(action: onNotInterested) {
-                Label("Pas intéressé", systemImage: "hand.thumbsdown")
+                Label("Not Interested", systemImage: "hand.thumbsdown")
             }
         }
 

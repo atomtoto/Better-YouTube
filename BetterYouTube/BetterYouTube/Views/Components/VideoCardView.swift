@@ -41,38 +41,47 @@ struct FeedVideoCard: View {
     @State private var showsPlaylistPicker = false
     let video: Video
     var avatarURL: URL?
+    var onPlay: () -> Void
     var onNotInterested: (() -> Void)? = nil
 
     @EnvironmentObject private var downloads: DownloadStore
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            ArtworkView(
-                url: downloads.artworkURL(for: video),
-                duration: video.duration,
-                cornerRadius: Theme.Radius.card
-            )
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                .artworkShadow()
-                .downloadedBadge(video, downloads: downloads)
+            Button(action: onPlay) {
+                ArtworkView(
+                    url: downloads.artworkURL(for: video),
+                    duration: video.duration,
+                    cornerRadius: Theme.Radius.card
+                )
+                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                    .artworkShadow()
+                    .downloadedBadge(video, downloads: downloads)
+            }
+            .buttonStyle(.plain)
 
             HStack(alignment: .top, spacing: 10) {
-                AvatarView(url: avatarURL, size: 36)
+                Button(action: onPlay) {
+                    HStack(alignment: .top, spacing: 10) {
+                        AvatarView(url: avatarURL, size: 36)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(video.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(video.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
 
-                    Text(metadataLine)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                            Text(metadataLine)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
                 }
-
-                Spacer(minLength: 0)
+                .buttonStyle(.plain)
 
                 Menu {
                     VideoMenuItems(
