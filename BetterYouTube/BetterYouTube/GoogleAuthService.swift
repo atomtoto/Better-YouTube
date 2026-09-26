@@ -13,6 +13,7 @@ import AppKit
 
 enum AuthError: LocalizedError {
     case missingClientId
+    case clientIdIsURL
     case invalidClientId
     case cancelled
     case consentDenied(String?)
@@ -26,8 +27,10 @@ enum AuthError: LocalizedError {
         switch self {
         case .missingClientId:
             return "Add your Google OAuth client ID in Settings before signing in."
+        case .clientIdIsURL:
+            return "This is a web address, not an OAuth client ID. In Google Cloud, copy the Client ID value only; it ends in .apps.googleusercontent.com."
         case .invalidClientId:
-            return "That doesn't look like an Apple-platform OAuth client ID (it should end in .apps.googleusercontent.com)."
+            return "That doesn't look like an Apple-platform OAuth client ID. Copy the Client ID value ending in .apps.googleusercontent.com."
         case .cancelled:
             return "Sign-in was cancelled."
         case .scopeDeclined:
@@ -200,13 +203,29 @@ final class GoogleAuthService: ObservableObject {
         signOut()
     }
 
+    /// Diagnose pasted URLs before trying to turn the client ID into a callback URL scheme.
+    var clientIdInputError: AuthError? {
+        let suffix = ".apps.googleusercontent.com"
+        let trimmed = clientId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        guard !trimmed.lowercased().hasPrefix("http") else { return .clientIdIsURL }
+        guard trimmed.hasSuffix(suffix) else { return .invalidClientId }
+        let prefix = String(trimmed.dropLast(suffix.count))
+        guard !prefix.isEmpty,
+              prefix.utf8.allSatisfy({ byte in
+                  (48...57).contains(byte) || (65...90).contains(byte) ||
+                  (97...122).contains(byte) || byte == 45
+              }) else { return .invalidClientId }
+        return nil
+    }
+
     /// Google's iOS clients use the reversed client ID as their custom URL scheme.
     var redirectScheme: String? {
+        guard clientIdInputError == nil else { return nil }
         let suffix = ".apps.googleusercontent.com"
         let trimmed = clientId.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.hasSuffix(suffix) else { return nil }
         let prefix = String(trimmed.dropLast(suffix.count))
-        guard !prefix.isEmpty else { return nil }
         return "com.googleusercontent.apps.\(prefix)"
     }
 
@@ -215,6 +234,7 @@ final class GoogleAuthService: ObservableObject {
     func signIn() async throws {
         let trimmedClientId = clientId.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedClientId.isEmpty else { throw AuthError.missingClientId }
+        if let inputError = clientIdInputError { throw inputError }
         guard let scheme = redirectScheme else { throw AuthError.invalidClientId }
 
         let verifier = Self.randomCodeVerifier()

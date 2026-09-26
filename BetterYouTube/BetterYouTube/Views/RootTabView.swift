@@ -394,6 +394,13 @@ private struct OnboardingView: View {
                         .textFieldStyle(.plain)
                         .padding(14)
                         .background(Color.appBackground, in: RoundedRectangle(cornerRadius: 12))
+                        .onChange(of: auth.clientId) { _, _ in authError = nil }
+                    if let inputError = auth.clientIdInputError,
+                       case .clientIdIsURL = inputError {
+                        Text(inputError.localizedDescription)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
                     Text("It ends in .apps.googleusercontent.com. You can find it under Google Cloud → Clients.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)

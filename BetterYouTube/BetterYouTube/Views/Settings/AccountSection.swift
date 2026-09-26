@@ -89,10 +89,19 @@ struct AccountSection: View {
 #if os(macOS)
         TextField("OAuth ID", text: $auth.clientId)
             .identifierField()
+            .onChange(of: auth.clientId) { _, _ in authError = nil }
 #else
         TextField("Click here to add YouTube OAuth client ID", text: $auth.clientId)
             .identifierField()
+            .onChange(of: auth.clientId) { _, _ in authError = nil }
 #endif
+
+        if let inputError = auth.clientIdInputError,
+           case .clientIdIsURL = inputError {
+            Text(inputError.localizedDescription)
+                .font(.footnote)
+                .foregroundStyle(.red)
+        }
 
         Button {
             signIn()
