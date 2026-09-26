@@ -32,6 +32,7 @@ final class LocalPlayerHostView: NSView {
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
         nativePlayer.allowsPictureInPicturePlayback = true
+        nativePlayer.showsFullScreenToggleButton = true
         nativePlayer.videoGravity = .resizeAspect
         addSubview(nativePlayer)
         adopt(player)

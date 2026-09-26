@@ -72,25 +72,48 @@ struct ExpandedPlayerView: View {
         PlayerCollapseDrag(state: $drag, travel: travel) { player.collapse() }
     }
 
+    private var backSymbol: String {
+        #if os(macOS)
+        "arrow.left"
+        #else
+        "chevron.down"
+        #endif
+    }
+
+    private var menuSymbol: String {
+        #if os(macOS)
+        "ellipsis.rectangle.fill"
+        #else
+        "ellipsis"
+        #endif
+    }
+
     private var header: some View {
         HStack(spacing: 4) {
             Button {
                 player.collapse()
             } label: {
-                Image(systemName: "chevron.down")
+                Image(systemName: backSymbol)
                     .font(.headline)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
+            #if os(macOS)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Back to browsing")
+            #else
             .accessibilityLabel("Minimize player")
+            #endif
 
             Spacer()
 
+            #if os(iOS)
             Capsule()
                 .fill(Color.secondary.opacity(0.35))
                 .frame(width: 36, height: 5)
 
             Spacer()
+            #endif
 
             Menu {
                 PlayerActions(
@@ -100,12 +123,16 @@ struct ExpandedPlayerView: View {
                     onAddToPlaylist: { showsPlaylistPicker = true }
                 )
             } label: {
-                Image(systemName: "ellipsis")
+                Image(systemName: menuSymbol)
                     .font(.headline)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
             .accessibilityLabel("More")
+            #if os(macOS)
+            .menuIndicator(.hidden)
+            .buttonStyle(.plain)
+            #endif
         }
         .padding(.horizontal, 6)
         .foregroundStyle(.primary)
