@@ -39,8 +39,12 @@ The app talks to the public **YouTube Data API v3**. Two levels of access exist:
 
 | Access | Needs | Gives you |
 | --- | --- | --- |
-| API key | A key from the Google Cloud Console | Trending, search, video details, channels, comments, public playlists |
-| OAuth 2.0 sign-in | An iOS OAuth client ID | Your subscriptions, your custom playlists, your liked videos, your channel, and liking a video |
+| API key (optional) | A key from the Google Cloud Console | Public browsing without signing in: trending, search, video details, channels, comments, public playlists |
+| OAuth 2.0 sign-in (recommended) | An iOS OAuth client ID and a Google sign-in | Public browsing plus your subscriptions, custom playlists, liked videos, channel, and account actions |
+
+One of these is enough for Data API browsing. When both are configured, public requests use the
+API key and account requests use OAuth. The separate youtube.com sign-in for **YouTube Home** is
+optional; it supplies the real personalized feed and Watch Later, which OAuth cannot access.
 
 **Not available through the public Data API:** the account's **Watch Later** (`WL`) and **watch history** (`HL`)
 playlists — Google removed API access to both in 2016 — and the personalized home feed. No scope
@@ -95,7 +99,7 @@ enriched with a single batched `videos.list` call. Only the search box spends 10
 Settings shows what is left of the day as a bar, with a breakdown of where the units went. No
 endpoint reports the remaining quota, so the app prices each call from the table above as it goes
 out and keeps the tally itself: it counts what *this device* spent, while the allowance belongs to
-the Cloud project behind the API key, so anything else using that key spends from the same pot
+the Cloud project behind the key or OAuth client, so anything else using that project spends from the same pot
 without showing up. The count rolls over at midnight Pacific time, which is when Google refills it.
 
 ## Recommendations
@@ -360,17 +364,15 @@ app read its own credentials back.
 
 1. Open `BetterYouTube/BetterYouTube.xcodeproj` in Xcode 26+ and run on an iOS 26+ simulator or
    device, or pick *My Mac* for the macOS 26+ build.
-2. **API key** (required for browsing): in the Google Cloud Console, enable the *YouTube Data API v3*
-   and create an **API key** credential. Paste it on first launch or in Settings.
-3. **Google sign-in** (optional, for your own library): in the same project, create an **OAuth 2.0
-   client ID** of type **iOS** with the app's bundle identifier
+2. **Google sign-in** (recommended): in the Google Cloud Console, [enable the YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com)
+   and [create an OAuth 2.0 client ID](https://console.cloud.google.com/auth/clients) of type **iOS** with the app's bundle identifier
    (`com.atomtoto.BetterYouTube`, or your own). That client type covers macOS too — the same
    client ID works for both builds, and both use the reversed client ID as their callback scheme.
-   Paste the client ID in Settings, then tap *Sign in with Google*.
+   Paste the client ID on the welcome screen or in Settings, then tap *Sign in with Google*.
    - **Add yourself as a test user**, or sign-in fails with `Error 403: access_denied`. In
-     *Google Auth Platform → Audience*, with publishing status **Testing**, only the accounts listed
+     [Google Auth Platform → Audience](https://console.cloud.google.com/auth/audience), with publishing status **Testing**, only the accounts listed
      under *Test users* may grant consent — add the Google account you sign in with. Alternatively
-     switch the app to **In production** (with the sensitive `youtube` scope you'll then see
+     switch the app to **In production** (with the sensitive `youtube.force-ssl` scope you'll then see
      an "unverified app" interstitial you can pass via *Advanced*).
    - Note: while in Testing, Google expires refresh tokens after **7 days**, so you'll be asked to
      sign in again about once a week. Publishing the app removes that limit.
@@ -385,13 +387,19 @@ app read its own credentials back.
      entered at runtime, so it can't be declared in `Info.plist` and the flow can't move to
      Safari. Sign in to Google in Safari with your passkey instead; the session is not ephemeral,
      so the sheet borrows those cookies and asks for nothing.
-   - Scope requested: `https://www.googleapis.com/auth/youtube` — read/write, because the app
-     creates and edits its own Watch Later playlist. A token granted for an earlier, narrower scope
+   - Scope requested: `https://www.googleapis.com/auth/youtube.force-ssl` — read/write for account
+     actions such as likes, comments and custom playlists. A token granted for a narrower scope
      can't be widened in place, so the app drops it and asks you to sign in once more when the
      scope changes. Tokens are stored in the keychain — the iOS one, or the data-protection
      keychain on macOS. So is the download resolver's bearer token, for the same reason. The API
      key lives in `UserDefaults`: it is a quota identifier rather than a credential, it is visible
      in every request the app makes, and Google's own advice is to restrict it rather than hide it.
+3. **API key** (optional alternative): [create an API key credential](https://console.cloud.google.com/apis/credentials) in the same Cloud project if
+   you prefer public browsing without Google sign-in. Paste it on the welcome screen or in Settings.
+   Account features still require OAuth. You can also keep both: the key handles public requests.
+4. **YouTube Home** (optional): after setting up OAuth or an API key, the welcome screen offers a
+   separate sign-in to youtube.com. Connect it for your real personalized Home feed and YouTube
+   Watch Later. You can skip it and connect later in Settings → YouTube Home.
 
 ## Project structure
 

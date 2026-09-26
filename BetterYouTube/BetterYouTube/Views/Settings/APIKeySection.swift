@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The API key, which is what everything the app shows is fetched with.
+/// An optional key for public Data API requests when the user prefers not to sign in.
 struct APIKeySection: View {
     @EnvironmentObject private var apiKeyStore: APIKeyStore
 
@@ -11,6 +11,12 @@ struct APIKeySection: View {
 
     var body: some View {
         Section {
+            Link(destination: GoogleCloudSetupURL.youtubeDataAPI) {
+                ExternalLinkLabel("Enable YouTube Data API v3")
+            }
+            Link(destination: GoogleCloudSetupURL.apiCredentials) {
+                ExternalLinkLabel("Create or find an API key")
+            }
             TextField("API key", text: $draft)
                 .identifierField()
 
@@ -26,9 +32,9 @@ struct APIKeySection: View {
                     .foregroundStyle(.green)
             }
         } header: {
-            Text("YouTube Data API v3 Key")
+            Text("YouTube Data API v3 Key (Optional)")
         } footer: {
-            Text("Enable the YouTube Data API v3 in the Google Cloud Console and create an API key credential. The key is stored only on this device.")
+            Text("Select your Google Cloud project on each linked page, enable the API, then choose Create credentials → API key. Google OAuth can load public content without a separate key; account features still need OAuth. The key is stored only on this device.")
         }
         .onAppear { draft = apiKeyStore.apiKey }
     }

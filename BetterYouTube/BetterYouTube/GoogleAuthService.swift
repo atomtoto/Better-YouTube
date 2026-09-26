@@ -99,11 +99,36 @@ enum KeychainStore {
 
 // MARK: - Presentation anchor
 
-/// Where the sign-in sheet hangs from: a `UIWindow` on iOS, an `NSWindow` on macOS. The two are
-/// the same thing under `ASPresentationAnchor`, which is why this is the whole of the difference.
+/// Keep the window captured on the main actor when sign-in starts. AuthenticationServices may
+/// ask for it on another executor, where looking up AppKit/UIKit state would be unsafe.
 final class WebAuthPresenter: NSObject, ASWebAuthenticationPresentationContextProviding {
+    private let anchor: ASPresentationAnchor
+
+    init(anchor: ASPresentationAnchor) {
+        self.anchor = anchor
+    }
+
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        MainActor.assumeIsolated { Platform.keyWindow } ?? ASPresentationAnchor()
+        anchor
+    }
+}
+
+/// `start()` can fail before the system calls its completion handler. If it later calls the
+/// handler too, a checked continuation must still be resumed only once.
+private final class WebAuthCompletion {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<URL, Error>?
+
+    init(_ continuation: CheckedContinuation<URL, Error>) {
+        self.continuation = continuation
+    }
+
+    func resume(_ result: Result<URL, Error>) {
+        lock.lock()
+        let pending = continuation
+        continuation = nil
+        lock.unlock()
+        pending?.resume(with: result)
     }
 }
 
@@ -146,8 +171,9 @@ final class GoogleAuthService: ObservableObject {
     private static let authEndpoint = "https://accounts.google.com/o/oauth2/v2/auth"
     private static let tokenEndpoint = "https://oauth2.googleapis.com/token"
 
-    private let presenter = WebAuthPresenter()
     private var session: ASWebAuthenticationSession?
+    /// Keep the presentation provider alive until the authentication session ends.
+    private var presenter: WebAuthPresenter?
     private var tokens: OAuthTokens? {
         didSet { isSignedIn = tokens != nil }
     }
@@ -321,21 +347,34 @@ final class GoogleAuthService: ObservableObject {
     // MARK: Private
 
     private func authenticate(url: URL, scheme: String) async throws -> URL {
-        try await withCheckedThrowingContinuation { continuation in
-            let session = ASWebAuthenticationSession(url: url, callbackURLScheme: scheme) { callbackURL, error in
+        guard session == nil else {
+            throw AuthError.exchangeFailed("A Google sign-in is already in progress.")
+        }
+        guard let anchor = Platform.keyWindow else {
+            throw AuthError.exchangeFailed("Sign-in could not find the app window. Close this screen and try again.")
+        }
+        let presenter = WebAuthPresenter(anchor: anchor)
+        self.presenter = presenter
+        defer {
+            session = nil
+            self.presenter = nil
+        }
+        return try await withCheckedThrowingContinuation { continuation in
+            let completion = WebAuthCompletion(continuation)
+            let session = ASWebAuthenticationSession(url: url, callback: .customScheme(scheme)) { callbackURL, error in
                 if let callbackURL {
-                    continuation.resume(returning: callbackURL)
+                    completion.resume(.success(callbackURL))
                 } else if let error {
-                    continuation.resume(throwing: error)
+                    completion.resume(.failure(error))
                 } else {
-                    continuation.resume(throwing: AuthError.cancelled)
+                    completion.resume(.failure(AuthError.cancelled))
                 }
             }
             session.presentationContextProvider = presenter
             session.prefersEphemeralWebBrowserSession = false
             self.session = session
             if !session.start() {
-                continuation.resume(throwing: AuthError.cancelled)
+                completion.resume(.failure(AuthError.exchangeFailed("Google sign-in could not start. Please try again.")))
             }
         }
     }

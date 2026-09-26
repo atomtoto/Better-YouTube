@@ -29,6 +29,7 @@ enum FloatingMiniPlayerSize: String, CaseIterable, Identifiable {
     case compact, standard, large
 
     static let storageKey = "floating_mini_player_size"
+    static let defaultSize: FloatingMiniPlayerSize = .compact
     var id: String { rawValue }
 
     var title: String {
@@ -60,7 +61,7 @@ struct PlayerContainerView: View {
     @State private var horizontalDrag: CGFloat = 0
     @State private var expandedScrollOffset: CGFloat = 0
     @AppStorage(MiniPlayerStyle.storageKey) private var miniPlayerStyle = MiniPlayerStyle.platformDefault
-    @AppStorage(FloatingMiniPlayerSize.storageKey) private var floatingSize = FloatingMiniPlayerSize.standard
+    @AppStorage(FloatingMiniPlayerSize.storageKey) private var floatingSize = FloatingMiniPlayerSize.defaultSize
     #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     #endif
@@ -269,7 +270,11 @@ struct PlayerContainerView: View {
             #if os(iOS)
             LocalPlayerSurface(playback: player.local, showsControls: player.isExpanded)
             #else
-            LocalPlayerSurface(playback: player.local)
+            LocalPlayerSurface(
+                playback: player.local,
+                showsControls: player.isExpanded,
+                usesFullScreenControls: player.isFullScreen
+            )
             #endif
         } else {
             PlayerSurface(webView: player.webView)

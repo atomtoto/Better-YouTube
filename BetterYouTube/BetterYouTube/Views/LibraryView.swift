@@ -9,6 +9,9 @@ struct LibraryView: View {
     @EnvironmentObject private var webSession: YouTubeWebSession
     @EnvironmentObject private var downloads: DownloadStore
     @StateObject private var viewModel = LibraryViewModel()
+    #if os(iOS)
+    @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
+    #endif
 
     var body: some View {
         List {
@@ -114,13 +117,28 @@ struct LibraryView: View {
         .minimizesPlayerBarOnScroll()
         .navigationTitle("Library")
         .refreshable { await reload() }
-        // The whole toolbar is the Mac's: on a phone the pull above is the affordance, and an
-        // empty `toolbar` block isn't a thing the builder accepts.
-        #if os(macOS)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) { RefreshButton(action: reload) }
+            #if os(macOS)
+            ToolbarItemGroup(placement: .primaryAction) {
+                RefreshButton(action: reload)
+                SettingsLink {
+                    Image(systemName: "gear")
+                }
+                .accessibilityLabel("Settings")
+            }
+            #else
+            if !showsSettingsTab {
+                ToolbarItem(placement: .primaryAction) {
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Image(systemName: "gear")
+                    }
+                    .accessibilityLabel("Settings")
+                }
+            }
+            #endif
         }
-        #endif
         .task(id: "\(auth.isSignedIn)-\(webSession.isSignedIn)-\(webSession.feedGeneration)-\(watchLater.sessionRevision)") {
             await watchLater.refresh()
             if auth.isSignedIn || webSession.isSignedIn {

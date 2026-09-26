@@ -34,6 +34,26 @@ extension View {
     }
 }
 
+/// A consistent label for links that leave the app. Hierarchical rendering keeps the arrow in
+/// the accent color and gives the surrounding circle its secondary level.
+struct ExternalLinkLabel: View {
+    let title: String
+
+    init(_ title: String) {
+        self.title = title
+    }
+
+    var body: some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: "arrow.up.forward.circle")
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Color.accentColor)
+        }
+    }
+}
+
 /// 16:9 artwork with a rounded, continuous corner and an optional duration badge.
 struct ArtworkView: View {
     let url: URL?

@@ -7,28 +7,35 @@ import AppKit
 
 struct LocalPlayerSurface: NSViewRepresentable {
     let playback: LocalPlayback
+    let showsControls: Bool
+    let usesFullScreenControls: Bool
 
     func makeNSView(context: Context) -> LocalPlayerHostView {
-        LocalPlayerHostView(player: playback.player)
+        LocalPlayerHostView(
+            player: playback.player,
+            showsControls: showsControls,
+            usesFullScreenControls: usesFullScreenControls
+        )
     }
 
     func updateNSView(_ nsView: LocalPlayerHostView, context: Context) {
         nsView.adopt(playback.player)
+        nsView.setControls(showsControls: showsControls, usesFullScreenControls: usesFullScreenControls)
     }
 }
 
 final class LocalPlayerHostView: NSView {
     private let nativePlayer = AVPlayerView()
 
-    init(player: AVPlayer) {
+    init(player: AVPlayer, showsControls: Bool, usesFullScreenControls: Bool) {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
         nativePlayer.allowsPictureInPicturePlayback = true
-        nativePlayer.controlsStyle = .floating
-        nativePlayer.autoresizingMask = [.width, .height]
+        nativePlayer.videoGravity = .resizeAspect
         addSubview(nativePlayer)
         adopt(player)
+        setControls(showsControls: showsControls, usesFullScreenControls: usesFullScreenControls)
     }
 
     @available(*, unavailable)
@@ -38,9 +45,22 @@ final class LocalPlayerHostView: NSView {
 
     override var isFlipped: Bool { true }
 
+    override func layout() {
+        super.layout()
+        if nativePlayer.frame != bounds { nativePlayer.frame = bounds }
+    }
+
     func adopt(_ player: AVPlayer) {
         guard nativePlayer.player !== player else { return }
         nativePlayer.player = player
+    }
+
+    func setControls(showsControls: Bool, usesFullScreenControls: Bool) {
+        let style: AVPlayerViewControlsStyle = !showsControls
+            ? .none : (usesFullScreenControls ? .floating : .inline)
+        if nativePlayer.controlsStyle != style {
+            nativePlayer.controlsStyle = style
+        }
     }
 }
 

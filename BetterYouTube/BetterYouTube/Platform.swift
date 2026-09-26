@@ -76,6 +76,17 @@ enum Platform {
         #endif
     }
 
+    /// Copies setup values such as the app's bundle ID in the platform's pasteboard.
+    @MainActor
+    static func copyToPasteboard(_ value: String) {
+        #if os(macOS)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(value, forType: .string)
+        #else
+        UIPasteboard.general.string = value
+        #endif
+    }
+
     /// Takes the user to wherever notification permission is granted, which is the only place
     /// it can be granted from once it has been refused.
     @MainActor

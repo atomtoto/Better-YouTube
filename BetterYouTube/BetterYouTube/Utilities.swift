@@ -1,5 +1,14 @@
 import Foundation
 
+/// Google Cloud Console destinations used by setup and Settings. The project is chosen in
+/// Google's project selector; this app does not know the user's Cloud project ID.
+enum GoogleCloudSetupURL {
+    static let youtubeDataAPI = URL(string: "https://console.cloud.google.com/apis/library/youtube.googleapis.com")!
+    static let oauthClients = URL(string: "https://console.cloud.google.com/auth/clients")!
+    static let oauthAudience = URL(string: "https://console.cloud.google.com/auth/audience")!
+    static let apiCredentials = URL(string: "https://console.cloud.google.com/apis/credentials")!
+}
+
 /// Converts ISO 8601 durations returned by the YouTube API (e.g. "PT1H2M3S") into "1:02:03".
 ///
 /// The `T` decides what `M` means, and it used to be read and then thrown away: before the `T` it

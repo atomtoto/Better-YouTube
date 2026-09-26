@@ -1,5 +1,9 @@
 import SwiftUI
 
+enum SettingsTabPreference {
+    static let storageKey = "show_settings_tab"
+}
+
 /// Settings, as the phone and iPad show it: a list of panes, each pushing to its own screen.
 ///
 /// It used to be every section stacked into one form, which is a long scroll past six subjects to

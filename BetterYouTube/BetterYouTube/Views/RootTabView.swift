@@ -1,12 +1,18 @@
 import SwiftUI
 
 struct RootTabView: View {
+    @ObservedObject private var reset = AppResetSignal.shared
     @EnvironmentObject private var apiKeyStore: APIKeyStore
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var notificationStore: NotificationStore
     @EnvironmentObject private var player: PlayerManager
     @State private var showsOnboarding = false
+    @AppStorage(OnboardingProgress.startedKey) private var hasStartedOnboarding = false
+    @AppStorage(OnboardingProgress.completedKey) private var hasCompletedOnboarding = false
+    #if os(iOS)
+    @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
+    #endif
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -22,7 +28,11 @@ struct RootTabView: View {
                 .ignoresKeyboardInset()
         }
         .sheet(isPresented: $showsOnboarding) {
-            OnboardingView()
+            OnboardingView {
+                hasCompletedOnboarding = true
+                showsOnboarding = false
+            }
+            .interactiveDismissDisabled()
         }
         .sheet(item: $router.pendingDownloadConfig) { link in
             DownloadConfigImportView(link: link)
@@ -31,13 +41,37 @@ struct RootTabView: View {
             router.open(url)
         }
         .onAppear {
-            showsOnboarding = !apiKeyStore.hasKey && !auth.isSignedIn
+            presentOnboardingIfNeeded()
+        }
+        .onChange(of: reset.generation) { _, _ in
+            hasStartedOnboarding = true
+            hasCompletedOnboarding = false
+            showsOnboarding = true
         }
         .task(id: router.pendingVideoId) {
             guard let videoId = router.pendingVideoId else { return }
             router.pendingVideoId = nil
             await player.open(videoId: videoId)
         }
+        #if os(iOS)
+        .onChange(of: showsSettingsTab) { _, visible in
+            if !visible && router.selectedTab == .settings {
+                router.selectedTab = .library
+            }
+        }
+        #endif
+    }
+
+    private func presentOnboardingIfNeeded() {
+        guard !hasCompletedOnboarding else { return }
+        // Existing installs already configured with a key or OAuth should not see a new
+        // welcome screen after updating. An unfinished first-run flow should resume.
+        if !hasStartedOnboarding && (apiKeyStore.hasKey || auth.isSignedIn) {
+            hasCompletedOnboarding = true
+            return
+        }
+        hasStartedOnboarding = true
+        showsOnboarding = true
     }
 
     /// Whichever section is selected, in its own navigation stack. Shared by both shapes below,
@@ -73,9 +107,11 @@ struct RootTabView: View {
                 .tabItem { Label("Library", systemImage: "tray.full.fill") }
                 .tag(AppRouter.Tab.library)
 
-            screen(for: .settings)
-                .tabItem { Label("Settings", systemImage: "gearshape.fill") }
-                .tag(AppRouter.Tab.settings)
+            if showsSettingsTab {
+                screen(for: .settings)
+                    .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+                    .tag(AppRouter.Tab.settings)
+            }
         }
         // Shrink the floating tab bar as you scroll down, the way Apple's own apps do — it
         // comes back at the top of the scroll, not on the first flick upwards. The player bar
@@ -125,102 +161,411 @@ struct RootTabView: View {
 #endif
 }
 
-/// First-run screen explaining the two ways to authenticate against the YouTube API.
+enum OnboardingProgress {
+    static let startedKey = "onboarding_started"
+    static let completedKey = "onboarding_completed"
+}
+
+/// First-run setup. Each screen has one decision so the Cloud Console instructions, credential
+/// entry, and optional website session never compete for space on a phone.
 private struct OnboardingView: View {
     @EnvironmentObject private var apiKeyStore: APIKeyStore
-    @Environment(\.dismiss) private var dismiss
-    @State private var draft: String = ""
+    @EnvironmentObject private var auth: GoogleAuthService
+    @EnvironmentObject private var webSession: YouTubeWebSession
+    let onFinish: () -> Void
+
+    private enum Step: Equatable { case welcome, cloud, google, apiKey, home }
+    @State private var step: Step = .welcome
+    @State private var previousConnectionStep: Step = .google
+    @State private var apiKeyDraft = ""
+    @State private var showsYouTubeSignIn = false
+    @State private var isSigningIn = false
+    @State private var authError: String?
+    @State private var copiedBundleID = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 28) {
-                    VStack(spacing: 12) {
-                        Image(systemName: "play.rectangle.on.rectangle.fill")
-                            .font(.system(size: 56))
-                            .foregroundStyle(.red)
-                        Text("Welcome to Better YouTube")
-                            .font(.largeTitle.bold())
-                            .multilineTextAlignment(.center)
-                        Text("A calmer way to browse YouTube, built on the official Data API.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.top, 32)
-
-                    VStack(spacing: 16) {
-                        FeatureRow(
-                            icon: "key.fill",
-                            title: "Add an API key",
-                            detail: "Enable the YouTube Data API v3 in the Google Cloud Console and create an API key."
-                        )
-                        FeatureRow(
-                            icon: "person.crop.circle.fill",
-                            title: "Sign in (optional)",
-                            detail: "Connect your Google account in Settings to see your subscriptions, playlists and likes."
-                        )
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("API key")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        TextField("Paste your key", text: $draft)
-                            .identifierField()
-                            // The field draws its own background below; without this macOS
-                            // would put its bezel inside the rounded rectangle.
-                            .textFieldStyle(.plain)
-                            .padding(12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(Color.appSecondaryBackground)
-                            )
-
-                        Button {
-                            apiKeyStore.apiKey = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-                            dismiss()
-                        } label: {
-                            Text("Continue")
-                                .font(.headline)
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-                        .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
+                VStack(alignment: .leading, spacing: 28) {
+                    progress
+                    heading
+                    pageContent
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 32)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 32)
+                .frame(maxWidth: 560)
+                .frame(maxWidth: .infinity)
             }
+            .id(step)
+            .safeAreaInset(edge: .bottom, spacing: 0) { actions }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Later") { dismiss() }
+                    if step != .welcome {
+                        Button("Back", systemImage: "chevron.left", action: goBack)
+                            .disabled(isSigningIn)
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if step != .home {
+                        Button("Set Up Later", action: onFinish)
+                            .disabled(isSigningIn)
+                    }
+                }
+            }
+            .sheet(isPresented: $showsYouTubeSignIn) {
+                YouTubeSignInView()
+            }
+            .onAppear {
+                if auth.isSignedIn {
+                    previousConnectionStep = .google
+                    step = .home
+                } else if apiKeyStore.hasKey {
+                    previousConnectionStep = .apiKey
+                    step = .home
                 }
             }
         }
     }
-}
 
-private struct FeatureRow: View {
-    let icon: String
-    let title: String
-    let detail: String
+    private var progress: some View {
+        HStack(spacing: 7) {
+            ForEach(0..<4) { index in
+                Capsule()
+                    .fill(index <= progressIndex ? Color.accentColor : Color.appTertiaryFill)
+                    .frame(height: 5)
+            }
+        }
+        .accessibilityLabel("Setup step \(progressIndex + 1) of 4")
+    }
 
-    var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundStyle(.red)
-                .frame(width: 30)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                Text(detail)
-                    .font(.footnote)
+    private var progressIndex: Int {
+        switch step {
+        case .welcome: 0
+        case .cloud: 1
+        case .google, .apiKey: 2
+        case .home: 3
+        }
+    }
+
+    private var heading: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Image(systemName: stepIcon)
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 62, height: 62)
+                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 18))
+            Text(stepTitle)
+                .font(.largeTitle.bold())
+                .fixedSize(horizontal: false, vertical: true)
+            Text(stepSubtitle)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var stepIcon: String {
+        switch step {
+        case .welcome: "play.rectangle.fill"
+        case .cloud: "checklist"
+        case .google: "person.crop.circle.fill"
+        case .apiKey: "key.fill"
+        case .home: "house.fill"
+        }
+    }
+
+    private var stepTitle: String {
+        switch step {
+        case .welcome: "Welcome to Better YouTube"
+        case .cloud: "Prepare Google Cloud"
+        case .google: "Connect your Google account"
+        case .apiKey: "Use an API key"
+        case .home: "Bring in your YouTube Home"
+        }
+    }
+
+    private var stepSubtitle: String {
+        switch step {
+        case .welcome: "A calmer way to browse. Set up access in a few short steps."
+        case .cloud: "Enable the API and create an OAuth client in your Google Cloud project."
+        case .google: "Paste your OAuth client ID, then sign in securely with Google."
+        case .apiKey: "An optional way to browse public videos without signing in."
+        case .home: "Connect youtube.com for your personalized Home feed and Watch Later."
+        }
+    }
+
+    @ViewBuilder
+    private var pageContent: some View {
+        switch step {
+        case .welcome: welcomePage
+        case .cloud: cloudPage
+        case .google: googlePage
+        case .apiKey: apiKeyPage
+        case .home: homePage
+        }
+    }
+
+    private var welcomePage: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            feature("1", "Connect Google", "OAuth lets you browse and access your subscriptions, playlists and likes. No separate API key is needed.")
+            feature("2", "Add YouTube Home", "A separate, optional youtube.com connection brings in your personal feed and Watch Later.")
+            Text("You can also choose an API key for public videos, or finish setup later in Settings.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func feature(_ number: String, _ title: String, _ detail: String) -> some View {
+        card {
+            HStack(alignment: .top, spacing: 14) {
+                Text(number)
+                    .font(.headline)
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title).font(.headline)
+                    Text(detail).font(.subheadline).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var cloudPage: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Choose the same Google Cloud project on each linked page.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            setupLink("1", "Enable YouTube Data API v3", "Required for browsing and account features.", GoogleCloudSetupURL.youtubeDataAPI)
+            setupLink("2", "Create an OAuth client ID", "Choose the iOS application type, including on a Mac.", GoogleCloudSetupURL.oauthClients)
+            card {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Use this bundle ID").font(.headline)
+                    HStack(spacing: 10) {
+                        Text(bundleID)
+                            .font(.subheadline.monospaced())
+                            .textSelection(.enabled)
+                        Spacer(minLength: 0)
+                        Button(copiedBundleID ? "Copied" : "Copy", systemImage: copiedBundleID ? "checkmark" : "doc.on.doc") {
+                            Platform.copyToPasteboard(bundleID)
+                            copiedBundleID = true
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    Text("Paste it into the OAuth client's Bundle ID field.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            setupLink("3", "Add yourself as a test user", "Needed while the OAuth consent screen is in Testing.", GoogleCloudSetupURL.oauthAudience)
+        }
+    }
+
+    private var bundleID: String {
+        Bundle.main.bundleIdentifier ?? "com.atomtoto.BetterYouTube"
+    }
+
+    private func setupLink(_ number: String, _ title: String, _ detail: String, _ url: URL) -> some View {
+        Link(destination: url) {
+            card {
+                HStack(alignment: .top, spacing: 14) {
+                    Text(number)
+                        .font(.headline)
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 6) {
+                        ExternalLinkLabel(title).font(.headline)
+                        Text(detail).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var googlePage: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            card {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("OAuth client ID").font(.headline)
+                    TextField("Paste your client ID", text: $auth.clientId)
+                        .identifierField()
+                        .textFieldStyle(.plain)
+                        .padding(14)
+                        .background(Color.appBackground, in: RoundedRectangle(cornerRadius: 12))
+                    Text("It ends in .apps.googleusercontent.com. You can find it under Google Cloud → Clients.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if auth.isSignedIn {
+                Label("Connected with Google", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            } else {
+                Text("On Google's consent screen, select the YouTube permission before continuing.")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            Spacer(minLength: 0)
+            if let authError {
+                Label(authError, systemImage: "exclamationmark.circle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Link(destination: GoogleCloudSetupURL.oauthClients) {
+                ExternalLinkLabel("Find your OAuth client ID")
+            }
+            .font(.subheadline)
+        }
+    }
+
+    private var apiKeyPage: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            setupLink("1", "Enable YouTube Data API v3", "Choose your Google Cloud project first.", GoogleCloudSetupURL.youtubeDataAPI)
+            setupLink("2", "Create an API key", "Find it under APIs & Services → Credentials.", GoogleCloudSetupURL.apiCredentials)
+            card {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("API key").font(.headline)
+                    TextField("Paste your API key", text: $apiKeyDraft)
+                        .identifierField()
+                        .textFieldStyle(.plain)
+                        .padding(14)
+                        .background(Color.appBackground, in: RoundedRectangle(cornerRadius: 12))
+                    Text("You can add OAuth later in Settings for subscriptions, playlists and likes.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var homePage: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            card {
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("Your own YouTube feed", systemImage: "sparkles.tv")
+                        .font(.headline)
+                    Text("Sign in to youtube.com to see your personalized Home and YouTube Watch Later playlist here.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if webSession.isSignedIn {
+                Label("Connected to youtube.com", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            } else {
+                Text("This website connection is separate from Google OAuth. Use the same Google account when YouTube asks you to sign in.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Text("YouTube Home reads the website outside the official API and may need attention if YouTube changes its pages.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func card<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(18)
+            .cardBackground(cornerRadius: 20)
+    }
+
+    private var actions: some View {
+        VStack(spacing: 10) {
+            switch step {
+            case .welcome:
+                primaryButton("Set Up Google", icon: "arrow.right") { step = .cloud }
+                secondaryButton("Use an API key instead") { step = .apiKey }
+            case .cloud:
+                primaryButton("I Have My OAuth Client ID", icon: "arrow.right") { step = .google }
+            case .google:
+                if auth.isSignedIn {
+                    primaryButton("Continue to YouTube Home", icon: "arrow.right") {
+                        previousConnectionStep = .google
+                        step = .home
+                    }
+                } else {
+                    Button(action: signIn) {
+                        HStack(spacing: 10) {
+                            if isSigningIn { ProgressView().controlSize(.small) }
+                            Text("Sign in with Google")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(isSigningIn || auth.redirectScheme == nil)
+                }
+            case .apiKey:
+                primaryButton("Continue with API Key", icon: "arrow.right") {
+                    apiKeyStore.apiKey = apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    previousConnectionStep = .apiKey
+                    step = .home
+                }
+                .disabled(apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            case .home:
+                if webSession.isSignedIn {
+                    primaryButton("Start Using Better YouTube", icon: "checkmark", action: onFinish)
+                } else {
+                    primaryButton("Connect YouTube Home", icon: "arrow.right") { showsYouTubeSignIn = true }
+                    secondaryButton("Continue Without YouTube Home", action: onFinish)
+                }
+            }
+        }
+        .frame(maxWidth: 512)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
+        .background(.regularMaterial)
+    }
+
+    private func primaryButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title).font(.headline)
+                Spacer()
+                Image(systemName: icon)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+    }
+
+    private func secondaryButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+    }
+
+    private func goBack() {
+        switch step {
+        case .welcome: break
+        case .cloud, .apiKey: step = .welcome
+        case .google: step = .cloud
+        case .home: step = previousConnectionStep
+        }
+    }
+
+    private func signIn() {
+        isSigningIn = true
+        authError = nil
+        Task {
+            do {
+                try await auth.signIn()
+                previousConnectionStep = .google
+                step = .home
+            } catch {
+                authError = error.localizedDescription
+            }
+            isSigningIn = false
         }
     }
 }

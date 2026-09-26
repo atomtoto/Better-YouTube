@@ -63,6 +63,9 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 /// it decides.
 struct SettingsPaneView: View {
     let pane: SettingsPane
+    #if os(iOS)
+    @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
+    #endif
 
     var body: some View {
         Form {
@@ -84,6 +87,11 @@ struct SettingsPaneView: View {
                 APIKeySection()
                 QuotaSection()
             case .advanced:
+                #if os(iOS)
+                Section("Navigation") {
+                    Toggle("Show Settings in Tab Bar", isOn: $showsSettingsTab)
+                }
+                #endif
                 ResetSection()
                 AboutSection()
             }
@@ -100,7 +108,7 @@ struct SettingsPaneView: View {
 
 private struct PlaybackSection: View {
     @AppStorage(MiniPlayerStyle.storageKey) private var miniPlayerStyle = MiniPlayerStyle.platformDefault
-    @AppStorage(FloatingMiniPlayerSize.storageKey) private var floatingSize = FloatingMiniPlayerSize.standard
+    @AppStorage(FloatingMiniPlayerSize.storageKey) private var floatingSize = FloatingMiniPlayerSize.defaultSize
 
     var body: some View {
         Section {

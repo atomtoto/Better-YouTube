@@ -14,20 +14,18 @@ struct AccountSection: View {
         Section {
             if auth.isSignedIn {
                 signedIn
+                cloudSetupLinks
             } else {
+                cloudSetupLinks
                 signedOut
             }
         } header: {
             Text("YouTube Account")
         } footer: {
             Text("""
-            Optional. In the Google Cloud Console: create an OAuth 2.0 client ID of type iOS — the \
-            same type covers macOS — then open Google Auth Platform → Audience and add your own \
-            Google account under Test users; while the consent screen is in Testing, every other \
-            account is refused with "access_denied". Paste the client ID above to read your \
-            subscriptions, custom playlists and liked videos. Watch Later uses the separate \
-            youtube.com session. Watch history is not available through the API, so that list stays on \
-            this device.
+            OAuth is recommended for browsing and account features; an API key is optional. \
+            While the consent screen is in Testing, only accounts added under Test users can sign \
+            in. Watch Later uses the separate youtube.com session. Watch history stays on this device.
 
             On the consent screen, tick the YouTube permission before Continue: left unticked, \
             Google issues a sign-in that can't do anything and the app has to throw it away.
@@ -115,6 +113,26 @@ struct AccountSection: View {
                 .font(.footnote)
                 .foregroundStyle(.red)
         }
+    }
+
+    @ViewBuilder
+    private var cloudSetupLinks: some View {
+        Text("Google Cloud setup · select your project on each page")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+        Link(destination: GoogleCloudSetupURL.youtubeDataAPI) {
+            ExternalLinkLabel("Enable YouTube Data API v3")
+        }
+        Link(destination: GoogleCloudSetupURL.oauthClients) {
+            ExternalLinkLabel("Create or find an OAuth client ID")
+        }
+        Link(destination: GoogleCloudSetupURL.oauthAudience) {
+            ExternalLinkLabel("Add a test user (if Testing)")
+        }
+        Text("Choose an iOS client (also used on macOS) with this app's bundle ID: \(Bundle.main.bundleIdentifier ?? "com.atomtoto.BetterYouTube")")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .textSelection(.enabled)
     }
 
     /// The channel's own numbers once they arrive; until then — or for a Google account with no
