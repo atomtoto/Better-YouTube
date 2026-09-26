@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Everything below the video in the expanded player: title, actions, channel, description,
-/// the up-next queue and comments.
+/// the up-next queue and a preview of the comments.
 struct PlayerDetailsView: View {
     let video: Video
 
@@ -16,6 +16,7 @@ struct PlayerDetailsView: View {
     @State private var newCommentText = ""
     @State private var watchLaterError: String?
     @State private var showsPlaylistPicker = false
+    @State private var showsComments = false
 
     init(video: Video) {
         self.video = video
@@ -59,11 +60,11 @@ struct PlayerDetailsView: View {
                     descriptionCard
                 }
 
+                commentsPreview
+
                 if !player.upNext.isEmpty {
                     upNextSection
                 }
-
-                commentsSection
             }
             .padding(.horizontal, Theme.Spacing.gutter)
             .padding(.top, 16)
@@ -73,6 +74,27 @@ struct PlayerDetailsView: View {
         .task { await viewModel.loadAll() }
         .sheet(isPresented: $showsPlaylistPicker) {
             PlaylistPickerView(video: displayed)
+        }
+        .sheet(isPresented: $showsComments) {
+            NavigationStack {
+                ScrollView {
+                    commentsSection
+                        .padding(Theme.Spacing.gutter)
+                }
+                .navigationTitle("Comments")
+                #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+                #endif
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showsComments = false }
+                    }
+                }
+            }
+            #if os(iOS)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            #endif
         }
         .alert("Watch Later", isPresented: Binding(
             get: { watchLaterError != nil },
@@ -167,6 +189,18 @@ struct PlayerDetailsView: View {
                         Haptics.medium()
                         Task { await viewModel.toggleLike() }
                     }
+
+                    PlayerActionPill(
+                        title: viewModel.isDisliked ? "Dislike" : "",
+                        systemImage: viewModel.isDisliked ? "hand.thumbsdown.fill" : "hand.thumbsdown",
+                        isActive: viewModel.isDisliked,
+                        activeTint: .red,
+                        isBusy: viewModel.isRating
+                    ) {
+                        Haptics.medium()
+                        Task { await viewModel.toggleDislike() }
+                    }
+                    .accessibilityLabel("Dislike")
 
                     PlayerActionPill(
                         title: "Favorite",
@@ -316,11 +350,48 @@ struct PlayerDetailsView: View {
         }
     }
 
+    private var commentsPreview: some View {
+        Button { showsComments = true } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Comments")
+                        .font(.title3.bold())
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                if let comment = viewModel.comments.first {
+                    HStack(alignment: .top, spacing: 10) {
+                        AvatarView(url: comment.authorAvatarURL, size: 28)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(comment.authorName)
+                                .font(.caption.weight(.semibold))
+                            Text(comment.text)
+                                .font(.footnote)
+                                .lineLimit(2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                } else if viewModel.isLoadingComments {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Text(viewModel.commentsError ?? "No comments yet.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .cardBackground()
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens all comments")
+    }
+
     private var commentsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Comments")
-                .font(.title3.bold())
-
             HStack(alignment: .center, spacing: 8) {
                 TextField("Add a comment", text: $newCommentText, axis: .vertical)
                     .textFieldStyle(.plain)
@@ -377,7 +448,6 @@ struct PlayerDetailsView: View {
                 ForEach(viewModel.comments) { comment in
                     CommentRowView(
                         comment: comment,
-                        videoId: displayed.id,
                         viewModel: viewModel
                     )
                 }
@@ -508,10 +578,12 @@ struct PlayerPillFace: View {
                     .symbolEffect(.bounce, value: isActive)
             }
 
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-                .contentTransition(.numericText())
+            if !title.isEmpty {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                    .contentTransition(.numericText())
+            }
         }
         .foregroundStyle(isActive ? activeTint : Color.primary)
         .padding(.horizontal, 15)
@@ -558,10 +630,8 @@ private struct PlayerActionPill: View {
 
 struct CommentRowView: View {
     let comment: VideoComment
-    let videoId: String
     @ObservedObject var viewModel: VideoDetailViewModel
 
-    @Environment(\.openURL) private var openURL
     @State private var showsReplies = false
     @State private var showsReplyComposer = false
     @State private var replyText = ""
@@ -583,8 +653,10 @@ struct CommentRowView: View {
                         comment.likeCount > 0 ? CountFormatter.abbreviated(comment.likeCount) : "Like",
                         systemImage: comment.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup"
                     )
+                    .foregroundStyle(comment.isLiked ? Color.red : Color.secondary)
                 }
                 .accessibilityHint("Likes or unlikes this comment")
+                .disabled(viewModel.ratingComments.contains(comment.id))
 
                 Button("Reply") {
                     withAnimation(.easeInOut(duration: 0.2)) { showsReplyComposer.toggle() }
@@ -702,12 +774,4 @@ struct CommentRowView: View {
         }
     }
 
-    private func youTubeURL(for commentId: String) -> URL? {
-        var components = URLComponents(string: "https://www.youtube.com/watch")
-        components?.queryItems = [
-            URLQueryItem(name: "v", value: videoId),
-            URLQueryItem(name: "lc", value: commentId)
-        ]
-        return components?.url
-    }
 }

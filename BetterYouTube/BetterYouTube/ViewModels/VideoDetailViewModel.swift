@@ -15,6 +15,7 @@ final class VideoDetailViewModel: ObservableObject {
     @Published private(set) var loadingReplies: Set<String> = []
     @Published private(set) var isPostingComment = false
     @Published private(set) var sendingReplyTo: Set<String> = []
+    @Published private(set) var ratingComments: Set<String> = []
     /// The account's own rating for this video, as YouTube holds it. `.unspecified` until it
     /// has been read back — the like button only fills in once it is known.
     @Published private(set) var rating: VideoRating = .unspecified
@@ -36,6 +37,7 @@ final class VideoDetailViewModel: ObservableObject {
     }
 
     var isLiked: Bool { rating == .like }
+    var isDisliked: Bool { rating == .dislike }
 
     func loadAll() async {
         async let details: Void = refreshDetails()
@@ -89,26 +91,30 @@ final class VideoDetailViewModel: ObservableObject {
         rating = (try? await service.rating(videoId: video.id)) ?? .unspecified
     }
 
-    /// Likes the video on YouTube, or takes the like back — a real `videos.rate` write, so it
-    /// shows up in Liked videos in the YouTube app too. 50 quota units a tap.
-    ///
-    /// The button and the count move first and are put back if YouTube refuses, because the
-    /// write takes a round trip and a like that lags behind the thumb feels broken.
     func toggleLike() async {
+        await setRating(isLiked ? .none : .like)
+    }
+
+    func toggleDislike() async {
+        await setRating(isDisliked ? .none : .dislike)
+    }
+
+    /// Keep the two rating buttons and the public like count in sync through one write path.
+    private func setRating(_ target: VideoRating) async {
         guard !isRating else { return }
         let previous = rating
-        let target: VideoRating = isLiked ? .none : .like
+        let likeDelta = (target == .like ? 1 : 0) - (previous == .like ? 1 : 0)
 
         isRating = true
         ratingError = nil
         rating = target
-        adjustLikeCount(by: target == .like ? 1 : -1)
+        adjustLikeCount(by: likeDelta)
 
         do {
             try await service.rate(videoId: video.id, rating: target)
         } catch {
             rating = previous
-            adjustLikeCount(by: target == .like ? -1 : 1)
+            adjustLikeCount(by: -likeDelta)
             ratingError = error.localizedDescription
         }
         isRating = false
@@ -155,21 +161,26 @@ final class VideoDetailViewModel: ObservableObject {
     // MARK: - Comment actions
 
     func toggleCommentLike(_ comment: VideoComment) async {
-        guard let index = comments.firstIndex(where: { $0.id == comment.id }) else { return }
+        guard let index = comments.firstIndex(where: { $0.id == comment.id }),
+              !ratingComments.contains(comment.id) else { return }
 
         let isLiked = comments[index].isLiked
+        let likeCount = comments[index].likeCount
+        ratingComments.insert(comment.id)
+        commentActionError = nil
+        defer { ratingComments.remove(comment.id) }
         // Optimistic update
         comments[index].isLiked = !isLiked
-        comments[index].likeCount = max(0, comments[index].likeCount + (isLiked ? -1 : 1))
+        comments[index].likeCount = max(0, likeCount + (isLiked ? -1 : 1))
 
         do {
-            try await YouTubeWebCommentService.shared.setLiked(
-                !isLiked, commentID: comment.id, videoID: video.id
-            )
+            let actual = try await YouTubeWebCommentService.shared.toggleLike(commentID: comment.id, videoID: video.id)
+            comments[index].isLiked = actual
+            comments[index].likeCount = max(0, likeCount + (actual ? 1 : 0) - (isLiked ? 1 : 0))
         } catch {
             // Revert on failure
             comments[index].isLiked = isLiked
-            comments[index].likeCount += isLiked ? 1 : -1
+            comments[index].likeCount = likeCount
             commentActionError = error.localizedDescription
         }
     }

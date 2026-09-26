@@ -326,7 +326,13 @@ final class YouTubeFeedReader {
         isHarvesting = true
         defer { isHarvesting = false }
         let webView = attachedWebView()
-        defer { webView.stopLoading(); webView.removeFromSuperview() }
+        defer {
+            webView.stopLoading()
+            // A comment action loads a watch page. Discard its media document before hiding the
+            // reader so it cannot keep playing behind the app after the action finishes.
+            webView.loadHTMLString("", baseURL: nil)
+            webView.removeFromSuperview()
+        }
         webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
         try await waitForLoad(url, in: webView, readyWhenVideosAppear: false)
         guard webView.url?.host == "www.youtube.com" else { throw YouTubeFeedIssue.consentNeeded }
@@ -368,7 +374,18 @@ final class YouTubeFeedReader {
     }
 
     private func makeWebView() -> WKWebView {
-        let webView = WKWebView(frame: .zero, configuration: YouTubeWebSession.shared.configuration())
+        let configuration = YouTubeWebSession.shared.configuration()
+        // Readers inspect pages; playback belongs only to PlayerManager's separate web view.
+        configuration.mediaTypesRequiringUserActionForPlayback = .all
+        if self === Self.comments {
+            configuration.userContentController.addUserScript(WKUserScript(
+                source: Self.commentNoPlaybackScript,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false,
+                in: .page
+            ))
+        }
+        let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.customUserAgent = YouTubeWebSession.userAgent
         webView.navigationDelegate = bridge
         // Invisible and deaf to input: it is behind the whole app and only there to lay out.
@@ -380,6 +397,35 @@ final class YouTubeFeedReader {
         #endif
         return webView
     }
+
+    /// A watch page is needed to reach YouTube's comment control, but its player must never run.
+    /// Document-start injection applies in frames too, before YouTube's own scripts call play().
+    private static let commentNoPlaybackScript = #"""
+    (() => {
+        function stop(media) {
+            media.autoplay = false;
+            media.muted = true;
+            media.pause();
+        }
+        HTMLMediaElement.prototype.play = function() {
+            stop(this);
+            return Promise.resolve();
+        };
+        for (const event of ['play', 'playing']) {
+            document.addEventListener(event, e => {
+                if (e.target instanceof HTMLMediaElement) stop(e.target);
+            }, true);
+        }
+        new MutationObserver(records => {
+            for (const record of records) {
+                for (const node of record.addedNodes) {
+                    if (node instanceof HTMLMediaElement) stop(node);
+                    if (node instanceof Element) node.querySelectorAll('video,audio').forEach(stop);
+                }
+            }
+        }).observe(document, { childList: true, subtree: true });
+    })();
+    """#
 
     private func waitForLoad(_ url: URL, in webView: WKWebView, readyWhenVideosAppear: Bool) async throws {
         let loadID = UUID()

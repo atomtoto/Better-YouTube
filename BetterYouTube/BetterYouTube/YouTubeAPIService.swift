@@ -405,6 +405,8 @@ actor YouTubeAPIService {
     }
 
     func comments(videoId: String, maxResults: Int = 20) async throws -> [VideoComment] {
+        // viewerRating belongs to the account: a key-only request always reads it as "none".
+        let hasAccount = await GoogleAuthService.shared.isSignedIn
         let response: YTListResponse<YTCommentThreadItem> = try await request(
             path: "commentThreads",
             query: [
@@ -413,7 +415,8 @@ actor YouTubeAPIService {
                 "maxResults": "\(maxResults)",
                 "order": "relevance",
                 "textFormat": "plainText"
-            ]
+            ],
+            requiresAuth: hasAccount
         )
         return response.items.map(VideoComment.init(thread:))
     }

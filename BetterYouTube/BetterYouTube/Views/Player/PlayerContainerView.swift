@@ -827,11 +827,9 @@ private struct MiniPlayerControls: View {
         .padding(.trailing, metrics.controlsTrailingPadding)
     }
 
-    /// A hairline of progress, clipped to the bar so it follows the rounded corners.
+    /// The shape clips the progress at its lower edge, including its rounded corners.
     private var progressLine: some View {
         MiniProgressLine(progress: player.progress)
-            .padding(.horizontal, 14)
-            .padding(.bottom, 3)
             .allowsHitTesting(false)
     }
 }
@@ -879,8 +877,6 @@ private struct MiniPlayerBoxPreview: View {
                 VStack {
                     Spacer()
                     MiniProgressLine(progress: progress)
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 3)
                 }
             } else {
                 HStack(spacing: 0) {
@@ -931,8 +927,6 @@ private struct MiniPlayerBoxPreview: View {
                     VStack {
                         Spacer()
                         MiniProgressLine(progress: progress)
-                            .padding(.horizontal, 14)
-                            .padding(.bottom, 3)
                     }
                 }
             }
@@ -942,14 +936,13 @@ private struct MiniPlayerBoxPreview: View {
     }
 }
 
-/// The played fraction. It watches the progress object rather than the player itself, so the
-/// position ticks — several a second — only ever redraw these two and a half points.
+/// The played fraction, using the original size with rounded ends.
 private struct MiniProgressLine: View {
     @ObservedObject var progress: PlaybackProgress
 
     var body: some View {
         GeometryReader { proxy in
-            Rectangle()
+            Capsule()
                 .fill(Color.accentColor)
                 .frame(width: proxy.size.width * progress.fraction)
                 .frame(maxHeight: .infinity, alignment: .bottom)

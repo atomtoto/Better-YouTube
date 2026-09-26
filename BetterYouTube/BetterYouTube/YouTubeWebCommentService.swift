@@ -12,7 +12,8 @@ final class YouTubeWebCommentService {
 
     private init() {}
 
-    func setLiked(_ liked: Bool, commentID: String, videoID: String) async throws {
+    /// Toggles the page's actual rating; the Data API does not expose the viewer's comment rating.
+    func toggleLike(commentID: String, videoID: String) async throws -> Bool {
         guard Self.isCommentID(commentID), YouTubeWebSession.videoId(in: Self.pageURL(videoID: videoID, commentID: commentID)) != nil else {
             throw YouTubeFeedIssue.loadFailed("YouTube returned an invalid comment reference.")
         }
@@ -24,15 +25,19 @@ final class YouTubeWebCommentService {
 
         let session = YouTubeWebSession.shared
         let generation = session.feedGeneration
-        try await reader.withPlaylistPage(Self.pageURL(videoID: videoID, commentID: commentID)) { webView in
+        return try await reader.withPlaylistPage(Self.pageURL(videoID: videoID, commentID: commentID)) { webView in
             guard session.isSignedIn, session.feedGeneration == generation else { throw CancellationError() }
             do {
-                _ = try await webView.callAsyncJavaScript(
+                let result = try await webView.callAsyncJavaScript(
                     Self.actionScript,
-                    arguments: ["commentID": commentID, "shouldLike": liked],
+                    arguments: ["commentID": commentID],
                     in: nil,
                     contentWorld: .page
                 )
+                guard let isLiked = result as? Bool else {
+                    throw YouTubeFeedIssue.loadFailed("YouTube did not confirm the comment rating.")
+                }
+                return isLiked
             } catch {
                 guard session.isSignedIn, session.feedGeneration == generation else { throw CancellationError() }
                 if let message = (error as NSError).userInfo["WKJavaScriptExceptionMessage"] as? String {
@@ -64,7 +69,6 @@ final class YouTubeWebCommentService {
     /// data model; button lookup uses its accessible label instead of a transient CSS class.
     private static let actionScript = #"""
     const wanted = String(commentID);
-    const desired = Boolean(shouldLike);
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
     function containsID(value, depth = 0, seen = new WeakSet()) {
@@ -95,22 +99,34 @@ final class YouTubeWebCommentService {
     }
     if (!comment) throw new Error('YouTube could not find this comment on its page. Refresh the comments and retry.');
 
-    function label(button) {
-        return String(button.getAttribute('aria-label') || button.title || '').trim();
+    function label(element) {
+        return String(element.getAttribute('aria-label') || element.getAttribute('title') || '').trim().toLowerCase();
     }
-    const button = Array.from(comment.querySelectorAll('button,[role="button"],tp-yt-paper-button'))
-        .find(candidate => {
-            const value = label(candidate).toLowerCase();
-            return (value.startsWith('like') || value.startsWith('unlike')) && !value.includes('dislike');
-        });
+    function isLikeLabel(value) {
+        return /^(like|unlike)(\b|\s|$)/.test(value) && !value.includes('dislike');
+    }
+    const controls = comment.querySelector('#action-buttons, #toolbar, ytd-comment-action-buttons-renderer, ytm-comment-action-buttons-renderer') || comment;
+    const candidates = Array.from(controls.querySelectorAll('button,[role="button"],tp-yt-paper-button,yt-icon-button,ytd-toggle-button-renderer,yt-button-shape'));
+    const control = candidates.find(candidate => {
+        if (isLikeLabel(label(candidate))) return true;
+        const tooltip = candidate.querySelector('#tooltip,yt-formatted-string[aria-label],yt-formatted-string[role="tooltip"]');
+        return tooltip && isLikeLabel(label(tooltip) || tooltip.textContent.trim().toLowerCase());
+    }) || controls.querySelector('#like-button');
+    const button = control?.matches('button,[role="button"],tp-yt-paper-button')
+        ? control : control?.querySelector('button,[role="button"],tp-yt-paper-button');
     if (!button) throw new Error('YouTube changed its comment controls. Update the app and retry.');
 
-    const currentLabel = label(button).toLowerCase();
-    const selected = button.getAttribute('aria-pressed') === 'true' || currentLabel.startsWith('unlike');
-    if (selected !== desired) {
-        button.click();
-        await sleep(900);
+    function selected() {
+        const pressed = [button, control].map(element => element.getAttribute('aria-pressed')).find(value => value !== null);
+        if (pressed !== undefined) return pressed === 'true';
+        if (control.hasAttribute('is-toggled')) return control.getAttribute('is-toggled') !== 'false';
+        const tooltip = control.querySelector('#tooltip,yt-formatted-string[aria-label],yt-formatted-string[role="tooltip"]');
+        return [label(button), label(control), tooltip && (label(tooltip) || tooltip.textContent.trim().toLowerCase())]
+            .some(value => value && value.startsWith('unlike'));
     }
-    return true;
+    const wasLiked = selected();
+    button.click();
+    await sleep(600);
+    return !wasLiked;
     """#
 }
