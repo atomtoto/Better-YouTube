@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The full-screen player. The video itself is the shared surface drawn underneath this view, so
-/// everything here sits either above it (the header) or below it (the details).
+/// The expanded player. The video is the shared surface drawn through the gap in this view.
 ///
 /// The header deliberately sits *above* the video rather than overlaying it: the embed draws
 /// YouTube's own transport controls, and an overlay would swallow the taps meant for them.
@@ -14,6 +13,7 @@ struct ExpandedPlayerView: View {
     /// How far the video travels to reach the docked bar.
     let travel: CGFloat
     @Binding var drag: PlayerDragState
+    @Binding var scrollOffset: CGFloat
 
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var downloads: DownloadStore
@@ -21,6 +21,28 @@ struct ExpandedPlayerView: View {
     @State private var showsPlaylistPicker = false
 
     var body: some View {
+        Group {
+            #if os(macOS)
+            ScrollView {
+                content
+            }
+            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                max(0, geometry.contentOffset.y + geometry.contentInsets.top)
+            } action: { _, current in
+                scrollOffset = current
+            }
+            #else
+            content
+            #endif
+        }
+        .sheet(isPresented: $showsPlaylistPicker) {
+            if let video = player.currentVideo {
+                PlaylistPickerView(video: video)
+            }
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 0) {
             header
                 .frame(height: headerHeight)
@@ -37,13 +59,11 @@ struct ExpandedPlayerView: View {
                     .id(video.id)
             }
 
+            #if os(iOS)
             Spacer(minLength: 0)
+            #endif
         }
-        .sheet(isPresented: $showsPlaylistPicker) {
-            if let video = player.currentVideo {
-                PlaylistPickerView(video: video)
-            }
-        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     /// The same pull-down the video surface answers to, so the gesture behaves identically

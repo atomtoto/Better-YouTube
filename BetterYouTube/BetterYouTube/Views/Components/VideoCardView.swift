@@ -41,6 +41,7 @@ struct FeedVideoCard: View {
     @State private var showsPlaylistPicker = false
     let video: Video
     var avatarURL: URL?
+    var onNotInterested: (() -> Void)? = nil
 
     @EnvironmentObject private var downloads: DownloadStore
 
@@ -77,7 +78,8 @@ struct FeedVideoCard: View {
                     VideoMenuItems(
                         video: video,
                         showPlaylistPicker: { showsPlaylistPicker = true },
-                        reportWatchLaterError: { saveError = $0 }
+                        reportWatchLaterError: { saveError = $0 },
+                        onNotInterested: onNotInterested
                     )
                 } label: {
                     Image(systemName: "ellipsis")

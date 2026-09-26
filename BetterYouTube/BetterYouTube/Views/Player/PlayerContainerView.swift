@@ -58,6 +58,7 @@ struct PlayerContainerView: View {
     @State private var barDragOffset: CGFloat = 0
     @State private var floatingOnLeft = false
     @State private var horizontalDrag: CGFloat = 0
+    @State private var expandedScrollOffset: CGFloat = 0
     @AppStorage(MiniPlayerStyle.storageKey) private var miniPlayerStyle = MiniPlayerStyle.platformDefault
     @AppStorage(FloatingMiniPlayerSize.storageKey) private var floatingSize = FloatingMiniPlayerSize.standard
     #if os(iOS)
@@ -111,6 +112,12 @@ struct PlayerContainerView: View {
             player.setLandscape(landscape)
         }
         #endif
+        .onChange(of: player.isExpanded) { _, expanded in
+            if !expanded { expandedScrollOffset = 0 }
+        }
+        .onChange(of: player.currentVideo?.id) { _, _ in
+            expandedScrollOffset = 0
+        }
     }
 
     @ViewBuilder
@@ -154,8 +161,13 @@ struct PlayerContainerView: View {
                     including: player.isFullScreen || player.isLocal ? .subviews : .all
                 )
                 .scaleEffect(scale)
-                .position(x: center.x, y: center.y)
+                .position(x: center.x, y: center.y - videoScrollOffset * expansion)
                 .allowsHitTesting(player.isExpanded)
+                #if os(macOS)
+                // The macOS ScrollView occupies the whole window. Keep the shared video above
+                // its transparent gap so YouTube's playback controls still receive clicks.
+                .zIndex(player.isExpanded ? 1 : 0)
+                #endif
 
             // 3. Chrome — drawn over the video. The details are mounted only while the player is
             //    expanded, and follow the finger point for point as it pulls them away. Full
@@ -165,7 +177,8 @@ struct PlayerContainerView: View {
                     videoHeight: video.height,
                     headerHeight: metrics.headerHeight,
                     travel: layout.collapseTravel,
-                    drag: $drag
+                    drag: $drag,
+                    scrollOffset: $expandedScrollOffset
                 )
                 .frame(width: layout.size.width, height: layout.size.height)
                 .offset(y: drag.translation)
@@ -214,6 +227,9 @@ struct PlayerContainerView: View {
             // inner view before that wrapper leaves an invisible menu layer over the expanded
             // player and swallows its controls.
             .allowsHitTesting(!player.isExpanded)
+            #if os(macOS)
+            .zIndex(2)
+            #endif
         }
     }
 
@@ -265,6 +281,14 @@ struct PlayerContainerView: View {
     private func currentExpansion(travel: CGFloat) -> CGFloat {
         guard player.isExpanded else { return 0 }
         return max(0, 1 - drag.translation / travel)
+    }
+
+    private var videoScrollOffset: CGFloat {
+        #if os(macOS)
+        player.isExpanded && !player.isFullScreen ? expandedScrollOffset : 0
+        #else
+        0
+        #endif
     }
 
     /// The details fade early in the pull, leaving the video as the only thing still travelling.

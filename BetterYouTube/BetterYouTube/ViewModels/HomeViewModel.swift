@@ -25,6 +25,7 @@ final class HomeViewModel: ObservableObject {
     @Published private(set) var avatars: [String: URL] = [:]
     @Published private(set) var isLoading = false
     @Published private(set) var isLoadingYouTube = false
+    @Published private(set) var pendingNotInterestedIDs: Set<String> = []
     /// Why YouTube's own feed is empty, in words the screen can show.
     @Published private(set) var youTubeIssue: String?
     @Published var errorMessage: String?
@@ -41,6 +42,7 @@ final class HomeViewModel: ObservableObject {
     private var lastLoadedYouTube: Date?
     private var youTubeLoad: Task<Void, Never>?
     private var restoredFeedGeneration: UUID?
+    private var excludedYouTubeIDs: Set<String> = []
     private static let reloadInterval: TimeInterval = 15 * 60
 
     init(service: YouTubeAPIService = .shared) {
@@ -71,6 +73,7 @@ final class HomeViewModel: ObservableObject {
         if restoredFeedGeneration != session.feedGeneration || !webSignedIn {
             youTubeVideos = []
             lastLoadedYouTube = nil
+            excludedYouTubeIDs = []
             restoredFeedGeneration = session.feedGeneration
         }
         if webSignedIn {
@@ -113,7 +116,7 @@ final class HomeViewModel: ObservableObject {
                     let first = try await self.service.videos(ids: firstIDs)
                     guard session.isSignedIn, session.feedGeneration == generation else { throw CancellationError() }
                     fetched = Dictionary(first.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-                    let ordered = firstIDs.compactMap { fetched[$0] }
+                    let ordered = firstIDs.filter { !self.excludedYouTubeIDs.contains($0) }.compactMap { fetched[$0] }
                     if !ordered.isEmpty { self.youTubeVideos = ordered }
                 }
                 let missing = ids.filter { fetched[$0] == nil }
@@ -122,7 +125,7 @@ final class HomeViewModel: ObservableObject {
                     for video in rest { fetched[video.id] = video }
                 }
                 guard session.isSignedIn, session.feedGeneration == generation else { return }
-                let videos = ids.compactMap { fetched[$0] }
+                let videos = ids.filter { !excludedYouTubeIDs.contains($0) }.compactMap { fetched[$0] }
                 if !videos.isEmpty {
                     youTubeVideos = videos
                     lastLoadedYouTube = Date()
@@ -155,6 +158,21 @@ final class HomeViewModel: ObservableObject {
         let channelIDs = Set(youTubeVideos.map(\.channelId))
         session.feedCache.save(YouTubeHomeSnapshot(videos: youTubeVideos,
             avatars: avatars.filter { channelIDs.contains($0.key) }, savedAt: lastLoadedYouTube ?? Date()))
+    }
+
+    func markNotInterested(_ video: Video) async throws {
+        guard !pendingNotInterestedIDs.contains(video.id) else { return }
+        let session = YouTubeWebSession.shared
+        guard session.isSignedIn else { throw YouTubeFeedIssue.notSignedIn }
+        let generation = session.feedGeneration
+        pendingNotInterestedIDs.insert(video.id)
+        defer { pendingNotInterestedIDs.remove(video.id) }
+
+        try await YouTubeFeedReader.shared.markNotInterested(videoID: video.id)
+        guard session.isSignedIn, session.feedGeneration == generation else { throw CancellationError() }
+        excludedYouTubeIDs.insert(video.id)
+        youTubeVideos.removeAll { $0.id == video.id }
+        saveYouTubeCache(session: session)
     }
 
     func load(isSignedIn: Bool, library: LibraryStore, force: Bool = false) async {

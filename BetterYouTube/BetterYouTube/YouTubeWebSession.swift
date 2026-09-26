@@ -302,6 +302,48 @@ final class YouTubeFeedReader {
         return Array(ids.prefix(Self.targetCount))
     }
 
+    /// Uses YouTube's own Home menu, so feedback reaches the signed-in YouTube account.
+    func markNotInterested(videoID: String) async throws {
+        guard videoID.count == 11, videoID.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_") }) else {
+            throw YouTubeFeedIssue.loadFailed("Invalid video reference.")
+        }
+        let session = YouTubeWebSession.shared
+        await session.refresh()
+        guard session.isSignedIn else { throw YouTubeFeedIssue.notSignedIn }
+        let generation = session.feedGeneration
+        while isHarvesting { try await Task.sleep(for: .milliseconds(100)) }
+        try Task.checkCancellation()
+        guard session.isSignedIn, session.feedGeneration == generation else { throw CancellationError() }
+        isHarvesting = true
+        defer { isHarvesting = false }
+
+        let webView = attachedWebView()
+        defer { webView.removeFromSuperview() }
+        webView.customUserAgent = YouTubeWebSession.userAgent
+        if webView.url?.path != "/" || webView.url?.host?.hasSuffix("youtube.com") != true {
+            var url = URLComponents(url: YouTubeWebSession.homeURL, resolvingAgainstBaseURL: false)!
+            url.queryItems = [URLQueryItem(name: "hl", value: "en")]
+            try await waitForLoad(url.url!, in: webView, readyWhenVideosAppear: true)
+        }
+        guard session.isSignedIn, session.feedGeneration == generation else { throw CancellationError() }
+        do {
+            let result = try await webView.callAsyncJavaScript(
+                Self.notInterestedScript,
+                arguments: ["videoID": videoID],
+                in: nil,
+                contentWorld: .page
+            )
+            guard result as? Bool == true else {
+                throw YouTubeFeedIssue.loadFailed("YouTube did not confirm the feedback.")
+            }
+        } catch {
+            if let message = (error as NSError).userInfo["WKJavaScriptExceptionMessage"] as? String {
+                throw YouTubeFeedIssue.loadFailed(message)
+            }
+            throw error
+        }
+    }
+
     private func videoIds(in webView: WKWebView) async throws -> [String] {
         let result = try await webView.evaluateJavaScript(Self.harvestScript)
         guard let joined = result as? String, !joined.isEmpty else { return [] }
@@ -529,6 +571,53 @@ final class YouTubeFeedReader {
       return ids.join(',');
     })()
     """
+
+    private static let notInterestedScript = #"""
+    const wanted = String(videoID);
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    const cardSelector = 'ytd-rich-item-renderer,ytd-video-renderer,ytd-grid-video-renderer,ytm-rich-item-renderer,ytm-video-with-context-renderer,ytm-video-renderer';
+    function hasVideo(card) {
+        return Array.from(card.querySelectorAll('a[href*="watch?v="]')).some(link => {
+            try { return new URL(link.getAttribute('href'), location.href).searchParams.get('v') === wanted; }
+            catch (_) { return false; }
+        });
+    }
+    let card;
+    for (let attempt = 0; attempt < 18; attempt++) {
+        card = Array.from(document.querySelectorAll(cardSelector)).find(hasVideo);
+        if (card) break;
+        window.scrollTo(0, document.documentElement.scrollHeight);
+        await sleep(350);
+    }
+    if (!card) throw new Error('This recommendation is no longer on your YouTube home page. Refresh the feed and retry.');
+
+    const menu = card.querySelector('#menu, ytd-menu-renderer, ytm-menu');
+    const menuButton = menu?.querySelector('button,[role="button"]')
+        || menu?.querySelector('yt-icon-button,yt-button-shape')
+        || card.querySelector('button[aria-label*="More"],button[aria-label*="Action menu"]');
+    if (!menuButton) throw new Error('YouTube changed its recommendation menu. Update the app and retry.');
+    menuButton.click();
+
+    let item;
+    for (let attempt = 0; attempt < 20; attempt++) {
+        item = Array.from(document.querySelectorAll('ytd-menu-service-item-renderer,ytm-menu-service-item-renderer,ytm-menu-item,tp-yt-paper-item,[role="menuitem"]'))
+            .find(node => {
+                const label = (node.getAttribute('aria-label') || node.textContent || '').trim().toLowerCase();
+                return node.getClientRects().length && /^(not interested|pas intéressé)(\s|$)/i.test(label);
+            });
+        if (item) break;
+        await sleep(150);
+    }
+    if (!item) throw new Error('YouTube did not offer “Not interested” for this recommendation.');
+    (item.querySelector('button,[role="menuitem"]') || item).click();
+    for (let attempt = 0; attempt < 20; attempt++) {
+        if (!card.isConnected || !hasVideo(card) || card.getClientRects().length === 0) return true;
+        const message = (card.textContent || '').toLowerCase();
+        if (message.includes('video removed') || message.includes('vidéo supprimée')) return true;
+        await sleep(150);
+    }
+    throw new Error('YouTube did not remove this recommendation. Please retry.');
+    """#
 
     /// Asks for the next screenful. `true` at the end because `evaluateJavaScript` refuses to
     /// bring back an undefined result.

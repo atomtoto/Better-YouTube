@@ -10,6 +10,7 @@ struct HomeView: View {
     @StateObject private var youTubeNavigation = YouTubeWebNavigationModel()
 
     @State private var showsNotifications = false
+    @State private var recommendationError: String?
 
     /// YouTube's page in place of the app's cards: only on its own segment, and only when
     /// Settings asks for that rendering.
@@ -63,6 +64,14 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showsNotifications) {
             NotificationsView()
+        }
+        .alert("YouTube", isPresented: Binding(
+            get: { recommendationError != nil },
+            set: { if !$0 { recommendationError = nil } }
+        )) {
+            Button("OK", role: .cancel) { recommendationError = nil }
+        } message: {
+            Text(recommendationError ?? "")
         }
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
         .refreshable { await refresh(force: true) }
@@ -159,10 +168,14 @@ struct HomeView: View {
                         Button {
                             player.play(video, upNext: viewModel.videos.after(video))
                         } label: {
-                            FeedVideoCard(video: video, avatarURL: viewModel.avatar(for: video.channelId))
+                            FeedVideoCard(
+                                video: video,
+                                avatarURL: viewModel.avatar(for: video.channelId),
+                                onNotInterested: notInterestedAction(for: video)
+                            )
                         }
                         .buttonStyle(.plain)
-                        .videoContextMenu(video)
+                        .videoContextMenu(video, onNotInterested: notInterestedAction(for: video))
                     }
 
                     if let note = feedSourceNote {
@@ -183,6 +196,21 @@ struct HomeView: View {
 
     private var isLoadingCurrentFeed: Bool {
         viewModel.feed == .youTube ? viewModel.isLoadingYouTube : viewModel.isLoading
+    }
+
+    private func notInterestedAction(for video: Video) -> (() -> Void)? {
+        guard viewModel.feed == .youTube else { return nil }
+        return {
+            Task {
+                do {
+                    try await viewModel.markNotInterested(video)
+                } catch is CancellationError {
+                    // A changed account invalidates the action without changing the new feed.
+                } catch {
+                    recommendationError = error.localizedDescription
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -248,6 +276,7 @@ struct HomeView: View {
 /// Long-press actions shared by every video presentation.
 struct VideoContextMenu: ViewModifier {
     let video: Video
+    var onNotInterested: (() -> Void)? = nil
     @State private var showsPlaylistPicker = false
     @State private var saveError: String?
     func body(content: Content) -> some View {
@@ -255,7 +284,8 @@ struct VideoContextMenu: ViewModifier {
             VideoMenuItems(
                 video: video,
                 showPlaylistPicker: { showsPlaylistPicker = true },
-                reportWatchLaterError: { saveError = $0 }
+                reportWatchLaterError: { saveError = $0 },
+                onNotInterested: onNotInterested
             )
         }
         .sheet(isPresented: $showsPlaylistPicker) { PlaylistPickerView(video: video) }
@@ -272,6 +302,7 @@ struct VideoMenuItems: View {
     let video: Video
     let showPlaylistPicker: () -> Void
     let reportWatchLaterError: (String?) -> Void
+    var onNotInterested: (() -> Void)? = nil
 
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var watchLater: WatchLaterStore
@@ -280,6 +311,12 @@ struct VideoMenuItems: View {
 
     @ViewBuilder
     var body: some View {
+        if let onNotInterested {
+            Button(action: onNotInterested) {
+                Label("Pas intéressé", systemImage: "hand.thumbsdown")
+            }
+        }
+
         DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
 
         Button {
@@ -317,8 +354,8 @@ struct VideoMenuItems: View {
 }
 
 extension View {
-    func videoContextMenu(_ video: Video) -> some View {
-        modifier(VideoContextMenu(video: video))
+    func videoContextMenu(_ video: Video, onNotInterested: (() -> Void)? = nil) -> some View {
+        modifier(VideoContextMenu(video: video, onNotInterested: onNotInterested))
     }
 }
 

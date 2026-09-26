@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Everything below the video in the expanded player: title, actions, channel, description,
-/// the up-next queue and a preview of the comments.
+/// the up-next queue and comments.
 struct PlayerDetailsView: View {
     let video: Video
 
@@ -31,50 +31,21 @@ struct PlayerDetailsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                if let issue = player.issue {
-                    playbackIssueBanner(issue)
-                }
-
-                if player.isLocal {
-                    Label("Playing from your downloads", systemImage: "arrow.down.circle.fill")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(displayed.title)
-                        .font(.headline)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text(metadataLine)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-
-                actionRow
-                channelRow
-
-                if !displayed.description.isEmpty {
-                    descriptionCard
-                }
-
-                commentsPreview
-
-                if !player.upNext.isEmpty {
-                    upNextSection
-                }
+        Group {
+            #if os(macOS)
+            detailsContent
+            #else
+            ScrollView {
+                detailsContent
             }
-            .padding(.horizontal, Theme.Spacing.gutter)
-            .padding(.top, 16)
-            .padding(.bottom, 40)
+            .scrollIndicators(.hidden)
+            #endif
         }
-        .scrollIndicators(.hidden)
         .task { await viewModel.loadAll() }
         .sheet(isPresented: $showsPlaylistPicker) {
             PlaylistPickerView(video: displayed)
         }
+        #if os(iOS)
         .sheet(isPresented: $showsComments) {
             NavigationStack {
                 ScrollView {
@@ -82,20 +53,17 @@ struct PlayerDetailsView: View {
                         .padding(Theme.Spacing.gutter)
                 }
                 .navigationTitle("Comments")
-                #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
-                #endif
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { showsComments = false }
                     }
                 }
             }
-            #if os(iOS)
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
-            #endif
         }
+        #endif
         .alert("Watch Later", isPresented: Binding(
             get: { watchLaterError != nil },
             set: { if !$0 { watchLaterError = nil } }
@@ -104,6 +72,51 @@ struct PlayerDetailsView: View {
         } message: {
             Text(watchLaterError ?? "")
         }
+    }
+
+    private var detailsContent: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            if let issue = player.issue {
+                playbackIssueBanner(issue)
+            }
+
+            if player.isLocal {
+                Label("Playing from your downloads", systemImage: "arrow.down.circle.fill")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(displayed.title)
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(metadataLine)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            actionRow
+            channelRow
+
+            if !displayed.description.isEmpty {
+                descriptionCard
+            }
+
+            #if os(macOS)
+            commentsSection
+            #else
+            commentsPreview
+            #endif
+
+            if !player.upNext.isEmpty {
+                upNextSection
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Theme.Spacing.gutter)
+        .padding(.top, 16)
+        .padding(.bottom, 40)
     }
 
     /// Surfaces what actually went wrong rather than leaving a silent black player.
@@ -392,6 +405,11 @@ struct PlayerDetailsView: View {
 
     private var commentsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
+            #if os(macOS)
+            Text("Comments")
+                .font(.title3.bold())
+            #endif
+
             HStack(alignment: .center, spacing: 8) {
                 TextField("Add a comment", text: $newCommentText, axis: .vertical)
                     .textFieldStyle(.plain)
