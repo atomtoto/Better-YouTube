@@ -199,12 +199,10 @@ struct PlayerContainerView: View {
             .frame(width: bar.width, height: bar.height)
             .clipShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
-            #if !os(macOS)
-            .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
-#endif
             .simultaneousGesture(floatingDrag, including: miniPlayerStyle == .floatingVideo ? .all : .none)
             .gesture(barDragGesture)
             .onTapGesture { player.expand() }
+            #if os(macOS)
             .contextMenu {
                 PlayerActions(
                     player: player,
@@ -213,25 +211,33 @@ struct PlayerContainerView: View {
                     miniPlayerStyle: miniPlayerStyle,
                     onSwitchMiniPlayerStyle: switchMiniPlayerStyle
                 )
-            } preview: {
-                MiniPlayerBoxPreview(
-                    video: player.currentVideo,
-                    isPlaying: player.isPlaying,
-                    progress: player.progress,
-                    layout: layout,
-                    metrics: metrics
-                )
             }
+            #endif
             .position(x: bar.midX, y: bar.midY)
             .opacity(Double(1 - expansion))
-            // Must stay last: contextMenu installs its own interaction wrapper. Disabling the
-            // inner view before that wrapper leaves an invisible menu layer over the expanded
-            // player and swallows its controls.
+            // Keep the docked controls out of the expanded player's hit area.
             .allowsHitTesting(!player.isExpanded)
             #if os(macOS)
             .zIndex(2)
             #endif
         }
+        #if os(iOS)
+        // Lift the complete mini player, with the menu active only over its rounded bar.
+        // WebKit stays in its original host throughout the presentation.
+        .contentShape(.interaction, MiniPlayerBarShape(frame: bar, radius: layout.barCornerRadius, expanded: player.isExpanded))
+        .contentShape(.contextMenuPreview, MiniPlayerBarShape(frame: bar, radius: layout.barCornerRadius, expanded: false))
+        .contextMenu {
+            if !player.isExpanded {
+                PlayerActions(
+                    player: player,
+                    downloads: downloads,
+                    downloadManager: downloadManager,
+                    miniPlayerStyle: miniPlayerStyle,
+                    onSwitchMiniPlayerStyle: switchMiniPlayerStyle
+                )
+            }
+        }
+        #endif
     }
 
     /// Commit the anchor and clear the translation in the same animation transaction.
@@ -256,6 +262,22 @@ struct PlayerContainerView: View {
 
     private func switchMiniPlayerStyle() {
         guard !player.isExpanded else { return }
+        #if os(iOS)
+        // The context menu now wraps the whole player so its lift includes the video.
+        // Switching its layout before the menu finishes dismissing spends the animation
+        // behind the menu's frozen preview, leaving only the final frame visible.
+        Task { @MainActor in
+            do { try await Task.sleep(for: .milliseconds(300)) }
+            catch { return }
+            guard player.currentVideo != nil, !player.isExpanded else { return }
+            animateMiniPlayerStyleSwitch()
+        }
+        #else
+        animateMiniPlayerStyleSwitch()
+        #endif
+    }
+
+    private func animateMiniPlayerStyleSwitch() {
         withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
             miniPlayerStyle = miniPlayerStyle == .floatingVideo ? .playbackBar : .floatingVideo
         }
@@ -768,9 +790,6 @@ private struct MiniPlayerControls: View {
             }
         }
         .contentShape(RoundedRectangle(cornerRadius: barCornerRadius, style: .continuous))
-        #if !os(macOS)
-        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: barCornerRadius, style: .continuous))
-#endif
     }
 
     /// YouTube's current mini-player shape: the picture is the card, with controls over it.
@@ -863,107 +882,19 @@ private struct MiniPlayerControls: View {
     }
 }
 
-/// The complete card preview shown during a long-press on the docked player.
-/// Lifts the entire box (background, artwork, labels, transport, progress) rather than just individual subviews.
-private struct MiniPlayerBoxPreview: View {
-    let video: Video?
-    let isPlaying: Bool
-    @ObservedObject var progress: PlaybackProgress
-    let layout: PlayerLayout
-    let metrics: PlayerMetrics
+/// Rounded mini-player region used by the native context menu.
+#if os(iOS)
+private struct MiniPlayerBarShape: Shape {
+    let frame: CGRect
+    let radius: CGFloat
+    let expanded: Bool
 
-    private var isCompact: Bool { layout.compactness > 0.5 }
-    private var bar: CGRect { layout.barFrame }
-
-    var body: some View {
-        ZStack(alignment: .leading) {
-            MiniPlayerBackground(cornerRadius: layout.barCornerRadius)
-
-            if layout.style == .floatingVideo {
-                if let url = video?.thumbnailURL {
-                    ArtworkView(
-                        url: url,
-                        cornerRadius: layout.barCornerRadius
-                    )
-                }
-
-                FloatingPlayerButtonFace(
-                    isPlaying ? "pause.fill" : "play.fill",
-                    diameter: layout.floatingControlDiameter,
-                    iconSize: layout.floatingControlDiameter * 0.36
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                VStack {
-                    HStack {
-                        Spacer()
-                        FloatingPlayerButtonFace("xmark", diameter: 32, iconSize: 12)
-                            .padding(4)
-                    }
-                    Spacer()
-                }
-
-                VStack {
-                    Spacer()
-                    MiniProgressLine(progress: progress)
-                }
-            } else {
-                HStack(spacing: 0) {
-                    if let url = video?.thumbnailURL {
-                        ArtworkView(
-                            url: url,
-                            cornerRadius: 10
-                        )
-                        .frame(
-                            width: (metrics.barHeight - metrics.artworkPadding * 2) * 16 / 9,
-                            height: metrics.barHeight - metrics.artworkPadding * 2
-                        )
-                        .padding(.leading, metrics.artworkPadding)
-                    }
-
-                    if !isCompact {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(video?.title ?? "")
-                                .font(.subheadline.weight(.semibold))
-                                .lineLimit(1)
-                            Text(video?.channelTitle ?? "")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.leading, metrics.labelGap)
-                    } else {
-                        Spacer(minLength: 0)
-                    }
-
-                    HStack(spacing: 0) {
-                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                            .font(.title3)
-                            .frame(width: metrics.playButtonWidth, height: 44)
-
-                        if !isCompact {
-                            Image(systemName: "xmark")
-                                .font(.footnote.weight(.bold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: metrics.closeButtonWidth, height: 44)
-                        }
-                    }
-                    .padding(.trailing, metrics.controlsTrailingPadding)
-                }
-
-                if !isCompact {
-                    VStack {
-                        Spacer()
-                        MiniProgressLine(progress: progress)
-                    }
-                }
-            }
-        }
-        .frame(width: bar.width, height: bar.height)
-        .clipShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
+    func path(in rect: CGRect) -> Path {
+        Path(roundedRect: expanded ? rect : frame, cornerRadius: expanded ? 0 : radius)
     }
 }
+
+#endif
 
 /// The played fraction, using the original size with rounded ends.
 private struct MiniProgressLine: View {

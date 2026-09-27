@@ -63,6 +63,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 /// it decides.
 struct SettingsPaneView: View {
     let pane: SettingsPane
+    @State private var showsYouTubeSignIn = false
     #if os(iOS)
     @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
     #endif
@@ -80,7 +81,7 @@ struct SettingsPaneView: View {
             case .notifications:
                 NotificationsSection()
             case .youTubeHome:
-                YouTubeHomeSection()
+                YouTubeHomeSection(showsSignIn: $showsYouTubeSignIn)
             case .downloads:
                 DownloadsSection()
             case .api:
@@ -97,6 +98,9 @@ struct SettingsPaneView: View {
             }
         }
         .settingsFormStyle()
+        .sheet(isPresented: $showsYouTubeSignIn) {
+            YouTubeSignInView()
+        }
         .navigationTitle(pane.title)
         // Only the phone's: the docked player is in this window there. On a Mac it is in the
         // *other* window, and scrolling Settings has no business shrinking it.

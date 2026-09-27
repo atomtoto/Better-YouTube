@@ -174,32 +174,34 @@ struct SearchView: View {
     // MARK: Results
 
     private var results: some View {
-        List {
-            if !viewModel.videos.isEmpty {
-                Section("Videos") {
-                    ForEach(viewModel.videos) { video in
-                        Button {
-                            player.play(video, upNext: viewModel.videos.after(video))
-                        } label: {
-                            VideoRowView(video: video)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 24) {
+                if !viewModel.videos.isEmpty {
+                    Text("Videos")
+                        .font(.headline)
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 440), spacing: 18)], spacing: 24) {
+                        ForEach(viewModel.videos) { video in
+                            FeedVideoCard(video: video, onPlay: {
+                                player.play(video, upNext: viewModel.videos.after(video))
+                            })
+                            .videoContextMenu(video)
                         }
-                        .buttonStyle(.plain)
-                        .videoContextMenu(video)
                     }
                 }
-            }
 
-            if !viewModel.channels.isEmpty {
-                Section("Channels") {
+                if !viewModel.channels.isEmpty {
+                    Text("Channels")
+                        .font(.headline)
                     ForEach(viewModel.channels) { channel in
                         NavigationLink(value: channel) {
                             ChannelRowView(channel: channel)
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
+            .padding(Theme.Spacing.gutter)
         }
-        .listStyle(.plain)
         .scrollDismissesKeyboard(.immediately)
         .minimizesPlayerBarOnScroll()
     }

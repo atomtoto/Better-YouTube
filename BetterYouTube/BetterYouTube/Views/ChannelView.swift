@@ -23,32 +23,32 @@ struct ChannelView: View {
             } else if let message = viewModel.errorMessage, channel == nil {
                 EmptyStateView(title: "Couldn't load channel", message: message)
             } else {
-                List {
-                    if let channel {
-                        Section {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 20) {
+                        if let channel {
                             ChannelHeaderView(channel: channel)
-                                .listRowInsets(EdgeInsets())
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color.clear)
                         }
-                    }
 
-                    Section("Latest Videos") {
-                        if viewModel.videos.isEmpty && viewModel.isLoading {
-                            ProgressView()
-                        }
-                        ForEach(viewModel.videos) { video in
-                            Button {
-                                player.play(video, upNext: viewModel.videos.after(video))
-                            } label: {
-                                VideoRowView(video: video, showsChannel: false)
+                        Text("Latest Videos")
+                            .font(.headline)
+                            .padding(.horizontal, Theme.Spacing.gutter)
+                        if viewModel.videos.isEmpty {
+                            if viewModel.isLoading {
+                                ProgressView()
                             }
-                            .buttonStyle(.plain)
-                            .videoContextMenu(video)
+                        } else {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 440), spacing: 18)], spacing: 24) {
+                                ForEach(viewModel.videos) { video in
+                                    FeedVideoCard(video: video, onPlay: {
+                                        player.play(video, upNext: viewModel.videos.after(video))
+                                    })
+                                    .videoContextMenu(video)
+                                }
+                            }
+                            .padding(.horizontal, Theme.Spacing.gutter)
                         }
                     }
                 }
-                .listStyle(.plain)
                 .minimizesPlayerBarOnScroll()
             }
         }

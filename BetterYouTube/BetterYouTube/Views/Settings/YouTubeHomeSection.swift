@@ -5,7 +5,7 @@ import SwiftUI
 /// the segment.
 struct YouTubeHomeSection: View {
     @EnvironmentObject private var webSession: YouTubeWebSession
-    @State private var showsSignIn = false
+    @Binding var showsSignIn: Bool
 
     var body: some View {
         Section {
@@ -42,11 +42,6 @@ struct YouTubeHomeSection: View {
             do, it can break whenever the page changes, and it is your account that carries the \
             risk. Sign out here and the app forgets the session and the Home segment with it.
             """)
-        }
-        // The sheet belongs to the section that opens it. It used to hang off the whole screen,
-        // which is how a sheet ends up outliving the thing that asked for it.
-        .sheet(isPresented: $showsSignIn) {
-            YouTubeSignInView()
         }
     }
 }

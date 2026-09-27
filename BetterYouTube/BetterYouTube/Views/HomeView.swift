@@ -111,7 +111,8 @@ struct HomeView: View {
     private var feedPicker: some View {
         Picker("Feed", selection: Binding(get: { viewModel.feed }, set: viewModel.select)) {
             ForEach(HomeViewModel.Feed.allCases) { feed in
-                if feed != .youTube || webSession.isSignedIn {
+                if (feed != .youTube || webSession.isSignedIn)
+                    && (feed != .forYou || !webSession.isSignedIn) {
                     Text(feed.title).tag(feed)
                 }
             }
@@ -164,15 +165,18 @@ struct HomeView: View {
                     currentEmptyState
                         .padding(.top, 40)
                 } else {
-                    ForEach(viewModel.videos) { video in
-                        FeedVideoCard(
-                            video: video,
-                            avatarURL: viewModel.avatar(for: video.channelId),
-                            onPlay: { player.play(video, upNext: viewModel.videos.after(video)) },
-                            onNotInterested: notInterestedAction(for: video)
-                        )
-                        .videoContextMenu(video, onNotInterested: notInterestedAction(for: video))
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 440), spacing: 18)], spacing: 24) {
+                        ForEach(viewModel.videos) { video in
+                            FeedVideoCard(
+                                video: video,
+                                avatarURL: viewModel.avatar(for: video.channelId),
+                                onPlay: { player.play(video, upNext: viewModel.videos.after(video)) },
+                                onNotInterested: notInterestedAction(for: video)
+                            )
+                            .videoContextMenu(video, onNotInterested: notInterestedAction(for: video))
+                        }
                     }
+                    .padding(.horizontal, Theme.Spacing.gutter)
 
                     if let note = feedSourceNote {
                         Text(note)
@@ -276,7 +280,11 @@ struct VideoContextMenu: ViewModifier {
     @State private var showsPlaylistPicker = false
     @State private var saveError: String?
     func body(content: Content) -> some View {
-        content.contextMenu {
+        content
+        #if os(iOS)
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        #endif
+        .contextMenu {
             VideoMenuItems(
                 video: video,
                 showPlaylistPicker: { showsPlaylistPicker = true },

@@ -61,6 +61,7 @@ final class HomeViewModel: ObservableObject {
 
     /// Choosing a segment by hand, which also settles the default for good.
     func select(_ feed: Feed) {
+        guard feed != .forYou || !YouTubeWebSession.shared.isSignedIn else { return }
         guard self.feed != feed else { return }
         hasPickedFeed = true
         self.feed = feed
@@ -82,7 +83,8 @@ final class HomeViewModel: ObservableObject {
                 ChannelAvatarCache.shared.setAvatarURLs(cached.avatars)
                 youTubeVideos = cached.videos
             }
-            if !hasPickedFeed { feed = .youTube }
+            // The approximation is only offered while the real YouTube feed is unavailable.
+            if feed == .forYou || !hasPickedFeed { feed = .youTube }
         } else if feed == .youTube {
             feed = .forYou
         }

@@ -99,7 +99,6 @@ struct FeedVideoCard: View {
                 }
             }
         }
-        .padding(.horizontal, Theme.Spacing.gutter)
         .contentShape(Rectangle())
         .sheet(isPresented: $showsPlaylistPicker) { PlaylistPickerView(video: video) }
         .alert("Watch Later", isPresented: Binding(

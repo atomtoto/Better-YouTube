@@ -31,6 +31,11 @@ struct YouTubeSignInView: View {
                     }
                 }
         }
+        #if os(macOS)
+        // A WKWebView has no useful intrinsic size in a Settings sheet. Give the sheet a
+        // browser-sized viewport so the sign-in page can actually render and receive clicks.
+        .frame(minWidth: 720, idealWidth: 900, minHeight: 560, idealHeight: 700)
+        #endif
     }
 }
 
@@ -96,6 +101,7 @@ private struct YouTubeWebPage {
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.customUserAgent = YouTubeWebSession.userAgent
         webView.navigationDelegate = coordinator
+        webView.uiDelegate = coordinator
         webView.allowsBackForwardNavigationGestures = true
         coordinator.attach(webView)
         webView.load(URLRequest(url: YouTubeWebSession.homeURL))
@@ -106,7 +112,7 @@ private struct YouTubeWebPage {
         Coordinator(interceptsVideoTaps: interceptsVideoTaps, navigation: navigation)
     }
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         static let handler = "youTubeVideoTap"
         private let interceptsVideoTaps: Bool
         private weak var navigation: YouTubeWebNavigationModel?
@@ -193,6 +199,20 @@ private struct YouTubeWebPage {
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
             guard let videoId = message.body as? String else { return }
             Task { @MainActor in await PlayerManager.shared.open(videoId: videoId) }
+        }
+
+        // Account links can request a new window. A representable has no browser window to
+        // create, so load that request in the visible web view instead of leaving it blank.
+        func webView(
+            _ webView: WKWebView,
+            createWebViewWith configuration: WKWebViewConfiguration,
+            for navigationAction: WKNavigationAction,
+            windowFeatures: WKWindowFeatures
+        ) -> WKWebView? {
+            if navigationAction.targetFrame == nil {
+                webView.load(navigationAction.request)
+            }
+            return nil
         }
 
         /// The belt to the script's braces: a watch link that does become a real navigation —
