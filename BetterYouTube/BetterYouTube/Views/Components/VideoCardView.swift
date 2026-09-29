@@ -91,12 +91,25 @@ struct FeedVideoCard: View {
                         onNotInterested: onNotInterested
                     )
                 } label: {
+                    #if os(macOS)
+                    Image(systemName: "chevron.down.circle.fill")
+                        .font(.system(size: 23))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.tint)
+                        .frame(width: 42, height: 42)
+                        .contentShape(Rectangle())
+                    #else
                     Image(systemName: "ellipsis")
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .frame(width: 28, height: 28)
                         .contentShape(Rectangle())
+                    #endif
                 }
+                #if os(macOS)
+                .menuIndicator(.hidden)
+                .buttonStyle(.plain)
+                #endif
             }
         }
         .contentShape(Rectangle())
