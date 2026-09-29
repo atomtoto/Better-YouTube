@@ -30,6 +30,22 @@ actor LocalDownloadResolver {
         return url
     }
 
+    /// A compact audio track for a watch download. The watch receives the short-lived CDN URL
+    /// and transfers the bytes itself, then plays the saved M4A without the phone.
+    func resolveWatchAudio(videoID: String) async throws -> (url: URL, byteCount: Int64) {
+        let streams = try await YouTube(videoID: videoID, methods: [.local]).streams
+        try Task.checkCancellation()
+        guard let audio = streams.filter({
+            $0.includesAudioTrack && !$0.includesVideoTrack
+                && $0.audioCodec == .mp4a && $0.fileExtension == .m4a
+                && $0.url.scheme == "https"
+        }).max(by: { ($0.bitrate ?? 0) < ($1.bitrate ?? 0) }) else {
+            throw DownloadError.service("No compatible audio track is available for this video.")
+        }
+        let length = try await Self.contentLength(audio.url, wifiOnly: false)
+        return (audio.url, length)
+    }
+
     func resolve(videoID: String, quality: DownloadQuality, wifiOnly: Bool) async throws -> ResolvedMedia {
         if wifiOnly { try await Self.requireUnmeteredConnection() }
         try Task.checkCancellation()

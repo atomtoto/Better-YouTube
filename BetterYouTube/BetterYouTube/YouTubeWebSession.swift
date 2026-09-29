@@ -711,6 +711,7 @@ struct YouTubeHomeSnapshot: Codable {
 }
 
 struct YouTubeHomeCache {
+    static let didChange = Notification.Name("BetterYouTube.YouTubeHomeCacheDidChange")
     let url: URL
     init(url: URL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("youtube-home-v1.json")) {
@@ -728,6 +729,10 @@ struct YouTubeHomeCache {
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? data.write(to: url, options: .atomic)
+        NotificationCenter.default.post(name: Self.didChange, object: nil)
     }
-    func clear() { try? FileManager.default.removeItem(at: url) }
+    func clear() {
+        try? FileManager.default.removeItem(at: url)
+        NotificationCenter.default.post(name: Self.didChange, object: nil)
+    }
 }

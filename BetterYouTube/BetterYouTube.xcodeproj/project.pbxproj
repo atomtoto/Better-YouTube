@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DADB1234567890ABCDEF0011 /* WatchAccountLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DADB1234567890ABCDEF0012 /* WatchAccountLibraryStore.swift */; };
 		03AB6715F4D5961DAE9D71E9 /* BetterYouTube.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6F82E79045F550B7755B4537 /* BetterYouTube.icon */; };
 		057D4422BBED259B4344DA8B /* GoogleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 916A473B8AC88B5BD27F4644 /* GoogleAuthService.swift */; };
 		05BF4C809493100BE416DA7F /* VideoListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AA470184C4B77CEE258C2D /* VideoListView.swift */; };
@@ -81,6 +82,18 @@
 		F9A34079A47F4D73B5FCCF81 /* VideoCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200946DDA34EED92264FD752 /* VideoCardView.swift */; };
 		FA2F4E3FA41EB5FAAA3CD491 /* NotificationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EC14D7ABDA495DEE45A4CFE /* NotificationStore.swift */; };
 		FB8E1F0DC99B3252C39A41C1 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07915B6C44135B78F0C9D66 /* SearchViewModel.swift */; };
+		1BF176801A6544F4846629BA /* WatchPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 154963685A4B47E6B6A9EB99 /* WatchPayload.swift */; };
+		ADD812904EB74F7EBAE87E94 /* WatchPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 154963685A4B47E6B6A9EB99 /* WatchPayload.swift */; };
+		AE41B086B8224BAA856E265A /* WatchPhoneBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A573CD2046EE48A38E75B6CE /* WatchPhoneBridge.swift */; };
+		C4A7C6670D6142699A93D901 /* BetterYouTube.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6F82E79045F550B7755B4537 /* BetterYouTube.icon */; };
+		8F10542C483A4DD593886472 /* BetterYouTubeWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 602AD486682D4D2092F5E7DB /* BetterYouTubeWatch.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		6D464D89125340DB88C35AD1 /* BetterYouTubeWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0046F6A272445E9F3F7ACC /* BetterYouTubeWatchApp.swift */; };
+		3A2E6005B5014E03A86B21FE /* WatchViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF6072A191F54369ACEF8103 /* WatchViews.swift */; };
+		7BC9E73A19564169979027B5 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A80F1573E5429EA9B2F0ED /* WatchBridge.swift */; };
+		14D1AE9A23604F2787FFB383 /* WatchDownloads.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7112905C6E4B46D08F5DE110 /* WatchDownloads.swift */; };
+		E6DF1A2C38434C40A17D1AE4 /* WatchPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E60F9B55772417991612119 /* WatchPlayer.swift */; };
+		A658A30E11D0494B8E65073D /* WatchCatalogue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7934D73EC354A799EFB6A76 /* WatchCatalogue.swift */; };
+		FD6F85619F964DE3A9C76C1D /* WatchKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5D36489E9B8495394533BAA /* WatchKeychain.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -91,9 +104,32 @@
 			remoteGlobalIDString = 88F56D6A2F90F79D5F551E46;
 			remoteInfo = BetterYouTube;
 		};
+		EEEFB06016B7495CB6C3A555 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 46F86FAA6BBF9AC94A7E4595 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E4A053270B13451D8D669F6C;
+			remoteInfo = BetterYouTubeWatch;
+		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		7F8DC335523F4DD48A6AA2AE /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				8F10542C483A4DD593886472 /* BetterYouTubeWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		DADB1234567890ABCDEF0013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DADB1234567890ABCDEF0012 /* WatchAccountLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAccountLibraryStore.swift; sourceTree = "<group>"; };
 		166B42AABD82F80D72120EEE /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		200946DDA34EED92264FD752 /* VideoCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCardView.swift; sourceTree = "<group>"; };
 		205910A80EFBDFAD9310F5CD /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
@@ -172,6 +208,16 @@
 		F3BA485BDDB7D18FEDC8D887 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F7F28A6D4028554035CB0ECA /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		FA6A4A758FCEBAA99EF9A975 /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViewModel.swift; sourceTree = "<group>"; };
+		602AD486682D4D2092F5E7DB /* BetterYouTubeWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BetterYouTubeWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		154963685A4B47E6B6A9EB99 /* WatchPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPayload.swift; sourceTree = "<group>"; };
+		A573CD2046EE48A38E75B6CE /* WatchPhoneBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPhoneBridge.swift; sourceTree = "<group>"; };
+		9B0046F6A272445E9F3F7ACC /* BetterYouTubeWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetterYouTubeWatchApp.swift; sourceTree = "<group>"; };
+		AF6072A191F54369ACEF8103 /* WatchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchViews.swift; sourceTree = "<group>"; };
+		94A80F1573E5429EA9B2F0ED /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
+		7112905C6E4B46D08F5DE110 /* WatchDownloads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchDownloads.swift; sourceTree = "<group>"; };
+		7E60F9B55772417991612119 /* WatchPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlayer.swift; sourceTree = "<group>"; };
+		A7934D73EC354A799EFB6A76 /* WatchCatalogue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchCatalogue.swift; sourceTree = "<group>"; };
+		C5D36489E9B8495394533BAA /* WatchKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchKeychain.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -191,6 +237,7 @@
 			children = (
 				BEEFPRODUCT0000000000000 /* BetterYouTubeTests.xctest */,
 				81918909E83595C8F4212CCC /* BetterYouTube.app */,
+				602AD486682D4D2092F5E7DB /* BetterYouTubeWatch.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -211,6 +258,8 @@
 			isa = PBXGroup;
 			children = (
 				BEEFGROUP000000000000000 /* BetterYouTubeTests */,
+				0137AF6FC606487BAC0F087D /* BetterYouTubeWatch */,
+				4075A15D594544B789EC3AC7 /* Shared */,
 				CE882751F8B3EE4485706ED4 /* BetterYouTube */,
 				1BADDC1D73C1A20F347483E1 /* Products */,
 			);
@@ -322,6 +371,7 @@
 				166B42AABD82F80D72120EEE /* NotificationService.swift */,
 				974548E984460DB3448AB42E /* BackgroundRefresh.swift */,
 				F2AB4B2A9355C5BE1085AE20 /* PlayerManager.swift */,
+				A573CD2046EE48A38E75B6CE /* WatchPhoneBridge.swift */,
 			);
 			path = BetterYouTube;
 			sourceTree = "<group>";
@@ -334,6 +384,28 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
+		4075A15D594544B789EC3AC7 /* Shared */ = {
+			isa = PBXGroup;
+			children = (154963685A4B47E6B6A9EB99 /* WatchPayload.swift */,);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		0137AF6FC606487BAC0F087D /* BetterYouTubeWatch */ = {
+			isa = PBXGroup;
+			children = (
+				DADB1234567890ABCDEF0013 /* Info.plist */,
+				DADB1234567890ABCDEF0012 /* WatchAccountLibraryStore.swift */,
+				9B0046F6A272445E9F3F7ACC /* BetterYouTubeWatchApp.swift */,
+				AF6072A191F54369ACEF8103 /* WatchViews.swift */,
+				94A80F1573E5429EA9B2F0ED /* WatchBridge.swift */,
+				7112905C6E4B46D08F5DE110 /* WatchDownloads.swift */,
+				7E60F9B55772417991612119 /* WatchPlayer.swift */,
+				A7934D73EC354A799EFB6A76 /* WatchCatalogue.swift */,
+				C5D36489E9B8495394533BAA /* WatchKeychain.swift */,
+			);
+			path = BetterYouTubeWatch;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -344,10 +416,12 @@
 				F680599402C0D80E245DE801 /* Sources */,
 				781C774F390DF12CD292A30B /* Resources */,
 				D10CA1000000000000000005 /* Frameworks */,
+				7F8DC335523F4DD48A6AA2AE /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				E3C53B8735144B8CB4B03A1B /* PBXTargetDependency */,
 			);
 			name = BetterYouTube;
 			packageProductDependencies = (
@@ -373,6 +447,17 @@
 			productName = BetterYouTubeTests;
 			productReference = BEEFPRODUCT0000000000000 /* BetterYouTubeTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		E4A053270B13451D8D669F6C /* BetterYouTubeWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC8E7BE7A0434CA6882904A4 /* Build configuration list for PBXNativeTarget "BetterYouTubeWatch" */;
+			buildPhases = (8F86F10380124F55BE4FE335 /* Sources */, CF17EA396C614E0C9727D217 /* Resources */,);
+			buildRules = ();
+			dependencies = ();
+			name = BetterYouTubeWatch;
+			productName = BetterYouTubeWatch;
+			productReference = 602AD486682D4D2092F5E7DB /* BetterYouTubeWatch.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -411,6 +496,7 @@
 			targets = (
 				88F56D6A2F90F79D5F551E46 /* BetterYouTube */,
 				BEEFTARGET00000000000000 /* BetterYouTubeTests */,
+				E4A053270B13451D8D669F6C /* BetterYouTubeWatch */,
 			);
 		};
 /* End PBXProject section */
@@ -434,6 +520,12 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CF17EA396C614E0C9727D217 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (C4A7C6670D6142699A93D901 /* BetterYouTube.icon in Resources */,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -455,6 +547,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1BF176801A6544F4846629BA /* WatchPayload.swift in Sources */,
+				AE41B086B8224BAA856E265A /* WatchPhoneBridge.swift in Sources */,
 				E83091452729593944F09C0A /* BetterYouTubeApp.swift in Sources */,
 				729A150EAE4793319564AD3F /* Models.swift in Sources */,
 				DD9C34817BEF71E78E3483E7 /* Persistence.swift in Sources */,
@@ -520,6 +614,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8F86F10380124F55BE4FE335 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DADB1234567890ABCDEF0011 /* WatchAccountLibraryStore.swift in Sources */,
+				ADD812904EB74F7EBAE87E94 /* WatchPayload.swift in Sources */,
+				6D464D89125340DB88C35AD1 /* BetterYouTubeWatchApp.swift in Sources */,
+				3A2E6005B5014E03A86B21FE /* WatchViews.swift in Sources */,
+				7BC9E73A19564169979027B5 /* WatchBridge.swift in Sources */,
+				14D1AE9A23604F2787FFB383 /* WatchDownloads.swift in Sources */,
+				E6DF1A2C38434C40A17D1AE4 /* WatchPlayer.swift in Sources */,
+				A658A30E11D0494B8E65073D /* WatchCatalogue.swift in Sources */,
+				FD6F85619F964DE3A9C76C1D /* WatchKeychain.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -527,6 +637,12 @@
 			isa = PBXTargetDependency;
 			target = 88F56D6A2F90F79D5F551E46 /* BetterYouTube */;
 			targetProxy = BEEFPROXY000000000000000 /* PBXContainerItemProxy */;
+		};
+		E3C53B8735144B8CB4B03A1B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = E4A053270B13451D8D669F6C /* BetterYouTubeWatch */;
+			targetProxy = EEEFB06016B7495CB6C3A555 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -776,6 +892,50 @@
 			};
 			name = Release;
 		};
+		A61AD675050C411F94BFFC8C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = BetterYouTube;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RVBY9CDKL4;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = BetterYouTubeWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.atomtoto.BetterYouTube.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		E908DCDD08BB4CA2AE82E43C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = BetterYouTube;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RVBY9CDKL4;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = BetterYouTubeWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.atomtoto.BetterYouTube.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -803,6 +963,12 @@
 				4DEB3661A38156DF250681D7 /* Debug */,
 				34B30D8D79C98DB375308719 /* Release */,
 			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CC8E7BE7A0434CA6882904A4 /* Build configuration list for PBXNativeTarget "BetterYouTubeWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (A61AD675050C411F94BFFC8C /* Debug */, E908DCDD08BB4CA2AE82E43C /* Release */,);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};

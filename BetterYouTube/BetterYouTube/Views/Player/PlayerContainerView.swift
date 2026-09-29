@@ -60,7 +60,15 @@ struct PlayerContainerView: View {
     @State private var floatingOnLeft = false
     @State private var horizontalDrag: CGFloat = 0
     @State private var expandedScrollOffset: CGFloat = 0
+    #if os(iOS)
+    @State private var menuSwitchRequest = MiniPlayerMenuSwitchRequest()
+    #endif
     @AppStorage(MiniPlayerStyle.storageKey) private var miniPlayerStyle = MiniPlayerStyle.platformDefault
+    // AppStorage publishes its UserDefaults change separately from the animation transaction.
+    // Keep the visible layout in State so its frame and position changes animate together.
+    @State private var displayedMiniPlayerStyle = MiniPlayerStyle(
+        rawValue: UserDefaults.standard.string(forKey: MiniPlayerStyle.storageKey) ?? ""
+    ) ?? .platformDefault
     @AppStorage(FloatingMiniPlayerSize.storageKey) private var floatingSize = FloatingMiniPlayerSize.defaultSize
     #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -83,7 +91,7 @@ struct PlayerContainerView: View {
                 size: proxy.size,
                 metrics: metrics,
                 compactness: player.isBarCompact ? 1 : 0,
-                style: miniPlayerStyle,
+                style: displayedMiniPlayerStyle,
                 floatingSize: floatingSize,
                 floatingOnLeft: floatingOnLeft,
                 horizontalDrag: horizontalDrag,
@@ -118,6 +126,13 @@ struct PlayerContainerView: View {
         }
         .onChange(of: player.currentVideo?.id) { _, _ in
             expandedScrollOffset = 0
+        }
+        .onChange(of: miniPlayerStyle) { _, style in
+            // The Settings picker can change the same preference while the player is visible.
+            guard displayedMiniPlayerStyle != style else { return }
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                displayedMiniPlayerStyle = style
+            }
         }
     }
 
@@ -199,7 +214,7 @@ struct PlayerContainerView: View {
             .frame(width: bar.width, height: bar.height)
             .clipShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: layout.barCornerRadius, style: .continuous))
-            .simultaneousGesture(floatingDrag, including: miniPlayerStyle == .floatingVideo ? .all : .none)
+            .simultaneousGesture(floatingDrag, including: displayedMiniPlayerStyle == .floatingVideo ? .all : .none)
             .gesture(barDragGesture)
             .onTapGesture { player.expand() }
             #if os(macOS)
@@ -208,7 +223,7 @@ struct PlayerContainerView: View {
                     player: player,
                     downloads: downloads,
                     downloadManager: downloadManager,
-                    miniPlayerStyle: miniPlayerStyle,
+                    miniPlayerStyle: displayedMiniPlayerStyle,
                     onSwitchMiniPlayerStyle: switchMiniPlayerStyle
                 )
             }
@@ -222,8 +237,8 @@ struct PlayerContainerView: View {
             #endif
         }
         #if os(iOS)
-        // Lift the complete mini player, with the menu active only over its rounded bar.
-        // WebKit stays in its original host throughout the presentation.
+        // The native preview lifts the actual player. Keep its mask limited to the docked card;
+        // wait for dismissal before changing the layout behind that preview.
         .contentShape(.interaction, MiniPlayerBarShape(frame: bar, radius: layout.barCornerRadius, expanded: player.isExpanded))
         .contentShape(.contextMenuPreview, MiniPlayerBarShape(frame: bar, radius: layout.barCornerRadius, expanded: false))
         .contextMenu {
@@ -232,9 +247,10 @@ struct PlayerContainerView: View {
                     player: player,
                     downloads: downloads,
                     downloadManager: downloadManager,
-                    miniPlayerStyle: miniPlayerStyle,
+                    miniPlayerStyle: displayedMiniPlayerStyle,
                     onSwitchMiniPlayerStyle: switchMiniPlayerStyle
                 )
+                .onDisappear(perform: menuDidDisappear)
             }
         }
         #endif
@@ -263,24 +279,46 @@ struct PlayerContainerView: View {
     private func switchMiniPlayerStyle() {
         guard !player.isExpanded else { return }
         #if os(iOS)
-        // The context menu now wraps the whole player so its lift includes the video.
-        // Switching its layout before the menu finishes dismissing spends the animation
-        // behind the menu's frozen preview, leaving only the final frame visible.
+        menuSwitchRequest.videoID = player.currentVideo?.id
+        // The menu content normally reports its disappearance. The fallback also covers an
+        // interrupted dismissal that never delivers that lifecycle callback.
         Task { @MainActor in
-            do { try await Task.sleep(for: .milliseconds(300)) }
+            do { try await Task.sleep(for: .milliseconds(1200)) }
             catch { return }
-            guard player.currentVideo != nil, !player.isExpanded else { return }
-            animateMiniPlayerStyleSwitch()
+            finishPendingMiniPlayerStyleSwitch()
         }
         #else
         animateMiniPlayerStyleSwitch()
         #endif
     }
 
-    private func animateMiniPlayerStyleSwitch() {
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-            miniPlayerStyle = miniPlayerStyle == .floatingVideo ? .playbackBar : .floatingVideo
+    #if os(iOS)
+    private func menuDidDisappear() {
+        guard menuSwitchRequest.videoID != nil else { return }
+        Task { @MainActor in
+            // onDisappear can precede UIKit's return animation by a few frames. Let the lifted
+            // preview clear before changing the size of the view it was captured from.
+            do { try await Task.sleep(for: .milliseconds(400)) }
+            catch { return }
+            finishPendingMiniPlayerStyleSwitch()
         }
+    }
+
+    private func finishPendingMiniPlayerStyleSwitch() {
+        guard let videoID = menuSwitchRequest.videoID else { return }
+        menuSwitchRequest.videoID = nil
+        guard player.currentVideo?.id == videoID, !player.isExpanded else { return }
+        animateMiniPlayerStyleSwitch()
+    }
+    #endif
+
+    private func animateMiniPlayerStyleSwitch() {
+        let nextStyle: MiniPlayerStyle = displayedMiniPlayerStyle == .floatingVideo
+            ? .playbackBar : .floatingVideo
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+            displayedMiniPlayerStyle = nextStyle
+        }
+        miniPlayerStyle = nextStyle
     }
 
     /// Whichever player is live. They swap in the same slot and are laid out identically, so
@@ -882,8 +920,13 @@ private struct MiniPlayerControls: View {
     }
 }
 
-/// Rounded mini-player region used by the native context menu.
+/// The full player is the native context menu preview, clipped to the docked card.
 #if os(iOS)
+@MainActor
+private final class MiniPlayerMenuSwitchRequest {
+    var videoID: String?
+}
+
 private struct MiniPlayerBarShape: Shape {
     let frame: CGRect
     let radius: CGFloat
@@ -893,7 +936,6 @@ private struct MiniPlayerBarShape: Shape {
         Path(roundedRect: expanded ? rect : frame, cornerRadius: expanded ? 0 : radius)
     }
 }
-
 #endif
 
 /// The played fraction, using the original size with rounded ends.

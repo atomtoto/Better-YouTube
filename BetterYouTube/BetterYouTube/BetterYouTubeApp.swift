@@ -123,6 +123,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         BackgroundRefresh.register()
         UNUserNotificationCenter.current().delegate = NotificationService.shared
         NotificationService.shared.configure()
+        Task { @MainActor in WatchPhoneBridge.shared.start() }
         return true
     }
 

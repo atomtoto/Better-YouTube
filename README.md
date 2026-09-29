@@ -1,13 +1,15 @@
 # Better-YouTube
 
-An unofficial YouTube client for **iOS and macOS**, built with SwiftUI and designed to feel like a
+An unofficial YouTube client for **iOS, macOS and watchOS**, built with SwiftUI and designed to feel like a
 native Apple app (Apple Music-style shelves, artwork cards, inset-grouped library, context menus,
 share sheets).
 
-One target builds both. The phone gets a tab bar, a docked player over it and a video that goes
+One target builds iOS and macOS. The phone gets a tab bar, a docked player over it and a video that goes
 full screen when you turn the phone on its side; the Mac gets a sidebar, a menu bar with keyboard
 shortcuts and a window. Everything between those two — the API client, the player, the download
-queue, the on-device library — is the same code. See [Running on a Mac](#running-on-a-mac).
+queue, the on-device library — is the same code. A separate Watch app has a compact library,
+search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch) and
+[Running on a Mac](#running-on-a-mac).
 
 ## Features
 
@@ -32,6 +34,8 @@ queue, the on-device library — is the same code. See [Running on a Mac](#runni
   (on a Mac: the media widget in Control Centre and the keyboard's play/pause key)
 - **Settings** — Google sign-in, API key, library counts, what is left of the day's API quota,
   and a reset that puts the device back to a fresh install
+- **Apple Watch** — synced YouTube Home and library, direct search with the watch's network,
+  audio downloads saved on the watch, and offline playback with background audio
 
 ## What the YouTube API can and cannot do
 
@@ -315,13 +319,47 @@ already watch is the ordinary case for it, and the risk sits on your account and
 not on anyone else. The local mode is available without configuration; server mode requires a
 valid endpoint before it can start downloading.
 
+## Running on Apple Watch
+
+The `BetterYouTubeWatch` target builds for **watchOS 26+** and is embedded in the iOS app. Build
+the `BetterYouTubeWatch` scheme for a Watch simulator, or install the iOS app on a paired iPhone
+and its Watch app on the watch. Open the iPhone app once after installation to synchronize data.
+
+- **Home** shows the latest personalized YouTube feed already loaded on the iPhone. Connect
+  *Settings → YouTube Home* on the iPhone, then open its YouTube feed to update what the watch
+  caches. The watch keeps that feed when the iPhone is away; it cannot read the signed-in website
+  on its own.
+- **Search** uses the YouTube Data API directly over the watch's network. Set an API key on the
+  iPhone; Watch Connectivity sends that key to the watch, which stores it in its own keychain.
+  An OAuth-only setup has no key for independent watch search. Search requests consume the same
+  Cloud project's quota as the iPhone, but the iPhone's local quota counter does not see them.
+- **Library** caches the full favorites, Watch Later, history and downloaded-video lists from
+  the iPhone. When the Google OAuth account is connected, it also transfers subscriptions,
+  playlists and liked videos. Public
+  channel uploads and playlist contents load through the watch's Data API connection; private
+  playlists can ask the reachable iPhone and retain the results for later viewing.
+- **Offline audio** has two paths. Choose a video on the watch and tap *Download to Watch* while
+  the iPhone is reachable: the iPhone resolves a compatible M4A audio track, then the watch
+  fetches it in bounded ranges over its own network. Keep the Watch app open until that download
+  finishes; an interrupted download resumes from its last completed range when retried. For a
+  video already downloaded on the iPhone, tap *Transfer from iPhone*; Watch Connectivity moves
+  the existing MP4 in the background. That file can be much larger than the audio-only option.
+  Playback uses the file on the watch and continues when the wrist is lowered, with a Bluetooth
+  audio route selected by watchOS.
+
+The watch does not stream a new YouTube video or audio track by itself. watchOS has no WebKit
+player for the app's embedded playback, and the Data API supplies metadata rather than a playable
+media URL. Preparing a new download requires the iPhone to be reachable; once the file is saved,
+listening needs neither iPhone nor network. File transfer timing and background audio routing
+should be checked on a paired physical watch.
+
 ## Running on a Mac
 
 The Mac build is a **native AppKit-backed SwiftUI app**, not Catalyst and not "Designed for iPad":
 same target, `SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx"`, `SDKROOT = auto`. Pick
 *My Mac* as the run destination and build.
 
-Requirements: **macOS 26+**, Xcode 26+.
+Requirements: **macOS 26+**, Xcode 27+ for the full project.
 
 ### What is different, and why
 
@@ -362,7 +400,7 @@ app read its own credentials back.
 
 ## Getting started
 
-1. Open `BetterYouTube/BetterYouTube.xcodeproj` in Xcode 26+ and run on an iOS 26+ simulator or
+1. Open `BetterYouTube/BetterYouTube.xcodeproj` in Xcode 27+ and run on an iOS 26+ simulator or
    device, or pick *My Mac* for the macOS 26+ build.
 2. **Google sign-in** (recommended): in the Google Cloud Console, [enable the YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com)
    and [create an OAuth 2.0 client ID](https://console.cloud.google.com/auth/clients) of type **iOS** with the app's bundle identifier
@@ -407,7 +445,8 @@ app read its own credentials back.
 render.yaml                      One-click deploy of the resolver below
 resolver/                        A yt-dlp resolver: server.py, Dockerfile, compose, tests
 BetterYouTube/
-  BetterYouTube.xcodeproj/       Xcode project (one app target, iOS 26+ and macOS 26+)
+  BetterYouTube.xcodeproj/       Xcode project (iOS/macOS app and watchOS app target)
+  Shared/                       Small data payloads shared by iPhone and Watch
   BetterYouTube/
     BetterYouTubeApp.swift       App entry point, both app delegates, the Mac's menu bar
     Platform.swift               The iOS/macOS seam: typealiases, colours, window, modifiers
@@ -423,6 +462,7 @@ BetterYouTube/
     DownloadStore.swift          The Downloads folder, its manifest and what is in it
     DownloadService.swift        Download modes, settings and the optional server API
     LocalDownloadResolver.swift  On-device extraction, format selection and AVFoundation assembly
+    WatchPhoneBridge.swift       Watch Connectivity sync and iPhone-assisted audio resolution
     DownloadManager.swift        The background download queue
     LocalPlayback.swift          AVPlayer half of the player, for downloaded files
     DownloadConfigLink.swift     betteryoutube:// setup links, and their QR codes
@@ -433,13 +473,14 @@ BetterYouTube/
     Views/                       SwiftUI screens
     Views/Settings/              One file per settings section, the panes, and each shell
     Views/Components/            Reusable cards and rows
+  BetterYouTubeWatch/             Watch screens, API browsing, file downloads and audio playback
   BetterYouTubeTests/            Unit tests for the pure parts
 ```
 
 ## Continuous integration
 
 `.github/workflows/build.yml` builds the app with `xcodebuild` on a GitHub-hosted macOS runner for
-every push and pull request — **once for the iOS simulator and once for macOS** — so compile errors
+every push and pull request — **for iOS, macOS and watchOS simulators** — so compile errors
 surface without a local Mac, and so the platform nobody is currently working on can't quietly stop
 compiling.
 

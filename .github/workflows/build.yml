@@ -12,8 +12,7 @@ jobs:
     name: Build (${{ matrix.name }})
     runs-on: macos-latest
 
-    # One target, two platforms — so both have to be built, or the one nobody is
-    # currently working on quietly stops compiling.
+    # Build the shared iOS/macOS app and the separate watchOS app.
     strategy:
       fail-fast: false
       matrix:
@@ -21,9 +20,15 @@ jobs:
           - name: iOS Simulator
             sdk: iphonesimulator
             destination: generic/platform=iOS Simulator
+            scheme: BetterYouTube
           - name: macOS
             sdk: macosx
             destination: generic/platform=macOS
+            scheme: BetterYouTube
+          - name: watchOS Simulator
+            sdk: watchsimulator
+            destination: generic/platform=watchOS Simulator
+            scheme: BetterYouTubeWatch
 
     steps:
       - name: Checkout
@@ -38,7 +43,7 @@ jobs:
           set -o pipefail
           xcodebuild \
             -project BetterYouTube.xcodeproj \
-            -scheme BetterYouTube \
+            -scheme ${{ matrix.scheme }} \
             -sdk ${{ matrix.sdk }} \
             -destination "${{ matrix.destination }}" \
             CODE_SIGNING_ALLOWED=NO \
