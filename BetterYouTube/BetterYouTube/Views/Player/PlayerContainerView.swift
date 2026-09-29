@@ -283,7 +283,7 @@ struct PlayerContainerView: View {
         // The menu content normally reports its disappearance. The fallback also covers an
         // interrupted dismissal that never delivers that lifecycle callback.
         Task { @MainActor in
-            do { try await Task.sleep(for: .milliseconds(1200)) }
+            do { try await Task.sleep(for: .milliseconds(700)) }
             catch { return }
             finishPendingMiniPlayerStyleSwitch()
         }
@@ -298,7 +298,7 @@ struct PlayerContainerView: View {
         Task { @MainActor in
             // onDisappear can precede UIKit's return animation by a few frames. Let the lifted
             // preview clear before changing the size of the view it was captured from.
-            do { try await Task.sleep(for: .milliseconds(400)) }
+            do { try await Task.sleep(for: .milliseconds(250)) }
             catch { return }
             finishPendingMiniPlayerStyleSwitch()
         }
