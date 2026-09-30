@@ -76,6 +76,7 @@ struct SettingsPaneView: View {
             case .playback:
                 PlaybackSection()
             case .library:
+                ICloudSyncSection()
                 WatchLaterSection()
                 OnThisDeviceSection()
             case .notifications:

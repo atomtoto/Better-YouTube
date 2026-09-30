@@ -94,6 +94,11 @@
 		E6DF1A2C38434C40A17D1AE4 /* WatchPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E60F9B55772417991612119 /* WatchPlayer.swift */; };
 		A658A30E11D0494B8E65073D /* WatchCatalogue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7934D73EC354A799EFB6A76 /* WatchCatalogue.swift */; };
 		FD6F85619F964DE3A9C76C1D /* WatchKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5D36489E9B8495394533BAA /* WatchKeychain.swift */; };
+		62E4028D91934C8FBC5D69E6 /* CloudSyncEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42CAC8DB58C94E1995B46E8D /* CloudSyncEntry.swift */; };
+		30E042AFC8624510A837E386 /* ICloudSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E17AB7B0068405A9014C31E /* ICloudSyncService.swift */; };
+		3E6F612241B44C19A707BD75 /* ICloudSyncSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16EEADCF6F664C5EBBE7ABB6 /* ICloudSyncSection.swift */; };
+		426FB6EDC6984A72A626DD0F /* CloudLibrarySyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505540D7FD3146C3A3DA4107 /* CloudLibrarySyncTests.swift */; };
+		D718ABA5C1C041D68CC808C5 /* ICloudSyncServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6674D421281E4885BA4BE4EB /* ICloudSyncServiceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -218,6 +223,12 @@
 		7E60F9B55772417991612119 /* WatchPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlayer.swift; sourceTree = "<group>"; };
 		A7934D73EC354A799EFB6A76 /* WatchCatalogue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchCatalogue.swift; sourceTree = "<group>"; };
 		C5D36489E9B8495394533BAA /* WatchKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchKeychain.swift; sourceTree = "<group>"; };
+		42CAC8DB58C94E1995B46E8D /* CloudSyncEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncEntry.swift; sourceTree = "<group>"; };
+		7E17AB7B0068405A9014C31E /* ICloudSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudSyncService.swift; sourceTree = "<group>"; };
+		16EEADCF6F664C5EBBE7ABB6 /* ICloudSyncSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudSyncSection.swift; sourceTree = "<group>"; };
+		505540D7FD3146C3A3DA4107 /* CloudLibrarySyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudLibrarySyncTests.swift; sourceTree = "<group>"; };
+		6674D421281E4885BA4BE4EB /* ICloudSyncServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudSyncServiceTests.swift; sourceTree = "<group>"; };
+		D83ACB7A4C8649A0B6C9D4C3 /* BetterYouTube-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BetterYouTube-iOS.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -289,6 +300,7 @@
 		A1B2C3D4E5F600112233AA01 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				16EEADCF6F664C5EBBE7ABB6 /* ICloudSyncSection.swift */,
 				CD59E0EB71DC1D5B631D2753 /* SettingsView.swift */,
 				A1B2C3D4E5F600112299BB99 /* SettingsPane.swift */,
 				A1B2C3D4E5F600112202BB02 /* AboutSection.swift */,
@@ -322,6 +334,8 @@
 		BEEFGROUP000000000000000 /* BetterYouTubeTests */ = {
 			isa = PBXGroup;
 			children = (
+				6674D421281E4885BA4BE4EB /* ICloudSyncServiceTests.swift */,
+				505540D7FD3146C3A3DA4107 /* CloudLibrarySyncTests.swift */,
 				D10CA2000000000000000002 /* LocalDownloadTests.swift */,
 				D10CA2000000000000000004 /* Fixtures */,
 				D10CA5300000000000000002 /* YouTubeWebPlaylistTests.swift */,
@@ -337,6 +351,9 @@
 		CE882751F8B3EE4485706ED4 /* BetterYouTube */ = {
 			isa = PBXGroup;
 			children = (
+				D83ACB7A4C8649A0B6C9D4C3 /* BetterYouTube-iOS.entitlements */,
+				7E17AB7B0068405A9014C31E /* ICloudSyncService.swift */,
+				42CAC8DB58C94E1995B46E8D /* CloudSyncEntry.swift */,
 				6ECDDB993DD4C6CDAA43CDB3 /* DownloadConfigLink.swift */,
 				F212278CDA1C2466E2A0C880 /* LocalPlayback.swift */,
 				3EDBA542F6162FE9537251BC /* DownloadManager.swift */,
@@ -471,6 +488,10 @@
 				TargetAttributes = {
 					88F56D6A2F90F79D5F551E46 = {
 						CreatedOnToolsVersion = 15.2;
+						SystemCapabilities = {
+							com.apple.iCloud = {enabled = 1;};
+							com.apple.Push = {enabled = 1;};
+						};
 					};
 					BEEFTARGET00000000000000 = {
 						CreatedOnToolsVersion = 26.0;
@@ -533,6 +554,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D718ABA5C1C041D68CC808C5 /* ICloudSyncServiceTests.swift in Sources */,
+				426FB6EDC6984A72A626DD0F /* CloudLibrarySyncTests.swift in Sources */,
 				D10CA2000000000000000001 /* LocalDownloadTests.swift in Sources */,
 				D10CA5300000000000000001 /* YouTubeWebPlaylistTests.swift in Sources */,
 				D10CA4000000000000000001 /* YouTubeHomeCacheTests.swift in Sources */,
@@ -547,6 +570,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3E6F612241B44C19A707BD75 /* ICloudSyncSection.swift in Sources */,
+				30E042AFC8624510A837E386 /* ICloudSyncService.swift in Sources */,
+				62E4028D91934C8FBC5D69E6 /* CloudSyncEntry.swift in Sources */,
 				1BF176801A6544F4846629BA /* WatchPayload.swift in Sources */,
 				AE41B086B8224BAA856E265A /* WatchPhoneBridge.swift in Sources */,
 				E83091452729593944F09C0A /* BetterYouTubeApp.swift in Sources */,
@@ -652,6 +678,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = BetterYouTube;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "BetterYouTube/BetterYouTube-iOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "BetterYouTube/BetterYouTube-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -686,6 +713,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = BetterYouTube;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "BetterYouTube/BetterYouTube-iOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "BetterYouTube/BetterYouTube-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

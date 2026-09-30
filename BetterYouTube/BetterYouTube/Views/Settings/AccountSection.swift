@@ -25,7 +25,8 @@ struct AccountSection: View {
             Text("""
             OAuth is recommended for browsing and account features; an API key is optional. \
             While the consent screen is in Testing, only accounts added under Test users can sign \
-            in. Watch Later uses the separate youtube.com session. Watch history stays on this device.
+            in. Watch Later uses the separate youtube.com session. The app's watch history can \
+            sync through iCloud; it is separate from your YouTube account's history.
 
             On the consent screen, tick the YouTube permission before Continue: left unticked, \
             Google issues a sign-in that can't do anything and the app has to throw it away.

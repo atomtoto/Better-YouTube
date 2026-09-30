@@ -1,113 +1,207 @@
 import Foundation
 import Combine
 
-/// Persists the on-device library (favorites, watch later, watch history) as JSON in Documents.
-///
-/// Watch history is local by necessity: the API has never exposed the account's `HL` playlist, and
-/// Google closed `WL` alongside it in 2016. Watch Later is local only while signed out — see
-/// `WatchLaterStore`, which stands a real playlist in for the one the API won't give us.
+/// The offline library and its per-video sync history, persisted together as JSON in Documents.
+/// Watch Later here is the app's own list; the separate youtube.com session uses the account's
+/// real playlist through `WatchLaterStore`. Neither YouTube sign-in is copied through iCloud.
 @MainActor
 final class LibraryStore: ObservableObject {
-    static let shared = LibraryStore()
+    static let shared = LibraryStore(fileURL: FileManager.default
+        .urls(for: .documentDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("library.json"))
 
     @Published private(set) var favorites: [Video] = []
     @Published private(set) var watchLater: [Video] = []
     @Published private(set) var history: [Video] = []
 
+    private(set) var syncEntries: [String: CloudSyncEntry] = [:]
+    /// Installed by the sync service. Applying remote entries never calls this back.
+    var onSyncChange: (([CloudSyncEntry]) -> Void)?
+
     private struct Snapshot: Codable {
         var favorites: [Video]
         var watchLater: [Video]
         var history: [Video]
+        var syncEntries: [String: CloudSyncEntry]?
     }
 
     private let fileURL: URL
+    private var lastLocalMutation = Date.distantPast
 
-    private init() {
-        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.fileURL = documents.appendingPathComponent("library.json")
+    init(fileURL: URL) {
+        self.fileURL = fileURL
         load()
     }
 
     private func load() {
         guard let data = try? Data(contentsOf: fileURL),
               let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data) else { return }
-        favorites = snapshot.favorites
-        watchLater = snapshot.watchLater
-        history = snapshot.history
+        syncEntries = (snapshot.syncEntries ?? [:]).filter { Self.isLibraryEntry($0.value) }
+        // Old installs have only arrays. Give their entries stable, ancient dates, rather than
+        // claiming the app's launch time as a fresh edit that could override remote deletions.
+        seedLegacy(snapshot.favorites, in: .favorite)
+        seedLegacy(snapshot.watchLater, in: .watchLater)
+        seedLegacy(snapshot.history, in: .history)
+        lastLocalMutation = syncEntries.values.map(\.modifiedAt).max() ?? .distantPast
+        rebuildLists()
+        persist()
     }
 
     private func persist() {
-        let snapshot = Snapshot(favorites: favorites, watchLater: watchLater, history: history)
+        let snapshot = Snapshot(favorites: favorites, watchLater: watchLater, history: history,
+                                syncEntries: syncEntries)
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        try? FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
         try? data.write(to: fileURL, options: .atomic)
+    }
+
+    private func seedLegacy(_ videos: [Video], in list: CloudLibraryList) {
+        for (index, video) in videos.enumerated() {
+            let key = list.key(for: video.id)
+            guard syncEntries[key] == nil else { continue }
+            syncEntries[key] = CloudSyncEntry(
+                key: key,
+                modifiedAt: .distantPast.addingTimeInterval(TimeInterval(videos.count - index)),
+                changeID: "legacy.\(key)", video: video
+            )
+        }
+    }
+
+    private static func isLibraryEntry(_ entry: CloudSyncEntry) -> Bool {
+        guard let list = CloudLibraryList(key: entry.key),
+              let id = list.videoID(in: entry.key), entry.value == nil else { return false }
+        return entry.video.map { $0.id == id } ?? true
+    }
+
+    private func rebuildLists() {
+        let ordered = syncEntries.values.filter { $0.video != nil }.sorted {
+            if $0.modifiedAt != $1.modifiedAt { return $0.modifiedAt > $1.modifiedAt }
+            if $0.changeID != $1.changeID { return $0.changeID > $1.changeID }
+            return $0.key < $1.key
+        }
+        favorites = ordered.filter { CloudLibraryList(key: $0.key) == .favorite }.compactMap(\.video)
+        watchLater = ordered.filter { CloudLibraryList(key: $0.key) == .watchLater }.compactMap(\.video)
+        history = Array(ordered.filter { CloudLibraryList(key: $0.key) == .history }
+            .compactMap(\.video).prefix(200))
+    }
+
+    func mergeSyncEntries(_ entries: [CloudSyncEntry]) {
+        let merged = CloudSyncEntry.merge(entries.filter(Self.isLibraryEntry), into: syncEntries)
+        guard merged != syncEntries else { return }
+        syncEntries = merged
+        lastLocalMutation = max(lastLocalMutation, merged.values.map(\.modifiedAt).max() ?? .distantPast)
+        rebuildLists()
+        persist()
+    }
+
+    private typealias Edit = (list: CloudLibraryList, videoID: String, video: Video?)
+
+    /// Each operation saves and announces its changed entries once, including deletions. Keep
+    /// dates monotonic even after receiving an edit from a device whose clock is ahead.
+    private func applyLocal(_ edits: [Edit]) {
+        guard !edits.isEmpty else { return }
+        var changed: [CloudSyncEntry] = []
+        for edit in edits {
+            let key = edit.list.key(for: edit.videoID)
+            let previous = syncEntries[key]?.modifiedAt ?? .distantPast
+            let date = max(Date(), max(previous.addingTimeInterval(0.001),
+                                       lastLocalMutation.addingTimeInterval(0.001)))
+            lastLocalMutation = date
+            let entry = CloudSyncEntry(key: key, modifiedAt: date, changeID: UUID().uuidString,
+                                       video: edit.video)
+            syncEntries[key] = entry
+            changed.append(entry)
+        }
+        rebuildLists()
+        persist()
+        onSyncChange?(changed)
     }
 
     func isFavorite(_ video: Video) -> Bool { favorites.contains(video) }
     func isInWatchLater(_ video: Video) -> Bool { watchLater.contains(video) }
 
     func toggleFavorite(_ video: Video) {
-        if let index = favorites.firstIndex(of: video) {
-            favorites.remove(at: index)
-        } else {
-            favorites.insert(video, at: 0)
-        }
-        persist()
+        applyLocal([(.favorite, video.id, isFavorite(video) ? nil : video)])
     }
 
     func toggleWatchLater(_ video: Video) {
-        if let index = watchLater.firstIndex(of: video) {
-            watchLater.remove(at: index)
-        } else {
-            watchLater.insert(video, at: 0)
-        }
-        persist()
+        applyLocal([(.watchLater, video.id, isInWatchLater(video) ? nil : video)])
     }
 
-    /// Adds many at once, keeping the order they arrive in and skipping what is already there.
-    /// Written to disk once — `toggleWatchLater` in a loop would rewrite the file per video.
+    /// Adds a batch at the front, preserving its order and ignoring already saved or repeated
+    /// videos. Reversing the edits gives the first imported video the latest ordering date.
     func addToWatchLater(_ videos: [Video]) {
-        let known = Set(watchLater.map(\.id))
-        let fresh = videos.filter { !known.contains($0.id) }
-        guard !fresh.isEmpty else { return }
-        watchLater.append(contentsOf: fresh)
-        persist()
+        var known = Set(watchLater.map(\.id))
+        let fresh = videos.filter { known.insert($0.id).inserted }
+        applyLocal(fresh.reversed().map { (.watchLater, $0.id, $0) })
     }
 
     func recordWatch(_ video: Video) {
-        history.removeAll { $0.id == video.id }
-        history.insert(video, at: 0)
-        if history.count > 200 {
-            history.removeLast(history.count - 200)
-        }
-        persist()
+        applyLocal([(.history, video.id, video)])
     }
 
     func removeFavorites(at offsets: IndexSet) {
-        favorites.remove(atOffsets: offsets)
-        persist()
+        remove(at: offsets, from: favorites, in: .favorite)
     }
 
     func removeWatchLater(at offsets: IndexSet) {
-        watchLater.remove(atOffsets: offsets)
-        persist()
+        remove(at: offsets, from: watchLater, in: .watchLater)
     }
 
     func removeFromHistory(at offsets: IndexSet) {
-        history.remove(atOffsets: offsets)
+        remove(at: offsets, from: history, in: .history)
+    }
+
+    private func remove(at offsets: IndexSet, from videos: [Video], in list: CloudLibraryList) {
+        applyLocal(offsets.compactMap { index in
+            guard videos.indices.contains(index) else { return nil }
+            return (list, videos[index].id, nil)
+        })
+    }
+
+    /// Deletes every saved item, retaining tombstones so an offline device cannot bring it back.
+    func eraseEverything() {
+        applyLocal(syncEntries.values.compactMap { entry in
+            guard entry.video != nil, let list = CloudLibraryList(key: entry.key),
+                  let id = list.videoID(in: entry.key) else { return nil }
+            return (list, id, nil)
+        })
+    }
+
+    /// Used only after disabling sync for a reset of this device. No fresh tombstones remain
+    /// to erase the iCloud library if the user later enables sync again.
+    func eraseLocalCopy() {
+        syncEntries = [:]
+        rebuildLists()
+        lastLocalMutation = .distantPast
         persist()
     }
 
-    /// Everything this device kept, gone. For the reset in Settings.
-    func eraseEverything() {
-        favorites = []
-        watchLater = []
-        history = []
+    /// Moving to another iCloud account copies the visible library only. Deletions from the
+    /// previous account must never remove entries in the new one; ancient dates also allow that
+    /// account's own removals to win over copied favorites or history.
+    func prepareForNewCloudAccount() {
+        let savedFavorites = favorites
+        let savedWatchLater = watchLater
+        let savedHistory = history
+        syncEntries = [:]
+        seedLegacy(savedFavorites, in: .favorite)
+        seedLegacy(savedWatchLater, in: .watchLater)
+        seedLegacy(savedHistory, in: .history)
+        rebuildLists()
+        lastLocalMutation = .distantPast
         persist()
     }
 
     func clearHistory() {
-        history.removeAll()
-        persist()
+        // Include retained entries outside the 200-row display cap, or older history would
+        // immediately become visible after clearing the newest rows.
+        applyLocal(syncEntries.values.compactMap { entry in
+            guard entry.video != nil, CloudLibraryList(key: entry.key) == .history,
+                  let id = CloudLibraryList.history.videoID(in: entry.key) else { return nil }
+            return (.history, id, nil)
+        })
     }
 }
 

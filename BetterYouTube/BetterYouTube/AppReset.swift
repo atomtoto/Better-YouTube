@@ -33,6 +33,7 @@ enum AppReset {
     /// Everything: both sign-ins, the API key, the on-device library, the Downloads folder,
     /// notifications, the quota tally and the search history.
     static func eraseEverything() async {
+        await ICloudSyncService.shared.resetForDevice()
         // Stop playback first — it holds the audio session and a video that's about to have no
         // history entry to belong to.
         PlayerManager.shared.close()
@@ -60,11 +61,12 @@ enum AppReset {
         DownloadSettings.shared.endpoint = ""
         DownloadSettings.shared.token = ""
 
-        LibraryStore.shared.eraseEverything()
+        LibraryStore.shared.eraseLocalCopy()
         NotificationStore.shared.eraseEverything()
         RecentSearchStore.shared.clear()
         QuotaTracker.shared.reset()
         APIKeyStore.shared.apiKey = ""
+        ICloudSyncService.shared.finishDeviceReset()
 
         // Pending banners refer to videos the app no longer knows anything about.
         NotificationService.shared.cancelAll()

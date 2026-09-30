@@ -24,8 +24,9 @@ struct ResetSection: View {
             Erases everything on this device: the API key and OAuth client ID, both sign-ins, \
             your favorites, Watch Later, watch history and recent searches, the notification \
             inbox and its channels, the quota tally, and every downloaded video along with the \
-            download service's address. Your YouTube account itself is untouched — playlists, \
-            subscriptions and likes all stay where they are.
+            download service's address. iCloud Sync is turned off on this device; your iCloud \
+            library stays saved and can be restored by enabling sync again. Your YouTube account \
+            itself is untouched — playlists, subscriptions and likes all stay where they are.
             """)
         }
         .confirmationDialog(
@@ -42,7 +43,7 @@ struct ResetSection: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This device goes back to a fresh install. Nothing changes on your YouTube account.")
+            Text("This device goes back to a fresh install and iCloud Sync is turned off here. Your library stays in iCloud and on your other devices. Nothing changes on your YouTube account.")
         }
     }
 }

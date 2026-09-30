@@ -67,12 +67,12 @@ struct LibraryView: View {
                     } else if watchLater.usesYouTubeWatchLater {
                         Text("Watch Later is synced with the account connected to youtube.com.")
                     } else {
-                        Text("Watch Later is stored on this device.")
+                        Text("The app's Watch Later can sync between your devices with iCloud Sync in Settings.")
                     }
                 }
             }
 
-            Section("On This Device") {
+            Section("Your Library") {
                 // First in the section on purpose: it is the only row here that still works with
                 // the network off, which is exactly when someone goes looking for it.
                 NavigationLink {
@@ -161,7 +161,7 @@ struct LibraryView: View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Your YouTube library", systemImage: "person.crop.circle.badge.plus")
                 .font(.headline)
-            Text("Sign in with Google from Settings to browse your subscriptions, playlists and liked videos, and to keep Watch Later as a playlist on your account rather than only on this device. Watch history stays here either way — YouTube's API has never exposed it.")
+            Text("Sign in with Google from Settings to browse your subscriptions, playlists and liked videos. Connect to youtube.com for YouTube's Watch Later. The app's favorites, Watch Later and watch history can sync across your Apple devices with iCloud Sync in Settings.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             OpenSettingsButton()

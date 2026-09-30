@@ -7,7 +7,7 @@ share sheets).
 One target builds iOS and macOS. The phone gets a tab bar, a docked player over it and a video that goes
 full screen when you turn the phone on its side; the Mac gets a sidebar, a menu bar with keyboard
 shortcuts and a window. Everything between those two — the API client, the player, the download
-queue, the on-device library — is the same code. A separate Watch app has a compact library,
+queue, the iCloud-backed library — is the same code. A separate Watch app has a compact library,
 search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch) and
 [Running on a Mac](#running-on-a-mac).
 
@@ -21,11 +21,13 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   full-screen presentation — the system's controls, over the app — and turning it back puts the
   player where it was. On a Mac, ⇧⌘F fills the window instead
 - **Video detail** — stats, expandable description, comments, share sheet, and a thumbs-up that
-  is the real like on your YouTube account (the heart beside it is this device's own favourites)
+  is the real like on your YouTube account (the heart beside it is the app's own favorites)
 - **Channels** — profile header plus latest uploads
 - **Library** —
   - *Signed in with Google*: your subscriptions, playlists and liked videos
-  - *On this device*: favorites, watch later and watch history
+  - *Your library*: favorites, the app's Watch Later and watch history, with iCloud sync
+- **iCloud Sync** — favorites, the app's Watch Later, watch history, and mini player style and
+  size shared between iPhone, iPad and Mac using the same Apple Account; see [iCloud Sync](#icloud-sync)
 - **Downloads** — videos kept in a `Downloads` folder on the device and played from the file
   wherever they turn up in the app, with no network at all. Downloads run directly on the device;
   a self-hosted resolver remains optional — see [Downloads](#downloads)
@@ -57,7 +59,8 @@ reopens them, and they are absent from the Data Portability API's YouTube export
 `search.list?relatedToVideoId` in August 2023, so no endpoint returns YouTube's suggestions
 either. What the app does instead is under [Recommendations](#recommendations).
 
-Watch history stays on the device. With **Settings → YouTube Home → youtube.com** connected,
+The app records its own watch history and can sync it through iCloud; this does not read or write
+your YouTube account's history. With **Settings → YouTube Home → youtube.com** connected,
 **Watch Later uses the account's real `WL` playlist**, including reads, additions and removals.
 Requests run inside the signed-in website's WebKit context; authentication cookie values are
 not returned to Swift, persisted separately, logged or sent to another service. This uses
@@ -65,7 +68,8 @@ YouTube's internal website endpoints, not a supported public API, and may break 
 changes them. Pagination and server confirmation are checked; failures never silently save to
 a different list. Live account behavior still needs verification on a signed-in device.
 
-Without a web session, Watch Later stays on the device. The app no longer discovers, creates or
+Without a web session, the app's Watch Later is stored locally and can sync through iCloud.
+The app no longer discovers, creates or
 writes to the former substitute playlist. A stale stored identifier is discarded on startup;
 the remote playlist itself remains in the user's account until they choose to delete it.
 
@@ -105,6 +109,71 @@ endpoint reports the remaining quota, so the app prices each call from the table
 out and keeps the tally itself: it counts what *this device* spent, while the allowance belongs to
 the Cloud project behind the key or OAuth client, so anything else using that project spends from the same pot
 without showing up. The count rolls over at midnight Pacific time, which is when Google refills it.
+
+## iCloud Sync
+
+**Settings → Library → iCloud Sync** enables the same private library on iPhone, iPad and Mac
+signed into the same Apple Account. It is enabled by default; the status row reports when iCloud
+is unavailable, and **Sync Now** requests another synchronization. Local library changes still
+work offline and wait for a connection. Synchronization is asynchronous: background delivery
+depends on the system, and opening the app or using Sync Now lets it catch up.
+
+The synchronized data is deliberately limited to **favorites, the app's Watch Later, watch
+history, and mini player style and floating size**. The youtube.com Watch Later playlist is
+managed by YouTube and remains separate from the app's fallback list. Apple Watch receives the
+updated library through Watch Connectivity from its paired iPhone; it does not connect to
+CloudKit directly.
+
+Downloaded media and manifests, API keys, Google and youtube.com sessions, download service
+credentials and settings, recent searches, quota counters, and notification settings and inboxes
+remain on each device. Turning off sync keeps the local library and the existing cloud copy.
+Clearing watch history while sync is enabled propagates that deletion. **Reset App** first turns
+off sync on that device and clears its local data; other devices and the cloud library remain
+intact. Enabling sync again can restore the saved cloud library.
+
+### Signing and container setup
+
+1. Select a team with iCloud support in the app target's **Signing & Capabilities**. Add or verify
+   **iCloud → CloudKit** and choose **`iCloud.com.atomtoto.BetterYouTube`** for both iOS and macOS.
+   If you use your own container, change the identifier in `ICloudSyncService.swift` and both
+   entitlement files together. Xcode must associate that container with your app ID and generate
+   provisioning profiles containing the iCloud entitlements. See Apple's
+   [CloudKit setup guide](https://developer.apple.com/documentation/cloudkit/enabling-cloudkit-in-your-app).
+2. Keep **Push Notifications** enabled for both platforms and **Background Modes → Remote
+   notifications** enabled on iOS. The entitlement files use the development APNs environment
+   for local development; verify the final signed archive uses the environment required by its
+   distribution profile. Preserve the Mac's App Sandbox entitlements.
+3. Run a signed build with an Apple Account signed into iCloud. CI builds and offline test hosts
+   do not validate live iCloud synchronization; tests and previews skip live engine initialization.
+   The Mac also checks its runtime CloudKit entitlement before starting the engine and reports
+   missing entitlements in Settings. Use correctly provisioned builds for device validation.
+
+The service uses `CKSyncEngine` with a custom zone named **`BetterYouTubeLibrary`** in the user's
+private CloudKit database. The record type is **`LibraryEntry`** with **`schemaVersion`** (Int64,
+currently `1`) and **`payload`** (Data containing a JSON-encoded entry). Deterministic record IDs
+identify each favorite, Watch Later item, history item, or player preference. Removal entries
+retain a tombstone so a device reconnecting after an offline deletion does not resurrect that
+item. The sync engine's state and pending changes are persisted locally.
+
+Development saves create the record schema. After testing those saves, use
+[CloudKit Console](https://icloud.developer.apple.com/) to inspect the development schema and
+**deploy it to production before distributing a TestFlight or App Store build**. Schema deployment
+does not copy development records into production. Follow Apple's
+[schema deployment guide](https://developer.apple.com/documentation/cloudkit/deploying-an-icloud-container-s-schema).
+
+### Device validation
+
+Live synchronization still requires validation on **two signed devices** using the same Apple
+Account, container, and CloudKit environment. A local build and unit tests cannot establish that
+Apple's provisioning, account access, push delivery, or production schema is working.
+
+Verify favorites and fallback Watch Later additions and removals, history changes and clearing,
+and mini player style and size in both directions. Make changes while one device is offline,
+including a removal, then reconnect and confirm they converge without reviving removed items.
+Check restart, background/foreground catch-up, Sync Now, iCloud sign-out or account change, and
+disabling sync. Reset one device and verify the other device and cloud copy retain the library;
+enable sync again and confirm it restores. Finally confirm credentials and downloaded files
+have stayed local, and that the paired Watch receives library and history changes from its iPhone.
 
 ## Recommendations
 
@@ -378,7 +447,7 @@ Requirements: **macOS 26+**, Xcode 27+ for the full project.
 | Downloaded files | The Files app, under "Better YouTube" | Downloads → **Show in Finder** |
 | Tokens | iOS keychain | The data-protection keychain, which is why the Mac build is sandboxed |
 
-Everything else — sign-in, the API client, the quota tally, the download queue, the on-device
+Everything else — sign-in, the API client, the quota tally, the download queue, the synced
 library, the notification inbox — is one implementation. Settings is divided into the same seven
 panes on both, by `SettingsPane`; only the shell around them differs, a pushing list against a
 source list.
@@ -392,8 +461,9 @@ rather than cosmetic (a phone can be turned on its side; a Mac app is never susp
 stays in the file that cares and is commented there: `PlayerManager`, `BackgroundRefresh`,
 `LocalPlayerSurface`, `RootTabView`.
 
-The Mac build is **sandboxed** (`BetterYouTube-macOS.entitlements`): network client, read-only
-access to the one CSV you pick when importing Watch Later, and nothing else. That is also what
+The Mac build is **sandboxed** (`BetterYouTube-macOS.entitlements`): network client and read-only
+access to the one CSV you pick when importing Watch Later, plus CloudKit and push entitlements
+for library synchronization. The sandbox is also what
 gives the app a keychain access group of its own, so the OAuth token lands in the app's keychain
 rather than your login keychain — without it macOS would ask for your password the first time the
 app read its own credentials back.
@@ -452,12 +522,14 @@ BetterYouTube/
     Platform.swift               The iOS/macOS seam: typealiases, colours, window, modifiers
     Info.plist                   iOS
     Info-macOS.plist             macOS
-    BetterYouTube-macOS.entitlements   The Mac build's sandbox
+    BetterYouTube-iOS.entitlements     CloudKit and iOS push notifications
+    BetterYouTube-macOS.entitlements   Mac sandbox, CloudKit and push notifications
     Theme.swift                  Design tokens + shared artwork/avatar/section components
     Models.swift                 Domain models and YouTube API decoding
     YouTubeAPIService.swift      API client (actor) with OAuth + API key support
     GoogleAuthService.swift      OAuth 2.0 PKCE sign-in, keychain token storage
-    Persistence.swift            On-device library and recent searches
+    Persistence.swift            Local library and recent searches
+    ICloudSyncService.swift       CloudKit engine, account state and synchronization status
     QuotaTracker.swift           The day's quota spending, counted call by call
     DownloadStore.swift          The Downloads folder, its manifest and what is in it
     DownloadService.swift        Download modes, settings and the optional server API

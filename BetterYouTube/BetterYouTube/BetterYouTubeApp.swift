@@ -1,4 +1,5 @@
 import SwiftUI
+import CloudKit
 import UserNotifications
 #if canImport(UIKit)
 import UIKit
@@ -29,6 +30,7 @@ struct BetterYouTubeApp: App {
     @StateObject private var downloadStore = DownloadStore.shared
     @StateObject private var downloadManager = DownloadManager.shared
     @StateObject private var downloadSettings = DownloadSettings.shared
+    @StateObject private var cloudSync = ICloudSyncService.shared
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -38,6 +40,7 @@ struct BetterYouTubeApp: App {
                 .appEnvironment()
                 .task(id: scenePhase) {
                     guard scenePhase == .active else { return }
+                    await cloudSync.syncNow()
                     while !Task.isCancelled {
                         await NotificationStore.shared.importYouTubeIfDue()
                         do { try await Task.sleep(for: .seconds(60)) }
@@ -123,6 +126,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         BackgroundRefresh.register()
         UNUserNotificationCenter.current().delegate = NotificationService.shared
         NotificationService.shared.configure()
+        application.registerForRemoteNotifications()
         Task { @MainActor in WatchPhoneBridge.shared.start() }
         return true
     }
@@ -131,6 +135,21 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     /// native player when the display locks or the app leaves the foreground.
     func applicationWillResignActive(_ application: UIApplication) {
         Task { @MainActor in PlayerManager.shared.prepareForBackgroundPlayback() }
+    }
+
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        guard CKNotification(fromRemoteNotificationDictionary: userInfo)?.containerIdentifier == ICloudSyncService.containerIdentifier else {
+            completionHandler(.noData)
+            return
+        }
+        Task { @MainActor in
+            await ICloudSyncService.shared.syncNow()
+            completionHandler(.noData)
+        }
     }
 
     /// iOS relaunched the app to say a download finished while it was gone.
@@ -162,7 +181,13 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = NotificationService.shared
         NotificationService.shared.configure()
+        NSApplication.shared.registerForRemoteNotifications()
         BackgroundRefresh.startPolling()
+    }
+
+    func application(_ application: NSApplication, didReceiveRemoteNotification userInfo: [String: Any]) {
+        guard CKNotification(fromRemoteNotificationDictionary: userInfo)?.containerIdentifier == ICloudSyncService.containerIdentifier else { return }
+        Task { @MainActor in await ICloudSyncService.shared.syncNow() }
     }
 
     /// One window, and closing it means you are done — the app has no document to leave open

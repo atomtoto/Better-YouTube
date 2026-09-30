@@ -14,7 +14,7 @@ struct WatchLaterSection: View {
         Section {
             LabeledContent(
                 "Playlist",
-                value: watchLater.usesYouTubeWatchLater ? "YouTube · Watch Later" : "On This Device"
+                value: watchLater.usesYouTubeWatchLater ? "YouTube · Watch Later" : "Your Library"
             )
 
             // Parsing is available signed out; destination choices are shown afterwards.
@@ -46,7 +46,7 @@ struct WatchLaterSection: View {
         } header: {
             Text("Watch Later")
         } footer: {
-            Text("Connect to youtube.com to use YouTube's actual Watch Later playlist. Otherwise, Watch Later stays on this device. A Google Takeout playlist can be imported into Watch Later or any custom playlist you choose.")
+            Text("Connect to youtube.com to use YouTube's actual Watch Later playlist. Otherwise, the app's Watch Later can sync between your devices with iCloud Sync. A Google Takeout playlist can be imported into Watch Later or any custom playlist you choose.")
         }
         // Takeout's CSVs arrive as plain text as often as with a CSV type, so accept both.
         .fileImporter(

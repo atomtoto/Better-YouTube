@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Domain models
 
-struct Video: Identifiable, Codable, Equatable, Hashable {
+struct Video: Identifiable, Codable, Equatable, Hashable, Sendable {
     let id: String
     let title: String
     let channelId: String

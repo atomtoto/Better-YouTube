@@ -54,6 +54,7 @@ final class WatchPhoneBridge: NSObject {
             .store(in: &observations)
         library.$favorites.sink { [weak self] _ in self?.publishSoon() }.store(in: &observations)
         library.$watchLater.sink { [weak self] _ in self?.publishSoon() }.store(in: &observations)
+        library.$history.sink { [weak self] _ in self?.publishSoon() }.store(in: &observations)
         watchLater.$entries.sink { [weak self] _ in self?.publishSoon() }.store(in: &observations)
         watchLater.$usesYouTubeWatchLater.sink { [weak self] _ in self?.publishSoon() }.store(in: &observations)
         downloads.$records.sink { [weak self] _ in self?.publishSoon() }.store(in: &observations)
