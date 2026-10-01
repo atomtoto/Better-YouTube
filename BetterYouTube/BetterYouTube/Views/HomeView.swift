@@ -42,6 +42,18 @@ struct HomeView: View {
                     .fixedSize()
             }
 
+            if viewModel.feed == .youTube || viewModel.feed == .forYou {
+                ToolbarItem(placement: .primaryAction) {
+                    Picker("Show as", selection: $webSession.rendering) {
+                        ForEach(YouTubeWebSession.FeedRendering.allCases) { rendering in
+                            Text(rendering.title).tag(rendering)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                }
+            }
+
             // Pull-to-refresh below is the phone's affordance; a Mac needs somewhere to click.
             ToolbarItem(placement: .primaryAction) {
                 RefreshButton { await refresh(force: true) }
