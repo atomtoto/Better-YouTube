@@ -131,6 +131,17 @@ final class PlayerManager: ObservableObject {
     @Published private(set) var issue: PlaybackIssue?
     /// Which of the two players is live. Watched by the container, which swaps the surface.
     @Published private(set) var source: PlaybackSource = .embed
+    @Published private(set) var isAudioOnly = false
+    @Published private(set) var isCarPlayVideoPlayback = false
+    private(set) var isCarPlayConnected = false
+    private var carPlaySupportsVideo = false
+    private var carPlayPrefersVideo = false
+    private var usesNativeCarPlayPlayback: Bool { isAudioOnly || isCarPlayVideoPlayback }
+    private var audioStreamTask: Task<Void, Never>?
+    private var audioShouldPlay = true
+    private let resolveAudio: (String) async throws -> URL
+    private let resolveVideo: (String) async throws -> URL
+    private let downloadedMediaURL: @MainActor (String) -> URL?
 
     let webView: WKWebView
     /// The other player. Both exist for the app's lifetime; `source` says which one is live.
@@ -231,7 +242,16 @@ final class PlayerManager: ObservableObject {
     private var backgroundStreamURL: URL?
     private var backgroundPlaybackRequested = false
 
-    private init() {
+    init(resolveAudio: @escaping (String) async throws -> URL = {
+        try await LocalDownloadResolver.shared.resolveAudioPlaybackURL(videoID: $0)
+    }, resolveVideo: @escaping (String) async throws -> URL = {
+        try await LocalDownloadResolver.shared.resolvePlaybackURL(videoID: $0)
+    }, downloadedMediaURL: @escaping @MainActor (String) -> URL? = {
+        DownloadStore.shared.readyMediaURL(for: $0)
+    }) {
+        self.resolveAudio = resolveAudio
+        self.resolveVideo = resolveVideo
+        self.downloadedMediaURL = downloadedMediaURL
         let configuration = WKWebViewConfiguration()
         #if os(iOS)
         // A Mac never plays video anywhere but inline, so there is nothing to ask for there.
@@ -313,6 +333,7 @@ final class PlayerManager: ObservableObject {
 
         local.onFailure = { [weak self] message in
             guard let self, self.isLocal else { return }
+            self.local.pause()
             self.setBuffering(false)
             self.issue = .loadFailed(message)
         }
@@ -321,8 +342,15 @@ final class PlayerManager: ObservableObject {
     // MARK: - Playback
 
     /// Starts a video and expands the player. `upNext` becomes the auto-play queue.
-    func play(_ video: Video, upNext queue: [Video] = []) {
+    func play(_ video: Video, upNext queue: [Video] = [], audioOnly: Bool = false,
+              carPlayVideo: Bool = false) {
         savePlaybackPosition()
+        audioStreamTask?.cancel()
+        audioStreamTask = nil
+        isCarPlayVideoPlayback = !audioOnly && (carPlayVideo || (isCarPlayConnected && carPlaySupportsVideo))
+        carPlayPrefersVideo = isCarPlayVideoPlayback
+        isAudioOnly = audioOnly || (isCarPlayConnected && !isCarPlayVideoPlayback)
+        audioShouldPlay = true
         LibraryStore.shared.recordWatch(video)
 
         upNext = queue.filter { $0.id != video.id }
@@ -342,16 +370,18 @@ final class PlayerManager: ObservableObject {
         wasExpandedBeforeFullScreen = true
         withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
             currentVideo = video
-            isExpanded = true
+            isExpanded = !usesNativeCarPlayPlayback
             isBarCompact = false
-            isFullScreen = isLandscape
+            isFullScreen = isLandscape && !usesNativeCarPlayPlayback
         }
 
         // The one decision that makes a download worth having: if the file is here, play it.
         // `readyMediaURL` checks the disk as well as the manifest, so a download deleted behind
         // the app's back falls back to streaming rather than playing a black rectangle.
-        if let file = DownloadStore.shared.readyMediaURL(for: video.id) {
+        if let file = downloadedMediaURL(video.id) {
             startLocal(file)
+        } else if usesNativeCarPlayPlayback {
+            startCarPlayStream(video.id)
         } else {
             startEmbed(video.id)
         }
@@ -359,6 +389,78 @@ final class PlayerManager: ObservableObject {
         // Claim the audio session now, so leaving the app doesn't take the sound with it.
         NowPlaying.shared.begin()
         refreshNowPlaying()
+    }
+
+    /// CarPlay can launch without an iPhone window, so never depend on the embed's surface.
+    func setCarPlayConnected(_ connected: Bool, supportsVideo: Bool = false) {
+        isCarPlayConnected = connected
+        carPlaySupportsVideo = connected && supportsVideo
+        guard connected, let video = currentVideo else { return }
+        guard !usesNativeCarPlayPlayback || carPlayPrefersVideo != supportsVideo else { return }
+        let wasAudioOnly = isAudioOnly
+        let shouldPlay = isPlaying
+        isCarPlayVideoPlayback = supportsVideo
+        carPlayPrefersVideo = supportsVideo
+        isAudioOnly = !supportsVideo
+        audioShouldPlay = shouldPlay
+        exitSystemFullScreen()
+        isFullScreen = false
+        isExpanded = false
+        #if os(iOS)
+        local.setFullScreen(false)
+        #endif
+        if !isLocal || (wasAudioOnly && supportsVideo && downloadedMediaURL(video.id) == nil) {
+            audioStreamTask?.cancel()
+            startCarPlayStream(video.id)
+        }
+        refreshNowPlaying()
+    }
+
+    private func startCarPlayStream(_ videoID: String) {
+        issue = nil
+        clearBackgroundStream()
+        if isShellLoaded { evaluate("stopVideo()") }
+        local.stop()
+        source = .embed
+        desiredVideoId = nil
+        loadedVideoId = nil
+        loadedPlaybackID = nil
+        watchdog?.cancel()
+        exitSystemFullScreen()
+        setPlaying(false)
+        setBuffering(true)
+        let requestID = playbackID
+        let wantsVideo = isCarPlayVideoPlayback
+        audioStreamTask = Task { [weak self] in
+            do {
+                guard let resolveAudio = self?.resolveAudio, let resolveVideo = self?.resolveVideo else { return }
+                let url: URL
+                if wantsVideo {
+                    do { url = try await resolveVideo(videoID) }
+                    catch {
+                        try Task.checkCancellation()
+                        // Some videos expose only a usable audio stream. Keep them listenable.
+                        url = try await resolveAudio(videoID)
+                        guard !Task.isCancelled, let self, self.playbackID == requestID else { return }
+                        self.isCarPlayVideoPlayback = false
+                        self.isAudioOnly = true
+                    }
+                } else { url = try await resolveAudio(videoID) }
+                guard !Task.isCancelled, let self, self.playbackID == requestID else { return }
+                self.audioStreamTask = nil
+                self.source = .local(url)
+                self.local.load(url: url)
+                self.local.seek(to: self.progress.currentTime)
+                if self.audioShouldPlay { self.local.play() }
+                else { self.setBuffering(false) }
+                self.refreshNowPlaying()
+            } catch {
+                guard !Task.isCancelled, let self, self.playbackID == requestID else { return }
+                self.audioStreamTask = nil
+                self.setBuffering(false)
+                self.issue = .loadFailed(error.localizedDescription)
+            }
+        }
     }
 
     /// Hands over to the file player, and quiets the embed — two soundtracks at once is the
@@ -380,7 +482,7 @@ final class PlayerManager: ObservableObject {
         #if os(iOS)
         // If playback starts while the phone is already on its side, setLandscape has already
         // run. Queue the request here so AVKit still presents the same true full-screen player.
-        local.setFullScreen(isLandscape)
+        local.setFullScreen(isLandscape && !usesNativeCarPlayPlayback)
         #endif
     }
 
@@ -441,7 +543,9 @@ final class PlayerManager: ObservableObject {
             video: currentVideo,
             isPlaying: isPlaying,
             elapsed: progress.currentTime,
-            duration: progress.duration
+            duration: progress.duration,
+            audioOnly: isAudioOnly,
+            hasNext: !upNext.isEmpty
         )
     }
 
@@ -483,7 +587,7 @@ final class PlayerManager: ObservableObject {
 
     /// Reported by the navigation delegate when the page itself fails to load.
     func handleLoadFailure(_ message: String) {
-        guard !isShellLoaded else { return }
+        guard !isShellLoaded, !usesNativeCarPlayPlayback else { return }
         isLoadingShell = false
         setBuffering(false)
         issue = .loadFailed(message)
@@ -501,6 +605,12 @@ final class PlayerManager: ObservableObject {
     }
 
     func resume() {
+        guard let currentVideo else { return }
+        audioShouldPlay = true
+        if usesNativeCarPlayPlayback, !isLocal || (issue != nil && downloadedMediaURL(currentVideo.id) == nil) {
+            if audioStreamTask == nil { startCarPlayStream(currentVideo.id) }
+            return
+        }
         if isLocal {
             local.play()
         } else {
@@ -511,10 +621,11 @@ final class PlayerManager: ObservableObject {
     }
 
     func pause() {
+        audioShouldPlay = false
         savePlaybackPosition()
         if isLocal {
             local.pause()
-        } else {
+        } else if !usesNativeCarPlayPlayback {
             evaluate("pauseVideo()")
         }
         isPlaying = false
@@ -533,7 +644,7 @@ final class PlayerManager: ObservableObject {
         savePlaybackPosition()
         if isLocal {
             local.seek(to: target)
-        } else {
+        } else if !usesNativeCarPlayPlayback {
             evaluate("seekTo(\(target))")
         }
         refreshNowPlaying()
@@ -546,11 +657,17 @@ final class PlayerManager: ObservableObject {
         }
         var queue = upNext
         let next = queue.removeFirst()
-        play(next, upNext: queue)
+        play(next, upNext: queue, audioOnly: isAudioOnly && !carPlayPrefersVideo,
+             carPlayVideo: carPlayPrefersVideo)
     }
 
     func close() {
         savePlaybackPosition()
+        audioStreamTask?.cancel()
+        audioStreamTask = nil
+        isAudioOnly = false
+        isCarPlayVideoPlayback = false
+        carPlayPrefersVideo = false
         playbackID = nil
         desiredVideoId = nil
         loadedVideoId = nil
@@ -599,6 +716,7 @@ final class PlayerManager: ObservableObject {
     func setLandscape(_ landscape: Bool) {
         guard isLandscape != landscape else { return }
         isLandscape = landscape
+        guard !usesNativeCarPlayPlayback else { return }
         guard currentVideo != nil else { return }
 
         scrollRun = 0
@@ -763,7 +881,7 @@ final class PlayerManager: ObservableObject {
         // The embed keeps reporting for a moment after a downloaded video takes over, and its
         // position would fight the file's for the scrubber. Only the handshake is still worth
         // hearing: it says the shell is up and ready for the next streamed video.
-        if isLocal {
+        if isLocal || usesNativeCarPlayPlayback {
             if event.type == "ready" {
                 isShellLoaded = true
                 isLoadingShell = false

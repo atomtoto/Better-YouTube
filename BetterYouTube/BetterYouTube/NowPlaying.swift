@@ -60,6 +60,11 @@ final class NowPlaying {
 
     /// Hands the audio session back when playback stops for good.
     func end() {
+        let commands = MPRemoteCommandCenter.shared()
+        commands.playCommand.isEnabled = false
+        commands.pauseCommand.isEnabled = false
+        commands.togglePlayPauseCommand.isEnabled = false
+        commands.nextTrackCommand.isEnabled = false
         artworkTask?.cancel()
         artworkVideoId = nil
         artwork = nil
@@ -78,7 +83,13 @@ final class NowPlaying {
     /// Publishes what is playing. Called when the video, the play state, the duration or the
     /// position *jumps* — never on the position ticking, which the system extrapolates from the
     /// playback rate on its own.
-    func update(video: Video?, isPlaying: Bool, elapsed: Double, duration: Double) {
+    func update(video: Video?, isPlaying: Bool, elapsed: Double, duration: Double,
+                audioOnly: Bool = false, hasNext: Bool = false) {
+        let commands = MPRemoteCommandCenter.shared()
+        commands.playCommand.isEnabled = video != nil
+        commands.pauseCommand.isEnabled = video != nil
+        commands.togglePlayPauseCommand.isEnabled = video != nil
+        commands.nextTrackCommand.isEnabled = hasNext
         guard let video else {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             #if os(macOS)
@@ -93,7 +104,8 @@ final class NowPlaying {
             MPNowPlayingInfoPropertyElapsedPlaybackTime: elapsed,
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
             MPNowPlayingInfoPropertyIsLiveStream: false,
-            MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.video.rawValue
+            MPNowPlayingInfoPropertyMediaType: audioOnly
+                ? MPNowPlayingInfoMediaType.audio.rawValue : MPNowPlayingInfoMediaType.video.rawValue
         ]
         if duration > 0 {
             info[MPMediaItemPropertyPlaybackDuration] = duration

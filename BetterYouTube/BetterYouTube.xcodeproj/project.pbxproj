@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA1200000000000000000003 /* CarPlayPlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1200000000000000000004 /* CarPlayPlaybackTests.swift */; };
+		CA1200000000000000000001 /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1200000000000000000002 /* CarPlaySceneDelegate.swift */; };
 		AA72D02F304D47CB86C5A001 /* PlaybackPositionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA72D02F304D47CB86C5A002 /* PlaybackPositionStore.swift */; };
 		AA72D02F304D47CB86C5A003 /* PlaybackPositionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA72D02F304D47CB86C5A004 /* PlaybackPositionTests.swift */; };
 		DADB1234567890ABCDEF0011 /* WatchAccountLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DADB1234567890ABCDEF0012 /* WatchAccountLibraryStore.swift */; };
@@ -135,6 +137,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		CA1200000000000000000004 /* CarPlayPlaybackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayPlaybackTests.swift; sourceTree = "<group>"; };
+		CA1200000000000000000002 /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
 		AA72D02F304D47CB86C5A002 /* PlaybackPositionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPositionStore.swift; sourceTree = "<group>"; };
 		AA72D02F304D47CB86C5A004 /* PlaybackPositionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPositionTests.swift; sourceTree = "<group>"; };
 		DADB1234567890ABCDEF0013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -339,6 +343,7 @@
 			isa = PBXGroup;
 			children = (
 				AA72D02F304D47CB86C5A004 /* PlaybackPositionTests.swift */,
+				CA1200000000000000000004 /* CarPlayPlaybackTests.swift */,
 				6674D421281E4885BA4BE4EB /* ICloudSyncServiceTests.swift */,
 				505540D7FD3146C3A3DA4107 /* CloudLibrarySyncTests.swift */,
 				D10CA2000000000000000002 /* LocalDownloadTests.swift */,
@@ -394,6 +399,7 @@
 				166B42AABD82F80D72120EEE /* NotificationService.swift */,
 				974548E984460DB3448AB42E /* BackgroundRefresh.swift */,
 				F2AB4B2A9355C5BE1085AE20 /* PlayerManager.swift */,
+				CA1200000000000000000002 /* CarPlaySceneDelegate.swift */,
 				A573CD2046EE48A38E75B6CE /* WatchPhoneBridge.swift */,
 			);
 			path = BetterYouTube;
@@ -561,6 +567,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA72D02F304D47CB86C5A003 /* PlaybackPositionTests.swift in Sources */,
+				CA1200000000000000000003 /* CarPlayPlaybackTests.swift in Sources */,
 				D718ABA5C1C041D68CC808C5 /* ICloudSyncServiceTests.swift in Sources */,
 				426FB6EDC6984A72A626DD0F /* CloudLibrarySyncTests.swift in Sources */,
 				D10CA2000000000000000001 /* LocalDownloadTests.swift in Sources */,
@@ -632,6 +639,7 @@
 				92C647B6ACC49AED8349A942 /* BackgroundRefresh.swift in Sources */,
 				C5F04AFA84BF255122D02CF1 /* NotificationsView.swift in Sources */,
 				74CB4F3A9608187F225EAE7F /* PlayerManager.swift in Sources */,
+				CA1200000000000000000001 /* CarPlaySceneDelegate.swift in Sources */,
 				944B4C0EA281BF27CC553EE3 /* PlayerSurface.swift in Sources */,
 				7AAD4AA89BAED0BD4237EBEF /* PlayerContainerView.swift in Sources */,
 				5AF94EA3A63C6046811F06CD /* ExpandedPlayerView.swift in Sources */,

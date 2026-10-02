@@ -55,6 +55,11 @@ final class LocalPlayback {
         // next thing behind their back.
         player.actionAtItemEnd = .pause
         player.automaticallyWaitsToMinimizeStalling = false
+        #if os(iOS)
+        // CarPlay owns the parked-video display and its driving restrictions through AirPlay.
+        player.allowsExternalPlayback = true
+        player.usesExternalPlaybackWhileExternalScreenIsActive = true
+        #endif
 
         // Reported four times a second: often enough that the scrubber tracks smoothly, rarely
         // enough that it isn't redrawing the player on every frame.

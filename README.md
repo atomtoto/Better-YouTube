@@ -41,6 +41,48 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   and a reset that puts the device back to a fresh install
 - **Apple Watch** — synced YouTube Home and library, direct search with the watch's network,
   audio downloads saved on the watch, and offline playback with background audio
+- **Apple CarPlay** — Favorites, Watch Later, History and Downloads, native Now Playing controls,
+  an Up Next list, saved positions, and parked video in compatible cars with iOS 27
+
+## Running with Apple CarPlay
+
+CarPlay presents four library tabs. Selecting an item starts native playback and queues the
+following items in that list. Downloads play from the iPhone's files without a network connection;
+other items resolve a native stream and need internet access. If a stream cannot be resolved or
+played, CarPlay shows an error. You can retry from the playback controls or
+select another item. The iPhone and CarPlay share one player, queue and playback position.
+
+On iOS 27, cars advertising video support receive playable items with a video presentation
+preference through `CPPlaybackConfiguration`. AVPlayer supports external playback via AirPlay;
+CarPlay controls the video presentation and switches to audio when vehicle policy disallows video.
+The app does not infer parking from keyboard/list restrictions or provide a manual override.
+Other cars and older iOS versions use audio. Online video uses a compatible H.264/AAC stream;
+if none is available, the item falls back to AAC audio. See Apple's
+[CarPlay video overview](https://developer.apple.com/videos/play/wwdc2026/212/).
+
+Connecting CarPlay hands any current online playback to the native player, including when it
+is paused. Disconnecting keeps the current playback and queue alive. A new selection on the phone
+after disconnecting returns to normal video playback. Account sign-in and library setup remain in
+the iPhone app. Watch Later refreshes on connection and when the CarPlay scene becomes active;
+favorites, history and downloads update as their stores change.
+
+The iOS target declares `CarPlaySceneDelegate` in its scene manifest and includes
+both `com.apple.developer.carplay-audio` and `com.apple.developer.carplay-video`. For a signed
+device build, request Apple's
+[CarPlay entitlements](https://developer.apple.com/documentation/carplay/requesting-carplay-entitlements)
+for your app ID and regenerate its provisioning profile after approval. Adding the entitlement to
+the project alone does not grant Apple's approval. macOS and watchOS do not request it.
+
+For interface validation, use CarPlay Simulator in Device Hub. For video testing, Apple's
+CarPlay Simulator from **Additional Tools for Xcode** supports video-capable vehicle configurations.
+Verify a launch with no phone window, all four library tabs, an empty library, Now Playing and
+Up Next, play/pause and seeking, queue advancement, unavailable streams, and offline downloaded
+playback. Test both video-capable and audio-only cars. In a video-capable configuration, select
+downloaded and online video while parked, then disallow video and confirm only audio remains;
+reallow video and verify the system resumes its presentation. Connect during both playing and
+paused phone playback, then disconnect and confirm playback continues. Repeat on a provisioned
+iPhone in a CarPlay vehicle, including screen lock, audio interruptions and reconnection.
+Unit tests and unsigned builds do not validate device provisioning or the vehicle interface.
 
 ## What the YouTube API can and cannot do
 
