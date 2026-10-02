@@ -37,6 +37,7 @@ enum AppReset {
         // Stop playback first — it holds the audio session and a video that's about to have no
         // history entry to belong to.
         PlayerManager.shared.close()
+        PlaybackPositionStore.shared.eraseLocalCopy()
         UserDefaults.standard.removeObject(forKey: MiniPlayerStyle.storageKey)
         UserDefaults.standard.removeObject(forKey: FloatingMiniPlayerSize.storageKey)
         UserDefaults.standard.removeObject(forKey: SettingsTabPreference.storageKey)

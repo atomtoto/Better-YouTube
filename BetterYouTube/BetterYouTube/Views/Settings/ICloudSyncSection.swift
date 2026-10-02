@@ -33,7 +33,7 @@ struct ICloudSyncSection: View {
         } header: {
             Text("iCloud")
         } footer: {
-            Text("Favorites, the app's Watch Later, watch history, and mini player style and size sync between iPhone, iPad and Mac using the same Apple Account. Apple Watch receives the library through its paired iPhone. Downloaded media, sign-ins and credentials stay on each device. YouTube's Watch Later uses your separate youtube.com session. Turning off sync keeps your library on this device and in iCloud.")
+            Text("Favorites, the app's Watch Later, watch history, playback positions, and mini player style and size sync between iPhone, iPad and Mac using the same Apple Account. Apple Watch receives the library through its paired iPhone. Downloaded media, sign-ins and credentials stay on each device. YouTube's Watch Later uses your separate youtube.com session. Turning off sync keeps your library on this device and in iCloud.")
         }
     }
 }

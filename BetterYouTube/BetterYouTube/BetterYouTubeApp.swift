@@ -60,6 +60,7 @@ struct BetterYouTubeApp: App {
         .commands { PlayerCommands(player: player, router: router) }
         #endif
         .onChange(of: scenePhase) { _, phase in
+            if phase != .active { player.savePlaybackPosition() }
             switch phase {
             case .active:
                 Task {
@@ -119,6 +120,10 @@ private extension View {
 /// before launch finishes, owning the notification-center delegate, and being handed the
 /// background downloads' completion handler.
 final class AppDelegate: NSObject, UIApplicationDelegate {
+    func applicationWillTerminate(_ application: UIApplication) {
+        PlayerManager.shared.savePlaybackPosition()
+    }
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -178,6 +183,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 /// delegate, which is owned here for the same reason as on iOS — it has to exist before the first
 /// notification can be delivered.
 final class MacAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillTerminate(_ notification: Notification) {
+        PlayerManager.shared.savePlaybackPosition()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = NotificationService.shared
         NotificationService.shared.configure()

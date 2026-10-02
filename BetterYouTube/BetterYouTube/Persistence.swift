@@ -70,7 +70,7 @@ final class LibraryStore: ObservableObject {
 
     private static func isLibraryEntry(_ entry: CloudSyncEntry) -> Bool {
         guard let list = CloudLibraryList(key: entry.key),
-              let id = list.videoID(in: entry.key), entry.value == nil else { return false }
+              let id = list.videoID(in: entry.key), entry.value == nil, entry.position == nil else { return false }
         return entry.video.map { $0.id == id } ?? true
     }
 

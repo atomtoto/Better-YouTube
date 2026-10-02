@@ -20,13 +20,16 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   YouTube's Terms of Service. Turning the phone on its side hands the video to iOS's own
   full-screen presentation — the system's controls, over the app — and turning it back puts the
   player where it was. On a Mac, ⇧⌘F fills the window instead
+- **Resume playback** — reopening a video on iPhone, iPad or Mac continues from its last saved
+  position, including downloaded videos. Positions survive app launches and sync through iCloud;
+  videos that reached the end start again from the beginning
 - **Video detail** — stats, expandable description, comments, share sheet, and a thumbs-up that
   is the real like on your YouTube account (the heart beside it is the app's own favorites)
 - **Channels** — profile header plus latest uploads
 - **Library** —
   - *Signed in with Google*: your subscriptions, playlists and liked videos
   - *Your library*: favorites, the app's Watch Later and watch history, with iCloud sync
-- **iCloud Sync** — favorites, the app's Watch Later, watch history, and mini player style and
+- **iCloud Sync** — favorites, the app's Watch Later, watch history, playback positions, and mini player style and
   size shared between iPhone, iPad and Mac using the same Apple Account; see [iCloud Sync](#icloud-sync)
 - **Downloads** — videos kept in a `Downloads` folder on the device and played from the file
   wherever they turn up in the app, with no network at all. Downloads run directly on the device;
@@ -119,7 +122,9 @@ work offline and wait for a connection. Synchronization is asynchronous: backgro
 depends on the system, and opening the app or using Sync Now lets it catch up.
 
 The synchronized data is deliberately limited to **favorites, the app's Watch Later, watch
-history, and mini player style and floating size**. The youtube.com Watch Later playlist is
+history, playback positions, and mini player style and floating size**. The most recent playback
+checkpoint wins across devices, including backward seeks. Finishing a video clears its resume
+point everywhere after synchronization. The youtube.com Watch Later playlist is
 managed by YouTube and remains separate from the app's fallback list. Apple Watch receives the
 updated library through Watch Connectivity from its paired iPhone; it does not connect to
 CloudKit directly.
@@ -168,7 +173,9 @@ Account, container, and CloudKit environment. A local build and unit tests canno
 Apple's provisioning, account access, push delivery, or production schema is working.
 
 Verify favorites and fallback Watch Later additions and removals, history changes and clearing,
-and mini player style and size in both directions. Make changes while one device is offline,
+playback positions, and mini player style and size in both directions. For resume positions,
+pause on one device and open the same video on the other; also check backward seeks, completion,
+and switching between streaming and a downloaded copy. Make changes while one device is offline,
 including a removal, then reconnect and confirm they converge without reviving removed items.
 Check restart, background/foreground catch-up, Sync Now, iCloud sign-out or account change, and
 disabling sync. Reset one device and verify the other device and cloud copy retain the library;

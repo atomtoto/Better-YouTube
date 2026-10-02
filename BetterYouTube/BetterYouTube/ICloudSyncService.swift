@@ -33,6 +33,7 @@ final class ICloudSyncService: ObservableObject {
 
     private var cache = Cache()
     private let library: LibraryStore
+    private let playbackPositions: PlaybackPositionStore
     private let defaults: UserDefaults
     private let fileURL: URL
     private let cloudKitAvailable: () -> Bool
@@ -49,15 +50,16 @@ final class ICloudSyncService: ObservableObject {
 
     private convenience init() {
         let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        self.init(library: .shared, defaults: .standard,
+        self.init(library: .shared, playbackPositions: .shared, defaults: .standard,
                   fileURL: folder.appendingPathComponent("BetterYouTube/icloud-sync.json"),
                   cloudKitAvailable: Self.hasCloudKitEntitlement)
     }
 
     /// Dependencies make the offline/reset path testable without an Apple account or entitlement.
-    init(library: LibraryStore, defaults: UserDefaults, fileURL: URL,
+    init(library: LibraryStore, playbackPositions: PlaybackPositionStore, defaults: UserDefaults, fileURL: URL,
          cloudKitAvailable: @escaping () -> Bool) {
         self.library = library
+        self.playbackPositions = playbackPositions
         self.defaults = defaults
         self.fileURL = fileURL
         self.cloudKitAvailable = cloudKitAvailable
@@ -78,12 +80,14 @@ final class ICloudSyncService: ObservableObject {
                 isEnabled = false
                 defaults.set(false, forKey: Self.enabledKey)
                 library.prepareForNewCloudAccount()
+                playbackPositions.prepareForNewCloudAccount()
                 statusMessage = "The iCloud sync cache couldn't be read. Turn sync on to merge your local library again."
             }
         }
         lastSyncDate = cache.lastSyncDate
         for key in Self.preferenceKeys { preferenceValues[key] = defaults.string(forKey: key) }
         library.onSyncChange = { [weak self] changes in self?.recordLocalChanges(changes) }
+        playbackPositions.onSyncChange = { [weak self] changes in self?.recordLocalChanges(changes) }
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification, object: defaults)
             .sink { [weak self] _ in
                 Task { @MainActor in self?.capturePreferences() }
@@ -206,6 +210,8 @@ final class ICloudSyncService: ObservableObject {
 
     private func reconcileLocalEntries() {
         recordLocalChanges(Array(library.syncEntries.values))
+        playbackPositions.flush()
+        recordLocalChanges(Array(playbackPositions.syncEntries.values))
         // Initial preference migration only publishes explicit choices. In particular, the
         // Mac and phone have different defaults, which must not compete on a fresh install.
         for key in Self.preferenceKeys {
@@ -242,6 +248,7 @@ final class ICloudSyncService: ObservableObject {
 
     private func applyToStores(_ entries: [CloudSyncEntry]) {
         library.mergeSyncEntries(entries)
+        playbackPositions.mergeSyncEntries(entries)
         applyingPreferences = true
         defer { applyingPreferences = false }
         for entry in entries where entry.key.hasPrefix("preference.") {
@@ -323,6 +330,7 @@ final class ICloudSyncService: ObservableObject {
     private func accountChanged(to accountID: String?) {
         setEnabled(false)
         library.prepareForNewCloudAccount()
+        playbackPositions.prepareForNewCloudAccount()
         cache = Cache(accountID: accountID)
         lastSyncDate = nil
         persist()
@@ -364,11 +372,12 @@ extension ICloudSyncService: CKSyncEngineDelegate {
             @unknown default: setEnabled(false)
             }
         case .fetchedRecordZoneChanges(let changes):
-            for modification in changes.modifications { mergeServerRecord(modification.record, engine: syncEngine) }
+            for modification in changes.modifications { mergeServerRecord(modification.record) }
             // Normal removals are saved tombstones. Physical deletions mean data was removed
             // outside the app; drop the cached copy and prevent a stale pending save resurrecting it.
             for deletion in changes.deletions where deletion.recordID.zoneID == Self.zoneID {
                 let key = deletion.recordID.recordName
+                if CloudPlaybackPosition.videoID(in: key) != nil { playbackPositions.flush() }
                 guard let old = cache.entries[key] else { continue }
                 let removed = CloudSyncEntry(key: key, modifiedAt: max(Date(), old.modifiedAt.addingTimeInterval(0.001)),
                                              changeID: UUID().uuidString, video: nil, value: nil)
@@ -399,7 +408,7 @@ extension ICloudSyncService: CKSyncEngineDelegate {
                 let key = failed.record.recordID.recordName
                 switch failed.error.code {
                 case .serverRecordChanged:
-                    if let server = failed.error.serverRecord { mergeServerRecord(server, engine: syncEngine) }
+                    if let server = failed.error.serverRecord { mergeServerRecord(server) }
                     else { show(failed.error) }
                 case .zoneNotFound:
                     cache.systemFields[key] = nil
@@ -453,24 +462,29 @@ extension ICloudSyncService: CKSyncEngineDelegate {
         return records.isEmpty ? nil : CKSyncEngine.RecordZoneChangeBatch(recordsToSave: records)
     }
 
-    private func mergeServerRecord(_ record: CKRecord, engine: CKSyncEngine) {
-        guard record.recordID.zoneID == Self.zoneID else { return }
+    /// Also testable with CloudKit records without creating a live sync engine.
+    func mergeServerRecord(_ record: CKRecord) {
+        guard isEnabled, cacheIsWritable, !resettingDevice, record.recordID.zoneID == Self.zoneID else { return }
         guard let incoming = Self.entry(from: record) else {
             operationFailed = true
             statusMessage = "Update the app to read an unsupported iCloud record."
             return
         }
         let key = incoming.key
+        // Include playback since the last five-second checkpoint in conflict resolution.
+        // A fetched record must not displace a more recent, still-unflushed local seek.
+        if CloudPlaybackPosition.videoID(in: key) != nil { playbackPositions.flush() }
         cache.systemFields[key] = Self.systemFields(of: record)
         if let local = cache.entries[key], local.isNewer(than: incoming) {
             cache.dirty.insert(key)
-            engine.state.add(pendingRecordZoneChanges: [.saveRecord(record.recordID)])
+            engine?.state.add(pendingRecordZoneChanges: [.saveRecord(record.recordID)])
         } else {
             cache.entries[key] = incoming
             cache.dirty.remove(key)
-            engine.state.remove(pendingRecordZoneChanges: [.saveRecord(record.recordID)])
+            engine?.state.remove(pendingRecordZoneChanges: [.saveRecord(record.recordID)])
             applyToStores([incoming])
         }
+        persist()
     }
 
     static func entry(from record: CKRecord) -> CloudSyncEntry? {
@@ -479,11 +493,13 @@ extension ICloudSyncService: CKSyncEngineDelegate {
               let entry = try? JSONDecoder().decode(CloudSyncEntry.self, from: data),
               entry.key == record.recordID.recordName else { return nil }
         if let list = CloudLibraryList(key: entry.key) {
-            guard entry.value == nil,
+            guard entry.value == nil, entry.position == nil,
                   entry.video.map({ list.key(for: $0.id) == entry.key }) ?? true else { return nil }
+        } else if CloudPlaybackPosition.videoID(in: entry.key) != nil {
+            guard CloudPlaybackPosition.isValid(entry) else { return nil }
         } else {
             let key = String(entry.key.dropFirst("preference.".count))
-            guard entry.key.hasPrefix("preference."), preferenceKeys.contains(key), entry.video == nil,
+            guard entry.key.hasPrefix("preference."), preferenceKeys.contains(key), entry.video == nil, entry.position == nil,
                   entry.value.map({ validPreference($0, key: key) }) ?? true else { return nil }
         }
         return entry

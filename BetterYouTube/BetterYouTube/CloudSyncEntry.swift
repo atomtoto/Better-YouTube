@@ -7,13 +7,16 @@ struct CloudSyncEntry: Codable, Equatable, Sendable {
     let changeID: String
     let video: Video?
     let value: String?
+    let position: PlaybackPosition?
 
-    init(key: String, modifiedAt: Date, changeID: String, video: Video? = nil, value: String? = nil) {
+    init(key: String, modifiedAt: Date, changeID: String, video: Video? = nil, value: String? = nil,
+         position: PlaybackPosition? = nil) {
         self.key = key
         self.modifiedAt = modifiedAt
         self.changeID = changeID
         self.video = video
         self.value = value
+        self.position = position
     }
 
     /// The later date wins; a lexical change ID breaks simultaneous edits consistently on every
@@ -38,7 +41,7 @@ struct CloudSyncEntry: Codable, Equatable, Sendable {
     // compares its display metadata, so a remotely refreshed title or thumbnail is persisted.
     static func == (lhs: CloudSyncEntry, rhs: CloudSyncEntry) -> Bool {
         lhs.key == rhs.key && lhs.modifiedAt == rhs.modifiedAt && lhs.changeID == rhs.changeID
-            && lhs.value == rhs.value && sameVideo(lhs.video, rhs.video)
+            && lhs.value == rhs.value && lhs.position == rhs.position && sameVideo(lhs.video, rhs.video)
     }
 
     private static func sameVideo(_ lhs: Video?, _ rhs: Video?) -> Bool {
@@ -53,6 +56,22 @@ struct CloudSyncEntry: Codable, Equatable, Sendable {
                 && left.categoryId == right.categoryId
         default: return false
         }
+    }
+}
+
+/// Separate keys keep resume checkpoints from changing the order of watch history.
+enum CloudPlaybackPosition {
+    static func key(for videoID: String) -> String { "playback.\(videoID)" }
+
+    static func videoID(in key: String) -> String? {
+        let prefix = "playback."
+        guard key.hasPrefix(prefix), key.count > prefix.count else { return nil }
+        return String(key.dropFirst(prefix.count))
+    }
+
+    static func isValid(_ entry: CloudSyncEntry) -> Bool {
+        videoID(in: entry.key) != nil && entry.video == nil && entry.value == nil
+            && (entry.position?.isResumable ?? true)
     }
 }
 

@@ -47,6 +47,8 @@ final class LocalPlayback {
     private var endObserver: NSObjectProtocol?
     private var currentURL: URL?
     private var pendingSeek: Double?
+    private var seekGeneration = 0
+    private var isSeeking = false
 
     init() {
         // The app's own transport and the lock screen drive playback; nothing should autoplay the
@@ -86,6 +88,9 @@ final class LocalPlayback {
     func load(url: URL) {
         guard currentURL != url else { return }
         currentURL = url
+        pendingSeek = nil
+        seekGeneration += 1
+        isSeeking = false
 
         let item = AVPlayerItem(url: url)
         observe(item)
@@ -103,14 +108,26 @@ final class LocalPlayback {
     }
 
     func seek(to seconds: Double) {
+        guard seconds.isFinite else { return }
         guard player.currentItem?.status == .readyToPlay else {
             pendingSeek = max(0, seconds)
             return
         }
+        let item = player.currentItem
+        seekGeneration += 1
+        let generation = seekGeneration
+        isSeeking = true
         let target = CMTime(seconds: max(0, seconds), preferredTimescale: 600)
         // Exact, because this is also what the lock screen's scrubber and a 15-second skip land
         // on, and snapping to the nearest keyframe makes both feel like they missed.
-        player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero)
+        player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] finished in
+            Task { @MainActor in
+                guard let self, self.player.currentItem === item,
+                      self.seekGeneration == generation else { return }
+                self.isSeeking = false
+                if finished { self.reportProgress(at: self.player.currentTime()) }
+            }
+        }
     }
 
     /// Stops and lets go of the file — called when the player closes, or when a video that isn't
@@ -123,6 +140,8 @@ final class LocalPlayback {
         player.replaceCurrentItem(with: nil)
         currentURL = nil
         pendingSeek = nil
+        seekGeneration += 1
+        isSeeking = false
         itemStatusObservation = nil
         if let endObserver {
             NotificationCenter.default.removeObserver(endObserver)
@@ -140,15 +159,16 @@ final class LocalPlayback {
             forName: .AVPlayerItemDidPlayToEndTime,
             object: item,
             queue: .main
-        ) { [weak self] _ in
+        ) { [weak self, weak item] _ in
             MainActor.assumeIsolated {
-                self?.onEnded?()
+                guard let self, self.player.currentItem === item else { return }
+                self.onEnded?()
             }
         }
 
         itemStatusObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             Task { @MainActor in
-                guard let self else { return }
+                guard let self, self.player.currentItem === item else { return }
                 switch item.status {
                 case .readyToPlay:
                     if let seconds = self.pendingSeek {
@@ -168,6 +188,7 @@ final class LocalPlayback {
     }
 
     private func reportProgress(at time: CMTime) {
+        guard player.currentItem != nil, pendingSeek == nil, !isSeeking else { return }
         let elapsed = time.seconds.isFinite ? time.seconds : 0
         let total = player.currentItem?.duration.seconds ?? 0
         onProgress?(elapsed, total.isFinite ? total : 0)

@@ -15,6 +15,8 @@ struct PlayerEvent: Sendable {
     let time: Double?
     let duration: Double?
     let state: Int?
+    let videoID: String?
+    let playbackID: String?
 }
 
 /// Where the picture is coming from.
@@ -65,7 +67,9 @@ final class PlayerScriptBridge: NSObject, WKScriptMessageHandler {
             type: type,
             time: body["time"] as? Double,
             duration: body["duration"] as? Double,
-            state: body["state"] as? Int
+            state: body["state"] as? Int,
+            videoID: body["videoID"] as? String,
+            playbackID: body["playbackID"] as? String
         )
         Task { @MainActor in
             PlayerManager.shared.handle(event)
@@ -146,6 +150,7 @@ final class PlayerManager: ObservableObject {
     /// WKWebView is suspended when iOS locks the display. Hand playback to the native player,
     /// whose stream was resolved while the app was active, before that suspension happens.
     func prepareForBackgroundPlayback() {
+        savePlaybackPosition()
         #if os(iOS)
         guard currentVideo != nil, isPlaying else { return }
         NowPlaying.shared.begin()
@@ -197,6 +202,12 @@ final class PlayerManager: ObservableObject {
     /// The video that should be playing, and the one the web view actually has.
     private var desiredVideoId: String?
     private var loadedVideoId: String?
+    private var playbackID: String?
+    private var loadedPlaybackID: String?
+    private var pendingSeekTime: Double?
+    private var isRestoringPosition = false
+    private var playbackDidEnd = false
+    private var lastRecordedPosition: PlaybackPosition?
     private var isShellLoaded = false
     private var isLoadingShell = false
     /// YouTube refuses to start in a zero-sized, off-screen player, so nothing loads until the
@@ -280,14 +291,7 @@ final class PlayerManager: ObservableObject {
         #endif
         local.onProgress = { [weak self] elapsed, duration in
             guard let self, self.isLocal else { return }
-            if duration > 0, self.progress.duration != duration {
-                self.progress.duration = duration
-                // The lock screen's scrubber has nothing to draw until the duration arrives.
-                self.refreshNowPlaying()
-            }
-            if abs(elapsed - self.progress.currentTime) > 0.05 {
-                self.progress.currentTime = elapsed
-            }
+            self.updatePlaybackProgress(elapsed: elapsed, duration: duration)
         }
 
         local.onPlayingChanged = { [weak self] playing in
@@ -303,6 +307,7 @@ final class PlayerManager: ObservableObject {
 
         local.onEnded = { [weak self] in
             guard let self, self.isLocal else { return }
+            self.finishPlayback()
             self.playNext()
         }
 
@@ -317,10 +322,19 @@ final class PlayerManager: ObservableObject {
 
     /// Starts a video and expands the player. `upNext` becomes the auto-play queue.
     func play(_ video: Video, upNext queue: [Video] = []) {
+        savePlaybackPosition()
         LibraryStore.shared.recordWatch(video)
 
         upNext = queue.filter { $0.id != video.id }
         progress.reset()
+        let savedPosition = PlaybackPositionStore.shared.position(for: video.id)
+        progress.currentTime = savedPosition?.seconds ?? 0
+        progress.duration = savedPosition?.duration ?? 0
+        lastRecordedPosition = PlaybackPosition(seconds: progress.currentTime, duration: progress.duration)
+        pendingSeekTime = savedPosition?.seconds
+        isRestoringPosition = savedPosition != nil
+        playbackDidEnd = false
+        playbackID = UUID().uuidString
         setBuffering(true)
         issue = nil
         scrollRun = 0
@@ -361,6 +375,7 @@ final class PlayerManager: ObservableObject {
 
         source = .local(file)
         local.load(url: file)
+        local.seek(to: progress.currentTime)
         local.play()
         #if os(iOS)
         // If playback starts while the phone is already on its side, setLandscape has already
@@ -371,8 +386,9 @@ final class PlayerManager: ObservableObject {
 
     private func startEmbed(_ videoId: String) {
         clearBackgroundStream()
-        if isLocal { local.stop() }
+        let wasLocal = isLocal
         source = .embed
+        if wasLocal { local.stop() }
 
         desiredVideoId = videoId
         sync()
@@ -401,6 +417,8 @@ final class PlayerManager: ObservableObject {
         fullScreenRequest = nil
 
         source = .local(url)
+        pendingSeekTime = position
+        isRestoringPosition = false
         local.load(url: url)
         local.seek(to: position)
         local.play()
@@ -436,17 +454,19 @@ final class PlayerManager: ObservableObject {
 
     /// Hands the desired video to the web view as soon as it is in a state to accept it.
     private func sync() {
-        guard isSurfaceOnScreen, let desired = desiredVideoId else { return }
+        guard isSurfaceOnScreen, let desired = desiredVideoId, let playbackID else { return }
 
         if !isShellLoaded {
             guard !isLoadingShell else { return }
             isLoadingShell = true
             loadedVideoId = desired
+            loadedPlaybackID = playbackID
             loadShell(initialVideoId: desired)
             startWatchdog()
-        } else if loadedVideoId != desired {
+        } else if loadedVideoId != desired || loadedPlaybackID != playbackID {
             loadedVideoId = desired
-            evaluate("setVideo('\(desired)')")
+            loadedPlaybackID = playbackID
+            evaluate("setVideo('\(desired)', \(progress.currentTime), '\(playbackID)')")
         }
     }
 
@@ -491,6 +511,7 @@ final class PlayerManager: ObservableObject {
     }
 
     func pause() {
+        savePlaybackPosition()
         if isLocal {
             local.pause()
         } else {
@@ -501,9 +522,15 @@ final class PlayerManager: ObservableObject {
     }
 
     func seek(to seconds: Double) {
+        guard seconds.isFinite else { return }
         let duration = progress.duration
         let target = max(0, min(seconds, duration > 0 ? duration : seconds))
         progress.currentTime = target
+        pendingSeekTime = target
+        isRestoringPosition = false
+        playbackDidEnd = false
+        lastRecordedPosition = nil // An explicit seek is a new edit, even to the same time.
+        savePlaybackPosition()
         if isLocal {
             local.seek(to: target)
         } else {
@@ -523,6 +550,14 @@ final class PlayerManager: ObservableObject {
     }
 
     func close() {
+        savePlaybackPosition()
+        playbackID = nil
+        desiredVideoId = nil
+        loadedVideoId = nil
+        loadedPlaybackID = nil
+        pendingSeekTime = nil
+        isRestoringPosition = false
+        watchdog?.cancel()
         clearBackgroundStream()
         exitSystemFullScreen()
         NowPlaying.shared.end()
@@ -719,6 +754,12 @@ final class PlayerManager: ObservableObject {
     // MARK: - Events from the web player
 
     func handle(_ event: PlayerEvent) {
+        // The shell handshake remains useful even if its first video was replaced while loading.
+        // Every other event must belong to the current playback, including reopens of the same ID.
+        if event.type != "ready" {
+            guard currentVideo != nil, event.videoID == currentVideo?.id,
+                  event.playbackID == playbackID else { return }
+        }
         // The embed keeps reporting for a moment after a downloaded video takes over, and its
         // position would fight the file's for the scrubber. Only the handshake is still worth
         // hearing: it says the shell is up and ready for the next streamed video.
@@ -731,7 +772,7 @@ final class PlayerManager: ObservableObject {
             return
         }
 
-        if let duration = event.duration, duration > 0, progress.duration != duration {
+        if let duration = event.duration, duration.isFinite, duration > 0, progress.duration != duration {
             progress.duration = duration
             // The scrubber on the lock screen has nothing to draw until this arrives.
             refreshNowPlaying()
@@ -760,13 +801,18 @@ final class PlayerManager: ObservableObject {
             setBuffering(state == 3)
             // Replaying the same video reloads nothing, so there is no `ready` to wait for; the
             // moment it starts is the other chance to hand it over.
-            if state == 1 { startFullScreenRequest() }
-            if state == 0 { playNext() }
+            if state == 1 {
+                playbackDidEnd = false
+                startFullScreenRequest()
+            }
+            if state == 0 {
+                finishPlayback()
+                playNext()
+            }
 
         case "time":
-            // Ignore the sub-frame jitter the embed reports between real ticks.
-            if let time = event.time, abs(time - progress.currentTime) > 0.05 {
-                progress.currentTime = time
+            if let time = event.time {
+                updatePlaybackProgress(elapsed: time, duration: event.duration ?? 0)
             }
 
         default:
@@ -779,6 +825,7 @@ final class PlayerManager: ObservableObject {
     private func setPlaying(_ playing: Bool) {
         guard isPlaying != playing else { return }
         isPlaying = playing
+        if !playing { savePlaybackPosition() }
         // The embed pausing or resuming on its own — an ad break, a tap on its own controls —
         // has to reach the lock screen too, or its button ends up showing the opposite.
         refreshNowPlaying()
@@ -786,6 +833,49 @@ final class PlayerManager: ObservableObject {
 
     private func setBuffering(_ buffering: Bool) {
         if isBuffering != buffering { isBuffering = buffering }
+    }
+
+    private func updatePlaybackProgress(elapsed: Double, duration: Double) {
+        guard elapsed.isFinite, elapsed >= 0, !playbackDidEnd else { return }
+        if duration.isFinite, duration > 0, progress.duration != duration {
+            progress.duration = duration
+            refreshNowPlaying()
+        }
+        if let target = pendingSeekTime {
+            // Startup and seek reports can still describe the old position. Do not let them
+            // replace the saved checkpoint before the player has actually reached the target.
+            if isRestoringPosition, progress.duration > 0, target >= progress.duration {
+                seek(to: 0)
+                return
+            }
+            // The file player already suppresses reports until its exact seek completes.
+            guard isLocal || abs(elapsed - target) < 2 else { return }
+            pendingSeekTime = nil
+            isRestoringPosition = false
+        }
+        if abs(elapsed - progress.currentTime) > 0.05 { progress.currentTime = elapsed }
+        savePlaybackPosition(flush: false)
+    }
+
+    func savePlaybackPosition(flush: Bool = true) {
+        if let videoID = currentVideo?.id, !playbackDidEnd {
+            let position = PlaybackPosition(seconds: progress.currentTime, duration: progress.duration)
+            // Closing an idle player must not overwrite a newer checkpoint received from
+            // another device. Only actual progress or an explicit seek creates a fresh edit.
+            if position != lastRecordedPosition {
+                PlaybackPositionStore.shared.record(videoID: videoID, seconds: position.seconds,
+                                                    duration: position.duration)
+                lastRecordedPosition = position
+            }
+        }
+        if flush { PlaybackPositionStore.shared.flush() }
+    }
+
+    private func finishPlayback() {
+        guard !playbackDidEnd else { return }
+        playbackDidEnd = true
+        pendingSeekTime = nil
+        if let videoID = currentVideo?.id { PlaybackPositionStore.shared.markFinished(videoID: videoID) }
     }
 
     // MARK: - Web view plumbing
@@ -796,7 +886,10 @@ final class PlayerManager: ObservableObject {
 
     private func loadShell(initialVideoId: String) {
         isShellLoaded = false
-        let html = Self.shellHTML.replacingOccurrences(of: "__VIDEO_ID__", with: initialVideoId)
+        let html = Self.shellHTML
+            .replacingOccurrences(of: "__VIDEO_ID__", with: initialVideoId)
+            .replacingOccurrences(of: "__START_SECONDS__", with: String(progress.currentTime))
+            .replacingOccurrences(of: "__PLAYBACK_ID__", with: playbackID ?? "")
 
         // The base URL matches the iframe's host, exactly as in the version that played fine.
         webView.loadHTMLString(html, baseURL: URL(string: "https://www.youtube-nocookie.com"))
@@ -823,7 +916,6 @@ final class PlayerManager: ObservableObject {
     </head>
     <body>
       <iframe id="frame"
-        src="https://www.youtube-nocookie.com/embed/__VIDEO_ID__?enablejsapi=1&playsinline=1&rel=1&modestbranding=1&controls=1"
         allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture"
         allowfullscreen>
       </iframe>
@@ -831,9 +923,14 @@ final class PlayerManager: ObservableObject {
         var frame = document.getElementById('frame');
         var handshake;
         var watchedVideo;
+        var reportedVideoID;
+        var playbackID;
+        var pendingStartSeconds = 0;
         var playing = false;
 
         function post(message) {
+          message.videoID = reportedVideoID || watchedVideo;
+          message.playbackID = playbackID;
           try { window.webkit.messageHandlers.player.postMessage(message); } catch (e) {}
         }
 
@@ -845,10 +942,22 @@ final class PlayerManager: ObservableObject {
           send({ event: 'command', func: func, args: args || [] });
         }
 
-        function setVideo(id) {
-          watchedVideo = null;
-          frame.src = 'https://www.youtube-nocookie.com/embed/' + id +
-            '?enablejsapi=1&playsinline=1&rel=1&modestbranding=1&controls=1';
+        function setVideo(id, seconds, sessionID) {
+          clearInterval(handshake);
+          watchedVideo = id;
+          reportedVideoID = null;
+          playbackID = sessionID;
+          pendingStartSeconds = seconds || 0;
+          playing = false;
+          // A fresh iframe gives each playback its own message source. Reports still in flight
+          // from the previous video cannot overwrite this video's checkpoint.
+          var nextFrame = frame.cloneNode(false);
+          installHandshake(nextFrame);
+          nextFrame.src = 'https://www.youtube-nocookie.com/embed/' + id +
+            '?enablejsapi=1&playsinline=1&rel=1&modestbranding=1&controls=1&start=' +
+            Math.floor(pendingStartSeconds);
+          frame.replaceWith(nextFrame);
+          frame = nextFrame;
         }
 
         // Full screen, in the two forms iOS offers, best first.
@@ -933,19 +1042,22 @@ final class PlayerManager: ObservableObject {
 
         // The embed only starts reporting state once we introduce ourselves; it can miss the
         // first few messages while it boots, so repeat briefly.
-        frame.addEventListener('load', function () {
-          clearInterval(handshake);
-          watchedVideo = null;
-          var attempts = 0;
-          handshake = setInterval(function () {
-            send({ event: 'listening', id: 'frame', channel: 'widget' });
-            if (attempts === 2) { command('playVideo'); }
-            if (++attempts > 20) { clearInterval(handshake); }
-          }, 250);
-          post({ type: 'ready' });
-        });
+        function installHandshake(loadedFrame) {
+          loadedFrame.addEventListener('load', function () {
+            if (loadedFrame !== frame || !watchedVideo) { return; }
+            clearInterval(handshake);
+            var attempts = 0;
+            handshake = setInterval(function () {
+              send({ event: 'listening', id: 'frame', channel: 'widget' });
+              if (attempts === 2) { command('playVideo'); }
+              if (++attempts > 20) { clearInterval(handshake); }
+            }, 250);
+            post({ type: 'ready' });
+          });
+        }
 
         window.addEventListener('message', function (event) {
+          if (!watchedVideo || event.source !== frame.contentWindow) { return; }
           var data;
           try { data = JSON.parse(event.data); } catch (e) { return; }
           if (!data) { return; }
@@ -957,6 +1069,14 @@ final class PlayerManager: ObservableObject {
             post({ type: 'error', state: data.info });
           } else if (data.event === 'infoDelivery' && data.info) {
             var info = data.info;
+            if (info.videoData && info.videoData.video_id) {
+              reportedVideoID = info.videoData.video_id;
+            }
+            if (pendingStartSeconds > 0 && info.duration > 0 &&
+                (!reportedVideoID || reportedVideoID === watchedVideo)) {
+              command('seekTo', [pendingStartSeconds < info.duration ? pendingStartSeconds : 0, true]);
+              pendingStartSeconds = 0;
+            }
             if (typeof info.playerState === 'number') {
               post({ type: 'state', state: info.playerState, duration: info.duration || 0 });
             }
@@ -972,7 +1092,14 @@ final class PlayerManager: ObservableObject {
         function resume() { command('playVideo'); }
         function pauseVideo() { command('pauseVideo'); }
         function seekTo(seconds) { command('seekTo', [seconds, true]); }
-        function stopVideo() { watchedVideo = null; frame.src = 'about:blank'; }
+        function stopVideo() {
+          clearInterval(handshake);
+          watchedVideo = null;
+          playing = false;
+          frame.src = 'about:blank';
+        }
+
+        setVideo('__VIDEO_ID__', __START_SECONDS__, '__PLAYBACK_ID__');
       </script>
     </body>
     </html>

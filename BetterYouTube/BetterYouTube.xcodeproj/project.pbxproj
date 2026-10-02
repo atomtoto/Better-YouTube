@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA72D02F304D47CB86C5A001 /* PlaybackPositionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA72D02F304D47CB86C5A002 /* PlaybackPositionStore.swift */; };
+		AA72D02F304D47CB86C5A003 /* PlaybackPositionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA72D02F304D47CB86C5A004 /* PlaybackPositionTests.swift */; };
 		DADB1234567890ABCDEF0011 /* WatchAccountLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DADB1234567890ABCDEF0012 /* WatchAccountLibraryStore.swift */; };
 		03AB6715F4D5961DAE9D71E9 /* BetterYouTube.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6F82E79045F550B7755B4537 /* BetterYouTube.icon */; };
 		057D4422BBED259B4344DA8B /* GoogleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 916A473B8AC88B5BD27F4644 /* GoogleAuthService.swift */; };
@@ -133,6 +135,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AA72D02F304D47CB86C5A002 /* PlaybackPositionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPositionStore.swift; sourceTree = "<group>"; };
+		AA72D02F304D47CB86C5A004 /* PlaybackPositionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPositionTests.swift; sourceTree = "<group>"; };
 		DADB1234567890ABCDEF0013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DADB1234567890ABCDEF0012 /* WatchAccountLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAccountLibraryStore.swift; sourceTree = "<group>"; };
 		166B42AABD82F80D72120EEE /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
@@ -334,6 +338,7 @@
 		BEEFGROUP000000000000000 /* BetterYouTubeTests */ = {
 			isa = PBXGroup;
 			children = (
+				AA72D02F304D47CB86C5A004 /* PlaybackPositionTests.swift */,
 				6674D421281E4885BA4BE4EB /* ICloudSyncServiceTests.swift */,
 				505540D7FD3146C3A3DA4107 /* CloudLibrarySyncTests.swift */,
 				D10CA2000000000000000002 /* LocalDownloadTests.swift */,
@@ -351,6 +356,7 @@
 		CE882751F8B3EE4485706ED4 /* BetterYouTube */ = {
 			isa = PBXGroup;
 			children = (
+				AA72D02F304D47CB86C5A002 /* PlaybackPositionStore.swift */,
 				D83ACB7A4C8649A0B6C9D4C3 /* BetterYouTube-iOS.entitlements */,
 				7E17AB7B0068405A9014C31E /* ICloudSyncService.swift */,
 				42CAC8DB58C94E1995B46E8D /* CloudSyncEntry.swift */,
@@ -554,6 +560,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA72D02F304D47CB86C5A003 /* PlaybackPositionTests.swift in Sources */,
 				D718ABA5C1C041D68CC808C5 /* ICloudSyncServiceTests.swift in Sources */,
 				426FB6EDC6984A72A626DD0F /* CloudLibrarySyncTests.swift in Sources */,
 				D10CA2000000000000000001 /* LocalDownloadTests.swift in Sources */,
@@ -570,6 +577,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA72D02F304D47CB86C5A001 /* PlaybackPositionStore.swift in Sources */,
 				3E6F612241B44C19A707BD75 /* ICloudSyncSection.swift in Sources */,
 				30E042AFC8624510A837E386 /* ICloudSyncService.swift in Sources */,
 				62E4028D91934C8FBC5D69E6 /* CloudSyncEntry.swift in Sources */,

@@ -20,6 +20,8 @@ struct ICloudSyncServiceTests {
         let suiteName: String
         let defaults: UserDefaults
         let library: LibraryStore
+        let playbackPositions: PlaybackPositionStore
+        var positionsURL: URL { folder.appendingPathComponent("playback-positions.json") }
         var libraryURL: URL { folder.appendingPathComponent("library.json") }
         var cacheURL: URL { folder.appendingPathComponent("icloud-sync.json") }
 
@@ -30,10 +32,11 @@ struct ICloudSyncServiceTests {
             defaults = try #require(UserDefaults(suiteName: suiteName))
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             library = LibraryStore(fileURL: folder.appendingPathComponent("library.json"))
+            playbackPositions = PlaybackPositionStore(fileURL: folder.appendingPathComponent("playback-positions.json"))
         }
 
         func service() -> ICloudSyncService {
-            ICloudSyncService(library: library, defaults: defaults, fileURL: cacheURL,
+            ICloudSyncService(library: library, playbackPositions: playbackPositions, defaults: defaults, fileURL: cacheURL,
                               cloudKitAvailable: { false })
         }
 
@@ -73,7 +76,7 @@ struct ICloudSyncServiceTests {
         let entries = fixture.library.syncEntries
         let libraryData = try Data(contentsOf: fixture.libraryURL)
         var entitlementChecks = 0
-        let service = ICloudSyncService(library: fixture.library, defaults: fixture.defaults,
+        let service = ICloudSyncService(library: fixture.library, playbackPositions: fixture.playbackPositions, defaults: fixture.defaults,
                                         fileURL: fixture.cacheURL, cloudKitAvailable: {
             entitlementChecks += 1
             return false
@@ -111,7 +114,7 @@ struct ICloudSyncServiceTests {
         #expect(try fixture.cache().dirty == Set(entries.keys))
 
         let relaunchedLibrary = LibraryStore(fileURL: fixture.libraryURL)
-        let relaunched = ICloudSyncService(library: relaunchedLibrary, defaults: fixture.defaults,
+        let relaunched = ICloudSyncService(library: relaunchedLibrary, playbackPositions: PlaybackPositionStore(fileURL: fixture.positionsURL), defaults: fixture.defaults,
                                            fileURL: fixture.cacheURL, cloudKitAvailable: { false })
         await relaunched.syncNow()
         #expect(!relaunched.isEnabled)
@@ -138,7 +141,7 @@ struct ICloudSyncServiceTests {
         let entries = fixture.library.syncEntries
         let libraryData = try Data(contentsOf: fixture.libraryURL)
         var entitlementChecks = 0
-        let service = ICloudSyncService(library: fixture.library, defaults: fixture.defaults,
+        let service = ICloudSyncService(library: fixture.library, playbackPositions: fixture.playbackPositions, defaults: fixture.defaults,
                                         fileURL: fixture.cacheURL, cloudKitAvailable: {
             entitlementChecks += 1
             return false
@@ -163,11 +166,13 @@ struct ICloudSyncServiceTests {
         fixture.defaults.set(MiniPlayerStyle.floatingVideo.rawValue, forKey: MiniPlayerStyle.storageKey)
         fixture.defaults.set(FloatingMiniPlayerSize.large.rawValue, forKey: FloatingMiniPlayerSize.storageKey)
         fixture.library.toggleFavorite(video("cloud-copy"))
+        fixture.playbackPositions.record(videoID: "watched", seconds: 30, duration: 600)
         let service = fixture.service()
-        #expect(try fixture.cache().entries.count == 3)
+        #expect(try fixture.cache().entries.count == 4)
 
         await service.resetForDevice()
         fixture.library.eraseLocalCopy()
+        fixture.playbackPositions.eraseLocalCopy()
         fixture.defaults.removeObject(forKey: MiniPlayerStyle.storageKey)
         fixture.defaults.removeObject(forKey: FloatingMiniPlayerSize.storageKey)
         NotificationCenter.default.post(name: UserDefaults.didChangeNotification, object: fixture.defaults)
@@ -178,6 +183,7 @@ struct ICloudSyncServiceTests {
         let relaunched = fixture.service()
         #expect(!relaunched.isEnabled)
         #expect(fixture.library.syncEntries.isEmpty)
+        #expect(fixture.playbackPositions.syncEntries.isEmpty)
         let cache = try fixture.cache()
         #expect(cache.entries.isEmpty)
         #expect(cache.dirty.isEmpty)
@@ -286,6 +292,9 @@ struct ICloudSyncServiceTests {
             entry("preference.\(FloatingMiniPlayerSize.storageKey)", value: $0.rawValue)
         }
         entries += ICloudSyncService.preferenceKeys.map { entry("preference.\($0)") }
+        entries += [CloudSyncEntry(key: "playback.item", modifiedAt: Date(timeIntervalSince1970: 123),
+                                   changeID: "checkpoint", position: PlaybackPosition(seconds: 30.75, duration: 600)),
+                    entry("playback.deleted")]
 
         for value in entries {
             let record = try ICloudSyncService.record(for: value)
@@ -341,6 +350,17 @@ struct ICloudSyncServiceTests {
         #expect(ICloudSyncService.entry(from: malformed) == nil)
 
         let invalidEntries = [
+            entry("playback."),
+            entry("playback.item", video: video("item")),
+            entry("playback.item", value: "unrelated"),
+            CloudSyncEntry(key: "playback.item", modifiedAt: Date(), changeID: "invalid",
+                           position: PlaybackPosition(seconds: -1, duration: 600)),
+            CloudSyncEntry(key: "playback.item", modifiedAt: Date(), changeID: "invalid",
+                           position: PlaybackPosition(seconds: 600, duration: 600)),
+            CloudSyncEntry(key: "history.item", modifiedAt: Date(), changeID: "invalid", video: video("item"),
+                           position: PlaybackPosition(seconds: 30, duration: 600)),
+            CloudSyncEntry(key: "preference.\(MiniPlayerStyle.storageKey)", modifiedAt: Date(), changeID: "invalid",
+                           position: PlaybackPosition(seconds: 30, duration: 600)),
             entry("favorite."),
             entry("favorite.expected", video: video("other")),
             entry("history.item", video: video("item"), value: "unrelated"),
@@ -354,5 +374,70 @@ struct ICloudSyncServiceTests {
         for value in invalidEntries {
             #expect(ICloudSyncService.entry(from: try ICloudSyncService.record(for: value)) == nil)
         }
+    }
+
+    @Test("Two devices exchange resume checkpoints, backward seeks and completion through cloud records")
+    func syncsPlaybackBetweenDevices() throws {
+        let first = try Fixture()
+        let second = try Fixture()
+        defer { first.cleanup(); second.cleanup() }
+        let firstService = first.service()
+        let secondService = second.service()
+        let now = Date()
+        first.playbackPositions.record(videoID: "video", seconds: 120, duration: 600, now: now)
+        let original = try #require(first.cache().entries["playback.video"])
+        secondService.mergeServerRecord(try ICloudSyncService.record(for: original))
+        #expect(second.playbackPositions.position(for: "video")?.seconds == 120)
+        #expect(try !second.cache().dirty.contains("playback.video"))
+
+        second.playbackPositions.record(videoID: "video", seconds: 20, duration: 600, now: now.addingTimeInterval(5))
+        second.playbackPositions.flush()
+        let backward = try #require(second.cache().entries["playback.video"])
+        firstService.mergeServerRecord(try ICloudSyncService.record(for: backward))
+        #expect(first.playbackPositions.position(for: "video")?.seconds == 20)
+
+        first.playbackPositions.markFinished(videoID: "video")
+        let finished = try #require(first.cache().entries["playback.video"])
+        secondService.mergeServerRecord(try ICloudSyncService.record(for: finished))
+        firstService.mergeServerRecord(try ICloudSyncService.record(for: original))
+        #expect(first.playbackPositions.position(for: "video") == nil)
+        #expect(second.playbackPositions.position(for: "video") == nil)
+        #expect(PlaybackPositionStore(fileURL: second.positionsURL).syncEntries["playback.video"] == finished)
+        #expect(try !second.cache().dirty.contains("playback.video"))
+    }
+
+    @Test("A fetched checkpoint cannot replace newer unflushed local playback")
+    func pendingPlaybackWinsConflict() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanup() }
+        let service = fixture.service()
+        let now = Date()
+        fixture.playbackPositions.record(videoID: "video", seconds: 10, duration: 600, now: now)
+        fixture.playbackPositions.record(videoID: "video", seconds: 20, duration: 600, now: now.addingTimeInterval(2))
+        #expect(try fixture.cache().entries["playback.video"]?.position?.seconds == 10)
+        let fetched = CloudSyncEntry(key: "playback.video", modifiedAt: now.addingTimeInterval(1),
+                                     changeID: "remote", position: PlaybackPosition(seconds: 15, duration: 600))
+        service.mergeServerRecord(try ICloudSyncService.record(for: fetched))
+        #expect(fixture.playbackPositions.position(for: "video")?.seconds == 20)
+        #expect(try fixture.cache().entries["playback.video"]?.position?.seconds == 20)
+        #expect(try fixture.cache().dirty.contains("playback.video"))
+    }
+
+    @Test("Offline playback stays queued across relaunch and disabled sync ignores cloud records")
+    func offlinePlaybackRelaunch() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanup() }
+        let service = fixture.service()
+        service.setEnabled(false)
+        fixture.playbackPositions.record(videoID: "video", seconds: 40, duration: 600)
+        let saved = try #require(fixture.cache().entries["playback.video"])
+        let relaunched = fixture.service()
+        let newer = CloudSyncEntry(key: saved.key, modifiedAt: saved.modifiedAt.addingTimeInterval(1),
+                                   changeID: "remote", position: PlaybackPosition(seconds: 50, duration: 600))
+        relaunched.mergeServerRecord(try ICloudSyncService.record(for: newer))
+        #expect(!relaunched.isEnabled)
+        #expect(fixture.playbackPositions.position(for: "video")?.seconds == 40)
+        #expect(try fixture.cache().dirty.contains("playback.video"))
+        #expect(PlaybackPositionStore(fileURL: fixture.positionsURL).position(for: "video")?.seconds == 40)
     }
 }
