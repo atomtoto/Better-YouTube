@@ -48,12 +48,28 @@ struct RootTabView: View {
             hasCompletedOnboarding = false
             showsOnboarding = true
         }
-        .task(id: router.pendingVideoId) {
-            guard let videoId = router.pendingVideoId else { return }
+        // Cleared, then followed in a task of its own. A `.task(id:)` here cancelled itself:
+        // clearing the request changes the id, SwiftUI cancels the running task, and the
+        // lookup it was waiting on failed as cancelled — a tapped notification opened nothing.
+        .onChange(of: router.pendingLink, initial: true) { _, link in
+            guard let link else { return }
+            router.pendingLink = nil
+            Task { await router.follow(link) }
+        }
+        .alert("Couldn't Open Link", isPresented: Binding(
+            get: { router.linkError != nil },
+            set: { if !$0 { router.linkError = nil } }
+        )) {
+            Button("OK", role: .cancel) { router.linkError = nil }
+        } message: {
+            Text(router.linkError ?? "")
+        }
+        .onChange(of: router.pendingVideoId, initial: true) { _, videoId in
+            guard let videoId else { return }
             router.pendingVideoId = nil
             // A tapped notification is in the inbox, which already knows the title and channel.
             let known = notificationStore.items.first { $0.videoId == videoId }?.video
-            await player.open(videoId: videoId, fallback: known)
+            Task { await player.open(videoId: videoId, fallback: known) }
         }
         #if os(iOS)
         .onChange(of: showsSettingsTab) { _, visible in

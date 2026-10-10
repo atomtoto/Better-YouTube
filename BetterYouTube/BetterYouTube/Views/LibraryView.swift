@@ -8,6 +8,7 @@ struct LibraryView: View {
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var webSession: YouTubeWebSession
     @EnvironmentObject private var downloads: DownloadStore
+    @ObservedObject private var positions = PlaybackPositionStore.shared
     @StateObject private var viewModel = LibraryViewModel()
     #if os(iOS)
     @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
@@ -84,6 +85,17 @@ struct LibraryView: View {
                         title: "Downloads",
                         count: downloads.readyRecords.count
                     )
+                }
+
+                // What was left part-way through, most recently watched first — the list the
+                // progress lines under the artwork point at.
+                let unfinished = positions.resumable(library.history)
+                if !unfinished.isEmpty {
+                    NavigationLink {
+                        VideoListView(title: "Continue Watching", videos: unfinished)
+                    } label: {
+                        LibraryRow(icon: "play.circle.fill", tint: .red, title: "Continue Watching", count: unfinished.count)
+                    }
                 }
 
                 NavigationLink {

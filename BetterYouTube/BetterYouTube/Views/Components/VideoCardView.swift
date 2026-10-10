@@ -6,13 +6,15 @@ struct VideoCardView: View {
     var width: CGFloat = Theme.Size.carouselCard
 
     @EnvironmentObject private var downloads: DownloadStore
+    @ObservedObject private var positions = PlaybackPositionStore.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ArtworkView(
                 url: downloads.artworkURL(for: video),
                 duration: video.duration,
-                cornerRadius: Theme.Radius.card
+                cornerRadius: Theme.Radius.card,
+                progress: positions.watchedFraction(for: video.id)
             )
                 .frame(width: width, height: width * 9 / 16)
                 .artworkShadow()
@@ -45,6 +47,7 @@ struct FeedVideoCard: View {
     var onNotInterested: (() -> Void)? = nil
 
     @EnvironmentObject private var downloads: DownloadStore
+    @ObservedObject private var positions = PlaybackPositionStore.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -52,7 +55,8 @@ struct FeedVideoCard: View {
                 ArtworkView(
                     url: downloads.artworkURL(for: video),
                     duration: video.duration,
-                    cornerRadius: Theme.Radius.card
+                    cornerRadius: Theme.Radius.card,
+                    progress: positions.watchedFraction(for: video.id)
                 )
                     .aspectRatio(16.0 / 9.0, contentMode: .fit)
                     .artworkShadow()
@@ -136,10 +140,15 @@ struct VideoRowView: View {
     var showsChannel: Bool = true
 
     @EnvironmentObject private var downloads: DownloadStore
+    @ObservedObject private var positions = PlaybackPositionStore.shared
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            ArtworkView(url: downloads.artworkURL(for: video), duration: video.duration)
+            ArtworkView(
+                url: downloads.artworkURL(for: video),
+                duration: video.duration,
+                progress: positions.watchedFraction(for: video.id)
+            )
                 .frame(width: Theme.Size.compactThumbnail, height: Theme.Size.compactThumbnail * 9 / 16)
                 .downloadedBadge(video, downloads: downloads)
 

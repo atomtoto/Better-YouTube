@@ -7,6 +7,10 @@ struct SearchView: View {
     @EnvironmentObject private var recents: RecentSearchStore
     @StateObject private var viewModel = SearchViewModel()
     @FocusState private var isFieldFocused: Bool
+    /// A channel or playlist opened from a pasted link, pushed onto Search's own stack.
+    @State private var linkedChannel: Channel?
+    @State private var linkedPlaylist: Playlist?
+    @State private var linkError: String?
 
     var body: some View {
         Group {
@@ -37,7 +41,65 @@ struct SearchView: View {
         // Bottom on a phone, top on a Mac — see `searchFieldInset`.
         .searchFieldInset { searchField }
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
+        .navigationDestination(item: $linkedChannel) { channel in
+            ChannelView(channelId: channel.id, initialChannel: channel.title.isEmpty ? nil : channel)
+        }
+        .navigationDestination(item: $linkedPlaylist) { PlaylistDetailView(playlist: $0) }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) { filtersMenu }
+        }
+        .alert("Couldn't Open Link", isPresented: Binding(
+            get: { linkError != nil },
+            set: { if !$0 { linkError = nil } }
+        )) {
+            Button("OK", role: .cancel) { linkError = nil }
+        } message: {
+            Text(linkError ?? "")
+        }
         .onAppear { isFieldFocused = true }
+    }
+
+    // MARK: Filters
+
+    /// YouTube's filter sheet, as the menu a toolbar holds: each picker is a submenu showing its
+    /// current choice. They narrow the same 100-unit search, so they cost nothing extra.
+    private var filtersMenu: some View {
+        Menu {
+            Picker(selection: $viewModel.filters.order) {
+                ForEach(SearchFilters.Order.allCases) { Text($0.title).tag($0) }
+            } label: {
+                Label("Sort By", systemImage: "arrow.up.arrow.down")
+            }
+            .pickerStyle(.menu)
+
+            Picker(selection: $viewModel.filters.duration) {
+                ForEach(SearchFilters.Duration.allCases) { Text($0.title).tag($0) }
+            } label: {
+                Label("Duration", systemImage: "timer")
+            }
+            .pickerStyle(.menu)
+
+            Picker(selection: $viewModel.filters.uploadDate) {
+                ForEach(SearchFilters.UploadDate.allCases) { Text($0.title).tag($0) }
+            } label: {
+                Label("Upload Date", systemImage: "calendar")
+            }
+            .pickerStyle(.menu)
+
+            if !viewModel.filters.isDefault {
+                Divider()
+                Button("Reset Filters", systemImage: "arrow.counterclockwise") {
+                    viewModel.filters = SearchFilters()
+                }
+            }
+        } label: {
+            Label(
+                "Filters",
+                systemImage: viewModel.filters.isDefault
+                    ? "line.3.horizontal.decrease.circle"
+                    : "line.3.horizontal.decrease.circle.fill"
+            )
+        }
     }
 
     // MARK: Bottom search field
@@ -54,7 +116,7 @@ struct SearchView: View {
                     .foregroundStyle(isFieldFocused ? Color.accentColor : .secondary)
                     .animation(.easeInOut(duration: 0.15), value: isFieldFocused)
 
-                TextField("Search videos and channels", text: $viewModel.query)
+                TextField("Search or paste a YouTube link", text: $viewModel.query)
                     .focused($isFieldFocused)
                     .submitLabel(.search)
                     .identifierField()
@@ -88,17 +150,19 @@ struct SearchView: View {
             .animation(.easeInOut(duration: 0.15), value: viewModel.query.isEmpty)
 
             Button(action: submit) {
-                Image(systemName: "arrow.right")
+                // A link is opened rather than searched for, and the button says which.
+                Image(systemName: viewModel.link == nil ? "arrow.right" : "arrow.up.forward")
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(.white)
                     .frame(width: 40, height: 40)
                     .background(canSubmit ? Color.accentColor : Color.appTertiaryFill, in: Circle())
                     .contentShape(Circle())
+                    .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
             .disabled(!canSubmit)
             .animation(.easeInOut(duration: 0.15), value: canSubmit)
-            .accessibilityLabel("Search")
+            .accessibilityLabel(viewModel.link == nil ? "Search" : "Open Link")
         }
         .padding(.horizontal, Theme.Spacing.gutter)
         .padding(.vertical, 10)
@@ -106,8 +170,37 @@ struct SearchView: View {
     }
 
     private func submit() {
-        viewModel.submit()
         isFieldFocused = false
+        if let link = viewModel.link {
+            open(link)
+        } else {
+            viewModel.submit()
+        }
+    }
+
+    /// A pasted link goes straight to what it names — one unit at most, against the 100 a
+    /// search for it would cost, and exactly the thing that was shared.
+    private func open(_ link: YouTubeLink) {
+        switch link {
+        case .video(let id, let start):
+            Task { await player.open(videoId: id, startTime: start) }
+        case .playlist(let id):
+            linkedPlaylist = Playlist(id: id, title: "", description: "", thumbnailURL: nil)
+        case .channel(let id):
+            linkedChannel = Channel(id: id, title: "", description: "", thumbnailURL: nil)
+        case .handle(let handle):
+            Task {
+                do {
+                    if let channel = try await YouTubeAPIService.shared.channel(handle: handle) {
+                        linkedChannel = channel
+                    } else {
+                        linkError = String(localized: "YouTube has no channel called \(handle).")
+                    }
+                } catch {
+                    linkError = error.localizedDescription
+                }
+            }
+        }
     }
 
     // MARK: Recents
@@ -173,6 +266,32 @@ struct SearchView: View {
 
     // MARK: Results
 
+    /// A further page is another full search's worth of quota, so it is asked for, not scrolled
+    /// into.
+    private var moreResults: some View {
+        VStack(spacing: 8) {
+            Button {
+                Task { await viewModel.loadMore() }
+            } label: {
+                if viewModel.isLoadingMore {
+                    ProgressView()
+                } else {
+                    Text("More Results")
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(viewModel.isLoadingMore)
+
+            if let error = viewModel.loadMoreError {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     private var results: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 24) {
@@ -199,6 +318,10 @@ struct SearchView: View {
                         .buttonStyle(.plain)
                     }
                 }
+
+                if viewModel.canLoadMore {
+                    moreResults
+                }
             }
             .padding(Theme.Spacing.gutter)
         }
@@ -216,4 +339,40 @@ struct SearchView: View {
         .environmentObject(DownloadManager.shared)
         .environmentObject(DownloadSettings.shared)
         .environmentObject(PlayerManager.shared)
+}
+
+// MARK: - Filter names
+
+extension SearchFilters.Order {
+    var title: String {
+        switch self {
+        case .relevance: String(localized: "Relevance")
+        case .date: String(localized: "Upload Date", comment: "Search sort order: newest first")
+        case .viewCount: String(localized: "View Count")
+        case .rating: String(localized: "Rating")
+        }
+    }
+}
+
+extension SearchFilters.Duration {
+    var title: String {
+        switch self {
+        case .any: String(localized: "Any Length")
+        case .short: String(localized: "Under 4 Minutes")
+        case .medium: String(localized: "4–20 Minutes")
+        case .long: String(localized: "Over 20 Minutes")
+        }
+    }
+}
+
+extension SearchFilters.UploadDate {
+    var title: String {
+        switch self {
+        case .any: String(localized: "Any Time")
+        case .today: String(localized: "Today")
+        case .week: String(localized: "This Week")
+        case .month: String(localized: "This Month")
+        case .year: String(localized: "This Year")
+        }
+    }
 }

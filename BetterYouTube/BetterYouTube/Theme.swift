@@ -54,11 +54,14 @@ struct ExternalLinkLabel: View {
     }
 }
 
-/// 16:9 artwork with a rounded, continuous corner and an optional duration badge.
+/// 16:9 artwork with a rounded, continuous corner, an optional duration badge, and — for a video
+/// left part-way through — how far it got, along the foot of the picture as YouTube draws it.
 struct ArtworkView: View {
     let url: URL?
     var duration: String?
     var cornerRadius: CGFloat = Theme.Radius.thumbnail
+    /// The share already watched, 0...1, or nil for a video not started or finished.
+    var progress: Double? = nil
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -87,6 +90,19 @@ struct ArtworkView: View {
                     .glassEffect(.regular, in: Capsule())
                     .environment(\.colorScheme, .dark)
                     .padding(6)
+                    // Sits above the progress line rather than on it.
+                    .padding(.bottom, progress == nil ? 0 : 6)
+            }
+
+            if let progress {
+                ProgressView(value: progress)
+                    .progressViewStyle(.linear)
+                    .tint(.red)
+                    .padding(.horizontal, 6)
+                    .padding(.bottom, 5)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .accessibilityLabel("Watched")
+                    .accessibilityValue(Text(progress, format: .percent.precision(.fractionLength(0))))
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))

@@ -7,6 +7,16 @@ struct VideoListView: View {
     let videos: [Video]
     var onDelete: ((IndexSet) -> Void)?
     var onRefresh: (@Sendable () async -> Void)? = nil
+    @State private var filter = ""
+
+    /// The videos the filter leaves, in the list's own order.
+    private var shown: [Video] {
+        let query = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return videos }
+        return videos.filter {
+            $0.title.localizedStandardContains(query) || $0.channelTitle.localizedStandardContains(query)
+        }
+    }
 
     var body: some View {
         Group {
@@ -18,18 +28,31 @@ struct VideoListView: View {
                 )
             } else {
                 List {
-                    ForEach(videos) { video in
+                    ForEach(shown) { video in
                         Button {
-                            player.play(video, upNext: videos.after(video))
+                            player.play(video, upNext: shown.after(video))
                         } label: {
                             VideoRowView(video: video)
                         }
                         .buttonStyle(.plain)
                         .videoContextMenu(video)
                     }
-                    .onDelete(perform: onDelete)
+                    .onDelete(perform: onDelete.map { delete in
+                        // Rows are counted in the filtered list; the store counts in its own.
+                        { offsets in
+                            let shown = shown
+                            let ids = Set(offsets.map { shown[$0].id })
+                            delete(IndexSet(videos.indices.filter { ids.contains(videos[$0].id) }))
+                        }
+                    })
                 }
                 .listStyle(.plain)
+                .overlay {
+                    if shown.isEmpty {
+                        ContentUnavailableView.search(text: filter)
+                    }
+                }
+                .listFilter($filter, prompt: "Filter by title or channel")
                 .minimizesPlayerBarOnScroll()
                 .optionalRefreshable(action: onRefresh)
             }
@@ -43,6 +66,13 @@ struct VideoListView: View {
 struct SubscriptionsView: View {
     let channels: [Channel]
     var onRefresh: (@Sendable () async -> Void)? = nil
+    @State private var filter = ""
+
+    private var shown: [Channel] {
+        let query = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return channels }
+        return channels.filter { $0.title.localizedStandardContains(query) }
+    }
 
     private let columns = [
         GridItem(.flexible(), spacing: 16),
@@ -61,7 +91,7 @@ struct SubscriptionsView: View {
             } else {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 20) {
-                        ForEach(channels) { channel in
+                        ForEach(shown) { channel in
                             NavigationLink {
                                 ChannelView(channelId: channel.id, initialChannel: channel)
                             } label: {
@@ -81,6 +111,12 @@ struct SubscriptionsView: View {
                     .padding(Theme.Spacing.gutter)
                 }
                 .scrollIndicators(.hidden)
+                .overlay {
+                    if shown.isEmpty {
+                        ContentUnavailableView.search(text: filter)
+                    }
+                }
+                .listFilter($filter, prompt: "Filter channels")
                 .minimizesPlayerBarOnScroll()
                 .optionalRefreshable(action: onRefresh)
             }
@@ -94,9 +130,16 @@ struct SubscriptionsView: View {
 struct PlaylistsView: View {
     let playlists: [Playlist]
     var onRefresh: (@Sendable () async -> Void)? = nil
+    @State private var filter = ""
 
     private var displayedPlaylists: [Playlist] {
         playlists.filter { !$0.isLikedVideos }
+    }
+
+    private var shown: [Playlist] {
+        let query = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return displayedPlaylists }
+        return displayedPlaylists.filter { $0.title.localizedStandardContains(query) }
     }
 
     var body: some View {
@@ -108,7 +151,7 @@ struct PlaylistsView: View {
                     message: "Playlists you create or save on YouTube appear here."
                 )
             } else {
-                List(displayedPlaylists) { playlist in
+                List(shown) { playlist in
                     NavigationLink {
                         PlaylistDetailView(playlist: playlist)
                     } label: {
@@ -131,6 +174,12 @@ struct PlaylistsView: View {
                     }
                 }
                 .listStyle(.plain)
+                .overlay {
+                    if shown.isEmpty {
+                        ContentUnavailableView.search(text: filter)
+                    }
+                }
+                .listFilter($filter, prompt: "Filter playlists")
                 .minimizesPlayerBarOnScroll()
                 .optionalRefreshable(action: onRefresh)
             }
@@ -142,14 +191,15 @@ struct PlaylistsView: View {
 
 /// Videos inside a playlist, fetched via `playlistItems.list` (1 quota unit).
 struct PlaylistDetailView: View {
-    let playlist: Playlist
     @EnvironmentObject private var player: PlayerManager
     @StateObject private var viewModel: PlaylistViewModel
 
     init(playlist: Playlist) {
-        self.playlist = playlist
-        _viewModel = StateObject(wrappedValue: PlaylistViewModel(playlistId: playlist.id))
+        _viewModel = StateObject(wrappedValue: PlaylistViewModel(playlist: playlist))
     }
+
+    /// What the list it came from said — or, opened from a link, what the API has said since.
+    private var playlist: Playlist { viewModel.playlist }
 
     var body: some View {
         Group {
@@ -197,6 +247,16 @@ struct PlaylistDetailView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .videoContextMenu(video)
+                            }
+
+                            if viewModel.canLoadMore {
+                                LoadMoreFooter(
+                                    error: viewModel.loadMoreError,
+                                    trigger: viewModel.videos.count
+                                ) {
+                                    await viewModel.loadMore()
+                                }
+                                .listRowSeparator(.hidden)
                             }
                         }
                     }

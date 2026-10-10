@@ -485,6 +485,16 @@ struct PlayerActions: View {
             ShareLink(item: url) {
                 Label("Share", systemImage: "square.and.arrow.up")
             }
+            // The menu is built as it opens, so this is the moment on screen right then.
+            if let video = player.currentVideo, player.progress.currentTime >= 1,
+               let timedURL = YouTubeLink.video(id: video.id, start: player.progress.currentTime).webURL {
+                ShareLink(item: timedURL) {
+                    Label(
+                        "Share at \(PlaybackTimeFormatter.string(player.progress.currentTime))",
+                        systemImage: "clock.arrow.circlepath"
+                    )
+                }
+            }
             Link(destination: url) {
                 Label("Open in YouTube", systemImage: "arrow.up.forward.app")
             }

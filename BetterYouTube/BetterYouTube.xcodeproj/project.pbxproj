@@ -104,6 +104,11 @@
 		426FB6EDC6984A72A626DD0F /* CloudLibrarySyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505540D7FD3146C3A3DA4107 /* CloudLibrarySyncTests.swift */; };
 		D718ABA5C1C041D68CC808C5 /* ICloudSyncServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6674D421281E4885BA4BE4EB /* ICloudSyncServiceTests.swift */; };
 		BAC7AB84BCE20E3EB354C669 /* NotificationStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADCF052A069B96442ABB04DA /* NotificationStoreTests.swift */; };
+		2A4977A426ECF60C2F5E3D80 /* YouTubeLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A91668F30AB56C47A198577 /* YouTubeLink.swift */; };
+		3BEED17A6D38B073C2FC9C3B /* YouTubeLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9D475EEF80BD3FFE6C80DA0 /* YouTubeLinkTests.swift */; };
+		C1426382C0E887E2638C008D /* LoadMoreFooter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 295069B58A55699A3056143C /* LoadMoreFooter.swift */; };
+		78FBE6B5F75CE97F8569508B /* RichText.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDDC1174C3A48315D3A54EE1 /* RichText.swift */; };
+		6AB2DF9D5DBEE9E4F6D39714 /* RichTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F49DBA36AC99FC0D2E6D38F /* RichTextTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -239,6 +244,11 @@
 		6674D421281E4885BA4BE4EB /* ICloudSyncServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudSyncServiceTests.swift; sourceTree = "<group>"; };
 		D83ACB7A4C8649A0B6C9D4C3 /* BetterYouTube-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BetterYouTube-iOS.entitlements; sourceTree = "<group>"; };
 		ADCF052A069B96442ABB04DA /* NotificationStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationStoreTests.swift; sourceTree = "<group>"; };
+		8A91668F30AB56C47A198577 /* YouTubeLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeLink.swift; sourceTree = "<group>"; };
+		D9D475EEF80BD3FFE6C80DA0 /* YouTubeLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeLinkTests.swift; sourceTree = "<group>"; };
+		295069B58A55699A3056143C /* LoadMoreFooter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadMoreFooter.swift; sourceTree = "<group>"; };
+		DDDC1174C3A48315D3A54EE1 /* RichText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichText.swift; sourceTree = "<group>"; };
+		9F49DBA36AC99FC0D2E6D38F /* RichTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichTextTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -344,6 +354,8 @@
 		BEEFGROUP000000000000000 /* BetterYouTubeTests */ = {
 			isa = PBXGroup;
 			children = (
+				9F49DBA36AC99FC0D2E6D38F /* RichTextTests.swift */,
+				D9D475EEF80BD3FFE6C80DA0 /* YouTubeLinkTests.swift */,
 				ADCF052A069B96442ABB04DA /* NotificationStoreTests.swift */,
 				AA72D02F304D47CB86C5A004 /* PlaybackPositionTests.swift */,
 				CA1200000000000000000004 /* CarPlayPlaybackTests.swift */,
@@ -364,6 +376,8 @@
 		CE882751F8B3EE4485706ED4 /* BetterYouTube */ = {
 			isa = PBXGroup;
 			children = (
+				DDDC1174C3A48315D3A54EE1 /* RichText.swift */,
+				8A91668F30AB56C47A198577 /* YouTubeLink.swift */,
 				AA72D02F304D47CB86C5A002 /* PlaybackPositionStore.swift */,
 				D83ACB7A4C8649A0B6C9D4C3 /* BetterYouTube-iOS.entitlements */,
 				7E17AB7B0068405A9014C31E /* ICloudSyncService.swift */,
@@ -411,6 +425,7 @@
 		DA6B490E99286C354C0290CE /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				295069B58A55699A3056143C /* LoadMoreFooter.swift */,
 				200946DDA34EED92264FD752 /* VideoCardView.swift */,
 			);
 			path = Components;
@@ -569,6 +584,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6AB2DF9D5DBEE9E4F6D39714 /* RichTextTests.swift in Sources */,
+				3BEED17A6D38B073C2FC9C3B /* YouTubeLinkTests.swift in Sources */,
 				BAC7AB84BCE20E3EB354C669 /* NotificationStoreTests.swift in Sources */,
 				AA72D02F304D47CB86C5A003 /* PlaybackPositionTests.swift in Sources */,
 				CA1200000000000000000003 /* CarPlayPlaybackTests.swift in Sources */,
@@ -588,6 +605,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				78FBE6B5F75CE97F8569508B /* RichText.swift in Sources */,
+				C1426382C0E887E2638C008D /* LoadMoreFooter.swift in Sources */,
+				2A4977A426ECF60C2F5E3D80 /* YouTubeLink.swift in Sources */,
 				AA72D02F304D47CB86C5A001 /* PlaybackPositionStore.swift in Sources */,
 				3E6F612241B44C19A707BD75 /* ICloudSyncSection.swift in Sources */,
 				30E042AFC8624510A837E386 /* ICloudSyncService.swift in Sources */,

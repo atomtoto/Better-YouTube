@@ -328,7 +328,7 @@ final class PlayerManager: ObservableObject {
         local.onEnded = { [weak self] in
             guard let self, self.isLocal else { return }
             self.finishPlayback()
-            self.playNext()
+            self.advanceAfterEnd()
         }
 
         local.onFailure = { [weak self] message in
@@ -342,8 +342,11 @@ final class PlayerManager: ObservableObject {
     // MARK: - Playback
 
     /// Starts a video and expands the player. `upNext` becomes the auto-play queue.
+    ///
+    /// `startTime` is a moment asked for explicitly — a shared link's `t=`, a timestamp tapped
+    /// in a description — and wins over the position saved for the video.
     func play(_ video: Video, upNext queue: [Video] = [], audioOnly: Bool = false,
-              carPlayVideo: Bool = false) {
+              carPlayVideo: Bool = false, startTime: TimeInterval? = nil) {
         savePlaybackPosition()
         audioStreamTask?.cancel()
         audioStreamTask = nil
@@ -356,11 +359,14 @@ final class PlayerManager: ObservableObject {
         upNext = queue.filter { $0.id != video.id }
         progress.reset()
         let savedPosition = PlaybackPositionStore.shared.position(for: video.id)
-        progress.currentTime = savedPosition?.seconds ?? 0
+        let requestedStart = startTime.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+        progress.currentTime = requestedStart ?? savedPosition?.seconds ?? 0
         progress.duration = savedPosition?.duration ?? 0
         lastRecordedPosition = PlaybackPosition(seconds: progress.currentTime, duration: progress.duration)
-        pendingSeekTime = savedPosition?.seconds
-        isRestoringPosition = savedPosition != nil
+        pendingSeekTime = requestedStart ?? savedPosition?.seconds
+        // Only a restored position may turn out to be the end of the video and start over; a
+        // requested moment is taken at its word.
+        isRestoringPosition = requestedStart == nil && savedPosition != nil
         playbackDidEnd = false
         playbackID = UUID().uuidString
         setBuffering(true)
@@ -599,13 +605,20 @@ final class PlayerManager: ObservableObject {
     /// the ID. So a lookup that fails — no credentials yet, the day's quota spent, no network
     /// with the file already downloaded — still plays, under whatever is already known about
     /// the video. It used to do nothing at all, which from a tapped notification looked broken.
-    func open(videoId: String, fallback: Video? = nil) async {
+    func open(videoId: String, fallback: Video? = nil, startTime: TimeInterval? = nil) async {
         let resolved = try? await YouTubeAPIService.shared.video(id: videoId)
-        let video = resolved
-            ?? fallback
-            ?? DownloadStore.shared.record(for: videoId)?.video
+        let stored = DownloadStore.shared.record(for: videoId)?.video
             ?? LibraryStore.shared.history.first { $0.id == videoId }
-            ?? Video(
+        // A stored copy without a channel is itself a stand-in from an earlier fallback, and
+        // oEmbed can do better than it.
+        let known = resolved ?? fallback ?? stored.flatMap { $0.channelId.isEmpty ? nil : $0 }
+        let video: Video
+        if let known {
+            video = known
+        } else if let embedded = await YouTubeOEmbed.video(id: videoId) {
+            video = embedded
+        } else {
+            video = stored ?? Video(
                 id: videoId,
                 title: String(localized: "YouTube Video"),
                 channelId: "",
@@ -614,7 +627,8 @@ final class PlayerManager: ObservableObject {
                 thumbnailURL: URL(string: "https://i.ytimg.com/vi/\(videoId)/hqdefault.jpg"),
                 publishedAt: nil
             )
-        play(video)
+        }
+        play(video, startTime: startTime)
     }
 
     func togglePlayPause() {
@@ -665,6 +679,25 @@ final class PlayerManager: ObservableObject {
             evaluate("seekTo(\(target))")
         }
         refreshNowPlaying()
+    }
+
+    /// Settings → Playback → Autoplay. On unless turned off, which is how it always behaved.
+    static let autoplayKey = "autoplay_next_video"
+
+    static var autoplaysNext: Bool {
+        UserDefaults.standard.object(forKey: autoplayKey) as? Bool ?? true
+    }
+
+    /// What a video reaching its end leads to: the next in the queue, unless Autoplay is off —
+    /// then the embed's own end screen, with YouTube's suggestions, stays up to choose from. In
+    /// a car the queue always carries on, since picking the next one there means a screen.
+    private func advanceAfterEnd() {
+        guard Self.autoplaysNext || isCarPlayConnected else {
+            setPlaying(false)
+            refreshNowPlaying()
+            return
+        }
+        playNext()
     }
 
     func playNext() {
@@ -942,7 +975,7 @@ final class PlayerManager: ObservableObject {
             }
             if state == 0 {
                 finishPlayback()
-                playNext()
+                advanceAfterEnd()
             }
 
         case "time":

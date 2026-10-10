@@ -12,8 +12,13 @@ struct PlaybackPosition: Codable, Equatable, Sendable {
 
 /// Streaming and downloaded playback share one position per video. Versioned checkpoints
 /// remain usable offline and join the library's iCloud outbox when synchronization is enabled.
+///
+/// Observable for the progress lines under artwork, but deliberately coarse about it: positions
+/// change four times a second during playback, and publishing each one would redraw every
+/// visible card as often. `revision` moves only when positions are saved — at most every five
+/// seconds while playing, and at once on pause, finish, seek or a sync.
 @MainActor
-final class PlaybackPositionStore {
+final class PlaybackPositionStore: ObservableObject {
     static let shared = PlaybackPositionStore(fileURL: FileManager.default
         .urls(for: .documentDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("playback-positions.json"))
@@ -33,6 +38,7 @@ final class PlaybackPositionStore {
     private var hasChanges = false
     private var lastSaved = Date.distantPast
     private var lastLocalMutation = Date.distantPast
+    @Published private(set) var revision = 0
 
     init(fileURL: URL) {
         self.fileURL = fileURL
@@ -50,6 +56,18 @@ final class PlaybackPositionStore {
     }
 
     func position(for videoID: String) -> Position? { positions[videoID] }
+
+    /// How much of a video has been watched, 0...1, for one that can be resumed — nil for one
+    /// never started, finished, or whose length isn't known yet.
+    func watchedFraction(for videoID: String) -> Double? {
+        guard let position = positions[videoID], position.isResumable, position.duration > 0 else { return nil }
+        return min(1, max(0.02, position.seconds / position.duration))
+    }
+
+    /// The videos among `videos` that were left part-way through, in the order given.
+    func resumable(_ videos: [Video]) -> [Video] {
+        videos.filter { watchedFraction(for: $0.id) != nil }
+    }
 
     /// Update in memory on every report, save and enqueue at most every five seconds during
     /// playback. Pauses, seeks and leaving playback flush the latest value immediately.
@@ -79,6 +97,7 @@ final class PlaybackPositionStore {
         changedKeys = []
         hasChanges = false
         lastSaved = now
+        revision &+= 1
         if !changed.isEmpty { onSyncChange?(changed) }
     }
 
@@ -91,6 +110,7 @@ final class PlaybackPositionStore {
         rebuildPositions()
         hasChanges = true
         if persist() { hasChanges = false }
+        revision &+= 1
     }
 
     /// A user-requested clear propagates removals while retaining their versions.
@@ -116,6 +136,7 @@ final class PlaybackPositionStore {
         seedLegacyPositions()
         hasChanges = true
         if persist() { hasChanges = false }
+        revision &+= 1
     }
 
     private func applyLocal(videoID: String, position: Position?, now: Date) {

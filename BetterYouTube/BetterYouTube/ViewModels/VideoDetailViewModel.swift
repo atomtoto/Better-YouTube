@@ -8,6 +8,10 @@ final class VideoDetailViewModel: ObservableObject {
     @Published private(set) var channelAvatarURL: URL?
     @Published private(set) var comments: [VideoComment] = []
     @Published private(set) var isLoadingComments = false
+    /// Top comments, as YouTube ranks them, or newest first.
+    @Published private(set) var commentOrder: CommentOrder = .relevance
+    @Published private(set) var isLoadingMoreComments = false
+    @Published private(set) var commentsLoadMoreError: String?
     @Published var errorMessage: String?
     @Published var commentsError: String?
     @Published var commentActionError: String?
@@ -26,6 +30,9 @@ final class VideoDetailViewModel: ObservableObject {
 
     private let service: YouTubeAPIService
     private var loadedReplyParents: Set<String> = []
+    private var nextCommentsPageToken: String?
+    /// Bumped by every fresh load, so a page that lands after the order changed is dropped.
+    private var commentsGeneration = 0
     /// What this session's likes have added to YouTube's own figure, so a refresh of the
     /// details doesn't quietly undo the tap that was made while it was in flight.
     private var likeCountAdjustment = 0
@@ -144,16 +151,53 @@ final class VideoDetailViewModel: ObservableObject {
         }
     }
 
+    var canLoadMoreComments: Bool { nextCommentsPageToken != nil }
+
     func loadComments() async {
-        guard !isLoadingComments else { return }
+        commentsGeneration += 1
+        let generation = commentsGeneration
+        let order = commentOrder
         isLoadingComments = true
         commentsError = nil
+        commentsLoadMoreError = nil
         do {
-            comments = try await service.comments(videoId: video.id)
+            let page = try await service.comments(videoId: video.id, order: order, pageToken: nil)
+            guard generation == commentsGeneration else { return }
+            comments = page.items
+            nextCommentsPageToken = page.nextPageToken
         } catch {
+            guard generation == commentsGeneration else { return }
             commentsError = error.localizedDescription
+            nextCommentsPageToken = nil
         }
         isLoadingComments = false
+    }
+
+    func setCommentOrder(_ order: CommentOrder) {
+        guard order != commentOrder else { return }
+        commentOrder = order
+        comments = []
+        nextCommentsPageToken = nil
+        Task { await loadComments() }
+    }
+
+    /// The next twenty. Comments used to stop at the first page, however long the thread.
+    func loadMoreComments() async {
+        guard let token = nextCommentsPageToken, !isLoadingMoreComments, !isLoadingComments else { return }
+        let generation = commentsGeneration
+        isLoadingMoreComments = true
+        commentsLoadMoreError = nil
+        defer { isLoadingMoreComments = false }
+        do {
+            let page = try await service.comments(videoId: video.id, order: commentOrder, pageToken: token)
+            guard generation == commentsGeneration else { return }
+            let known = Set(comments.map(\.id))
+            comments += page.items.filter { !known.contains($0.id) }
+            nextCommentsPageToken = page.nextPageToken
+        } catch {
+            guard generation == commentsGeneration else { return }
+            commentsLoadMoreError = error.localizedDescription
+        }
     }
 
     // MARK: - Comment actions

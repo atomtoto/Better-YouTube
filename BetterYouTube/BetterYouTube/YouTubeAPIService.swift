@@ -37,6 +37,71 @@ enum APIError: LocalizedError {
     }
 }
 
+/// One page of a list endpoint, and the token for the next one — nil once there is no more.
+struct Page<Item> {
+    let items: [Item]
+    let nextPageToken: String?
+}
+
+/// The two orders YouTube offers for a video's comments.
+enum CommentOrder: String, CaseIterable, Identifiable {
+    /// YouTube's own "Top comments".
+    case relevance
+    case time
+
+    var id: String { rawValue }
+}
+
+/// Narrows a search the way YouTube's own filter sheet does. Every filter here is a parameter
+/// of the same 100-unit `search.list`, so filtering costs nothing extra.
+struct SearchFilters: Equatable {
+    enum Order: String, CaseIterable, Identifiable {
+        case relevance, date, viewCount, rating
+        var id: String { rawValue }
+    }
+
+    enum Duration: String, CaseIterable, Identifiable {
+        case any, short, medium, long
+        var id: String { rawValue }
+    }
+
+    enum UploadDate: String, CaseIterable, Identifiable {
+        case any, today, week, month, year
+        var id: String { rawValue }
+
+        /// How far back the window starts, from now.
+        var interval: TimeInterval? {
+            switch self {
+            case .any: return nil
+            case .today: return 24 * 60 * 60
+            case .week: return 7 * 24 * 60 * 60
+            case .month: return 31 * 24 * 60 * 60
+            case .year: return 365 * 24 * 60 * 60
+            }
+        }
+    }
+
+    var order: Order = .relevance
+    var duration: Duration = .any
+    var uploadDate: UploadDate = .any
+
+    var isDefault: Bool { self == SearchFilters() }
+
+    /// Duration and date only apply to videos; YouTube refuses them alongside channels.
+    var needsVideoType: Bool { duration != .any || uploadDate != .any }
+
+    func queryItems(now: Date = Date()) -> [String: String] {
+        var items: [String: String] = [:]
+        if order != .relevance { items["order"] = order.rawValue }
+        if duration != .any { items["videoDuration"] = duration.rawValue }
+        if let interval = uploadDate.interval {
+            let formatter = ISO8601DateFormatter()
+            items["publishedAfter"] = formatter.string(from: now.addingTimeInterval(-interval))
+        }
+        return items
+    }
+}
+
 /// Stores the user-supplied YouTube Data API v3 key.
 final class APIKeyStore: ObservableObject {
     static let shared = APIKeyStore()
@@ -326,15 +391,26 @@ actor YouTubeAPIService {
     }
 
     func search(query: String, maxResults: Int = 25) async throws -> [SearchResult] {
-        let response: YTListResponse<YTSearchItem> = try await request(
-            path: "search",
-            query: [
-                "part": "snippet",
-                "q": query,
-                "type": "video,channel",
-                "maxResults": "\(maxResults)"
-            ]
-        )
+        try await search(query: query, maxResults: maxResults, pageToken: nil).items
+    }
+
+    /// One page of search results — 100 units, whichever page it is, which is why further pages
+    /// are only ever fetched when asked for.
+    func search(
+        query: String,
+        filters: SearchFilters = SearchFilters(),
+        maxResults: Int = 25,
+        pageToken: String?
+    ) async throws -> Page<SearchResult> {
+        var parameters = [
+            "part": "snippet",
+            "q": query,
+            "type": filters.needsVideoType ? "video" : "video,channel",
+            "maxResults": "\(maxResults)"
+        ]
+        parameters.merge(filters.queryItems()) { _, filter in filter }
+        if let pageToken { parameters["pageToken"] = pageToken }
+        let response: YTListResponse<YTSearchItem> = try await request(path: "search", query: parameters)
         let results = response.items.compactMap { item -> SearchResult? in
             switch item.id.kind {
             case "youtube#video":
@@ -354,12 +430,13 @@ actor YouTubeAPIService {
         let enriched = await enrich(videos)
         let byId = Dictionary(enriched.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        return results.map { result in
+        let items = results.map { result in
             if case .video(let video) = result, let full = byId[video.id] {
-                return .video(full)
+                return SearchResult.video(full)
             }
             return result
         }
+        return Page(items: items, nextPageToken: response.nextPageToken)
     }
 
     func video(id: String) async throws -> Video? {
@@ -376,6 +453,25 @@ actor YouTubeAPIService {
             query: ["part": "snippet,statistics", "id": id]
         )
         return response.items.first.map(Channel.init(resource:))
+    }
+
+    /// The channel behind an `@handle`, for a pasted or opened channel link. 1 unit.
+    func channel(handle: String) async throws -> Channel? {
+        let response: YTListResponse<YTResourceItem> = try await request(
+            path: "channels",
+            query: ["part": "snippet,statistics", "forHandle": handle]
+        )
+        return response.items.first.map(Channel.init(resource:))
+    }
+
+    /// A playlist's title, owner and size, for one opened from a link rather than from a list
+    /// that already carried them. 1 unit.
+    func playlist(id: String) async throws -> Playlist? {
+        let response: YTListResponse<YTResourceItem> = try await request(
+            path: "playlists",
+            query: ["part": "snippet,contentDetails", "id": id]
+        )
+        return response.items.first.map(Playlist.init(resource:))
     }
 
     // MARK: - Likes
@@ -405,20 +501,32 @@ actor YouTubeAPIService {
     }
 
     func comments(videoId: String, maxResults: Int = 20) async throws -> [VideoComment] {
+        try await comments(videoId: videoId, order: .relevance, maxResults: maxResults, pageToken: nil).items
+    }
+
+    /// One page of a video's top-level comments, in YouTube's order or newest first. 1 unit.
+    func comments(
+        videoId: String,
+        order: CommentOrder,
+        maxResults: Int = 20,
+        pageToken: String?
+    ) async throws -> Page<VideoComment> {
         // viewerRating belongs to the account: a key-only request always reads it as "none".
         let hasAccount = await GoogleAuthService.shared.isSignedIn
+        var query = [
+            "part": "snippet",
+            "videoId": videoId,
+            "maxResults": "\(maxResults)",
+            "order": order.rawValue,
+            "textFormat": "plainText"
+        ]
+        if let pageToken { query["pageToken"] = pageToken }
         let response: YTListResponse<YTCommentThreadItem> = try await request(
             path: "commentThreads",
-            query: [
-                "part": "snippet",
-                "videoId": videoId,
-                "maxResults": "\(maxResults)",
-                "order": "relevance",
-                "textFormat": "plainText"
-            ],
+            query: query,
             requiresAuth: hasAccount
         )
-        return response.items.map(VideoComment.init(thread:))
+        return Page(items: response.items.map(VideoComment.init(thread:)), nextPageToken: response.nextPageToken)
     }
 
     /// Publishes a new top-level comment. YouTube returns the created thread, including the
@@ -488,15 +596,21 @@ actor YouTubeAPIService {
     // MARK: - Playlists
 
     func videos(inPlaylist playlistId: String, maxResults: Int = 25) async throws -> [Video] {
-        let response: YTListResponse<YTPlaylistItemResource> = try await request(
-            path: "playlistItems",
-            query: [
-                "part": "snippet,contentDetails",
-                "playlistId": playlistId,
-                "maxResults": "\(maxResults)"
-            ]
-        )
-        return await enrich(response.items.compactMap(Video.init(playlistItem:)))
+        try await videos(inPlaylist: playlistId, maxResults: maxResults, pageToken: nil).items
+    }
+
+    /// One page of a playlist, enriched with durations and counts. 2 units: the page, and the
+    /// `videos.list` that fills it in.
+    func videos(inPlaylist playlistId: String, maxResults: Int = 50, pageToken: String?) async throws -> Page<Video> {
+        var query = [
+            "part": "snippet,contentDetails",
+            "playlistId": playlistId,
+            "maxResults": "\(maxResults)"
+        ]
+        if let pageToken { query["pageToken"] = pageToken }
+        let response: YTListResponse<YTPlaylistItemResource> = try await request(path: "playlistItems", query: query)
+        let videos = await enrich(response.items.compactMap(Video.init(playlistItem:)))
+        return Page(items: videos, nextPageToken: response.nextPageToken)
     }
 
     /// Resolves (and caches) a channel's "uploads" playlist — 1 quota unit instead of a 100-unit search.
@@ -512,8 +626,13 @@ actor YouTubeAPIService {
     }
 
     func videos(byChannel channelId: String, maxResults: Int = 25) async throws -> [Video] {
-        guard let uploads = try await uploadsPlaylistId(for: channelId) else { return [] }
-        return try await videos(inPlaylist: uploads, maxResults: maxResults)
+        try await videos(byChannel: channelId, maxResults: maxResults, pageToken: nil).items
+    }
+
+    /// One page of a channel's uploads, newest first, read through its uploads playlist.
+    func videos(byChannel channelId: String, maxResults: Int = 30, pageToken: String?) async throws -> Page<Video> {
+        guard let uploads = try await uploadsPlaylistId(for: channelId) else { return Page(items: [], nextPageToken: nil) }
+        return try await videos(inPlaylist: uploads, maxResults: maxResults, pageToken: pageToken)
     }
 
     // MARK: - Signed-in user's library (OAuth required)
@@ -540,6 +659,47 @@ actor YouTubeAPIService {
             limit: limit
         )
         return items.compactMap(Channel.init(subscription:))
+    }
+
+    /// The account's subscription to a channel, if it has one — the resource ID unsubscribing
+    /// takes. 1 unit.
+    func subscriptionID(forChannel channelId: String) async throws -> String? {
+        let response: YTListResponse<YTSubscriptionItem> = try await request(
+            path: "subscriptions",
+            query: ["part": "id", "mine": "true", "forChannelId": channelId],
+            requiresAuth: true
+        )
+        return response.items.first?.id
+    }
+
+    /// Subscribes the account to a channel and returns the new subscription's ID. 50 units.
+    func subscribe(toChannel channelId: String) async throws -> String {
+        struct Body: Encodable {
+            struct Snippet: Encodable {
+                struct ResourceId: Encodable {
+                    let kind = "youtube#channel"
+                    let channelId: String
+                }
+                let resourceId: ResourceId
+            }
+            let snippet: Snippet
+        }
+        struct Created: Decodable {
+            let id: String
+        }
+
+        let created: Created = try await send(
+            "POST",
+            path: "subscriptions",
+            query: ["part": "snippet"],
+            body: Body(snippet: .init(resourceId: .init(channelId: channelId)))
+        )
+        return created.id
+    }
+
+    /// Ends a subscription, by the subscription's ID rather than the channel's. 50 units.
+    func unsubscribe(subscriptionID: String) async throws {
+        try await sendDiscardingResponse("DELETE", path: "subscriptions", query: ["id": subscriptionID])
     }
 
     func myPlaylists(limit: Int = 200) async throws -> [Playlist] {
@@ -773,5 +933,47 @@ actor YouTubeAPIService {
             ]
         )
         return response.items.compactMap(Video.init(playlistItem:))
+    }
+}
+
+/// YouTube's oEmbed endpoint: a video's title, channel name and thumbnail, public and keyless.
+///
+/// What opening a link falls back on before any credentials are set up — or once the day's
+/// quota is spent, since this costs none. It knows nothing the Data API doesn't, and lacks the
+/// channel's ID, counts and duration, so it is only ever the second choice.
+enum YouTubeOEmbed {
+    private struct Response: Decodable {
+        let title: String
+        let authorName: String?
+        let thumbnailURL: URL?
+
+        enum CodingKeys: String, CodingKey {
+            case title
+            case authorName = "author_name"
+            case thumbnailURL = "thumbnail_url"
+        }
+    }
+
+    static func video(id: String, session: URLSession = .shared) async -> Video? {
+        var components = URLComponents(string: "https://www.youtube.com/oembed")
+        components?.queryItems = [
+            URLQueryItem(name: "url", value: "https://www.youtube.com/watch?v=\(id)"),
+            URLQueryItem(name: "format", value: "json")
+        ]
+        guard let url = components?.url else { return nil }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 5
+        guard let (data, response) = try? await session.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let decoded = try? JSONDecoder().decode(Response.self, from: data) else { return nil }
+        return Video(
+            id: id,
+            title: decoded.title,
+            channelId: "",
+            channelTitle: decoded.authorName ?? "",
+            description: "",
+            thumbnailURL: decoded.thumbnailURL ?? URL(string: "https://i.ytimg.com/vi/\(id)/hqdefault.jpg"),
+            publishedAt: nil
+        )
     }
 }

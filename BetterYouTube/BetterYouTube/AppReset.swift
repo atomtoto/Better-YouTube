@@ -40,6 +40,7 @@ enum AppReset {
         PlaybackPositionStore.shared.eraseLocalCopy()
         UserDefaults.standard.removeObject(forKey: MiniPlayerStyle.storageKey)
         UserDefaults.standard.removeObject(forKey: FloatingMiniPlayerSize.storageKey)
+        UserDefaults.standard.removeObject(forKey: PlayerManager.autoplayKey)
         UserDefaults.standard.removeObject(forKey: SettingsTabPreference.storageKey)
         UserDefaults.standard.removeObject(forKey: OnboardingProgress.startedKey)
         UserDefaults.standard.removeObject(forKey: OnboardingProgress.completedKey)

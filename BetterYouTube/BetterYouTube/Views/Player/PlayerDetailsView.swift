@@ -41,6 +41,7 @@ struct PlayerDetailsView: View {
             .scrollIndicators(.hidden)
             #endif
         }
+        .environment(\.openURL, linkAction)
         .task { await viewModel.loadAll() }
         .sheet(isPresented: $showsPlaylistPicker) {
             PlaylistPickerView(video: displayed)
@@ -52,6 +53,7 @@ struct PlayerDetailsView: View {
                     commentsSection
                         .padding(Theme.Spacing.gutter)
                 }
+                .environment(\.openURL, linkAction)
                 .navigationTitle("Comments")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -97,7 +99,11 @@ struct PlayerDetailsView: View {
             }
 
             actionRow
-            channelRow
+            // A video opened from a link before the Data API could be asked has no channel ID,
+            // and a row leading to a channel page that can't load is worse than none.
+            if !displayed.channelId.isEmpty {
+                channelRow
+            }
 
             if !displayed.description.isEmpty {
                 descriptionCard
@@ -175,6 +181,10 @@ struct PlayerDetailsView: View {
 
     private var metadataLine: String {
         var parts: [String] = []
+        // Without a channel row to name it, the channel goes here.
+        if displayed.channelId.isEmpty, !displayed.channelTitle.isEmpty {
+            parts.append(displayed.channelTitle)
+        }
         if let views = displayed.viewCount {
             parts.append("\(CountFormatter.abbreviated(views)) views")
         }
@@ -326,9 +336,43 @@ struct PlayerDetailsView: View {
         .buttonStyle(CardButtonStyle())
     }
 
+    /// Taps on a link in the description or a comment. A timestamp seeks this video, a YouTube
+    /// link opens in the app — a video in the player, a channel or playlist in Home — and any
+    /// other link goes to the browser as it always did.
+    private var linkAction: OpenURLAction {
+        OpenURLAction { url in
+            if let seconds = RichText.seekTime(in: url) {
+                seek(to: seconds)
+                return .handled
+            }
+            guard let link = YouTubeLink(url: url) else { return .systemAction }
+            switch link {
+            case .video(let id, let start) where id == video.id:
+                seek(to: start ?? 0)
+            case .video(let id, let start):
+                showsComments = false
+                Task { await player.open(videoId: id, startTime: start) }
+            default:
+                showsComments = false
+                Task { await router.follow(link) }
+            }
+            return .handled
+        }
+    }
+
+    /// Jumps to a moment of the video on screen, and plays from there — what tapping a chapter
+    /// does everywhere else. The comments sheet steps aside so the jump can be seen.
+    private func seek(to seconds: TimeInterval) {
+        guard player.currentVideo?.id == video.id else { return }
+        Haptics.selection()
+        showsComments = false
+        player.seek(to: seconds)
+        if !player.isPlaying { player.resume() }
+    }
+
     private var descriptionCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(displayed.description)
+            Text(RichText.attributed(displayed.description))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .lineLimit(isDescriptionExpanded ? nil : 3)
@@ -452,6 +496,16 @@ struct PlayerDetailsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            Picker("Sort Comments", selection: Binding(
+                get: { viewModel.commentOrder },
+                set: { viewModel.setCommentOrder($0) }
+            )) {
+                Text("Top").tag(CommentOrder.relevance)
+                Text("Newest").tag(CommentOrder.time)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
             if viewModel.isLoadingComments {
                 ProgressView().frame(maxWidth: .infinity)
             } else if let error = viewModel.commentsError {
@@ -469,8 +523,38 @@ struct PlayerDetailsView: View {
                         viewModel: viewModel
                     )
                 }
+
+                if viewModel.canLoadMoreComments {
+                    moreComments
+                }
             }
         }
+    }
+
+    /// Asked for rather than scrolled into: the comments sit in a plain stack, which would
+    /// otherwise fetch every page of a long thread the moment it appeared.
+    private var moreComments: some View {
+        VStack(spacing: 8) {
+            Button {
+                Task { await viewModel.loadMoreComments() }
+            } label: {
+                if viewModel.isLoadingMoreComments {
+                    ProgressView()
+                } else {
+                    Text("Show More Comments")
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(viewModel.isLoadingMoreComments)
+
+            if let error = viewModel.commentsLoadMoreError {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func postComment() {
@@ -771,7 +855,7 @@ struct CommentRowView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
-                Text(item.text)
+                Text(RichText.attributed(item.text))
                     .font(.footnote)
                     .fixedSize(horizontal: false, vertical: true)
             }

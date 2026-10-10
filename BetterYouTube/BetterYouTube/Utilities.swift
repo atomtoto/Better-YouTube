@@ -77,6 +77,15 @@ enum CountFormatter {
     }
 }
 
+/// A moment in a video as a clock reads it: "1:23", "1:02:03".
+enum PlaybackTimeFormatter {
+    static func string(_ seconds: TimeInterval) -> String {
+        let total = seconds.isFinite ? max(0, Int(seconds.rounded(.down))) : 0
+        return Duration.seconds(total)
+            .formatted(.time(pattern: total >= 3600 ? .hourMinuteSecond : .minuteSecond))
+    }
+}
+
 enum RelativeDateFormatter {
     private static let formatter: RelativeDateTimeFormatter = {
         let f = RelativeDateTimeFormatter()

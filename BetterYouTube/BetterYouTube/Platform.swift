@@ -235,6 +235,17 @@ extension View {
         #endif
     }
 
+    /// A field that filters a long list in place — subscriptions, history, a playlist. In the
+    /// navigation bar's drawer on a phone, well clear of the docked player at the bottom of the
+    /// screen; in the toolbar on a Mac, where a window keeps its search field.
+    func listFilter(_ text: Binding<String>, prompt: LocalizedStringKey) -> some View {
+        #if os(iOS)
+        searchable(text: text, placement: .navigationBarDrawer(displayMode: .automatic), prompt: prompt)
+        #else
+        searchable(text: text, placement: .toolbar, prompt: prompt)
+        #endif
+    }
+
     /// Hides the status bar and the home indicator while the video has the screen. Neither
     /// exists on a Mac.
     @ViewBuilder

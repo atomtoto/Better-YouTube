@@ -57,8 +57,10 @@ struct BetterYouTubeApp: App {
         #if os(macOS)
         .defaultSize(width: 1180, height: 820)
         .windowToolbarStyle(.unified)
-        .commands { PlayerCommands(player: player, router: router) }
         #endif
+        // The Mac's menu bar — and the iPad's, which shows the same menus, with every shortcut
+        // in them working from a keyboard on an iPad or an iPhone.
+        .commands { PlayerCommands(player: player, router: router) }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { player.savePlaybackPosition() }
             switch phase {
@@ -212,7 +214,9 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-/// The menu bar.
+#endif
+
+/// The menu bar, on a Mac and on an iPad.
 ///
 /// Every one of these is something the iPhone offers as a gesture — a tap on the bar, a flick
 /// down, turning the phone on its side — and a Mac has no gesture for any of them. A menu item is
@@ -268,11 +272,14 @@ struct PlayerCommands: Commands {
             .keyboardShortcut("p", modifiers: [.command, .shift])
             .disabled(player.currentVideo == nil)
 
+            #if os(macOS)
+            // A phone or iPad goes full screen by turning it; a window has to be asked.
             Button(player.isFullScreen ? "Exit Fill Window" : "Fill Window") {
                 player.toggleFillsWindow()
             }
             .keyboardShortcut("f", modifiers: [.command, .shift])
             .disabled(player.currentVideo == nil)
+            #endif
 
             Button("Stop Playback") { player.close() }
                 .keyboardShortcut(".", modifiers: .command)
@@ -290,5 +297,3 @@ struct PlayerCommands: Commands {
         }
     }
 }
-
-#endif

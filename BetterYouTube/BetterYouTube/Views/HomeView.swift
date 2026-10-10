@@ -85,7 +85,12 @@ struct HomeView: View {
         } message: {
             Text(recommendationError ?? "")
         }
-        .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
+        // A channel or playlist opened from a link arrives as a bare ID with no title yet; the
+        // destination loads the rest rather than showing an empty header.
+        .navigationDestination(for: Channel.self) { channel in
+            ChannelView(channelId: channel.id, initialChannel: channel.title.isEmpty ? nil : channel)
+        }
+        .navigationDestination(for: Playlist.self) { PlaylistDetailView(playlist: $0) }
         .refreshable { await refresh(force: true) }
         .onChange(of: webSession.isSignedIn, initial: true) { _, signedIn in
             viewModel.adoptDefaultFeed(webSignedIn: signedIn)

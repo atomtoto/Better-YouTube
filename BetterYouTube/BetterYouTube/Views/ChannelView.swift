@@ -2,9 +2,11 @@ import SwiftUI
 
 struct ChannelView: View {
     @EnvironmentObject private var player: PlayerManager
+    @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var notificationStore: NotificationStore
     @EnvironmentObject private var notifications: NotificationService
     @StateObject private var viewModel: ChannelViewModel
+    @State private var confirmsUnsubscribe = false
     private let initialChannel: Channel?
     private let channelId: String
 
@@ -29,6 +31,9 @@ struct ChannelView: View {
                             ChannelHeaderView(channel: channel)
                         }
 
+                        subscribeButton
+                            .frame(maxWidth: .infinity)
+
                         Text("Latest Videos")
                             .font(.headline)
                             .padding(.horizontal, Theme.Spacing.gutter)
@@ -46,6 +51,15 @@ struct ChannelView: View {
                                 }
                             }
                             .padding(.horizontal, Theme.Spacing.gutter)
+
+                            if viewModel.canLoadMore {
+                                LoadMoreFooter(
+                                    error: viewModel.loadMoreError,
+                                    trigger: viewModel.videos.count
+                                ) {
+                                    await viewModel.loadMore()
+                                }
+                            }
                         }
                     }
                 }
@@ -70,6 +84,57 @@ struct ChannelView: View {
         }
         .task {
             if viewModel.channel == nil { await viewModel.load() }
+        }
+        .task(id: auth.isSignedIn) {
+            await viewModel.loadSubscription(isSignedIn: auth.isSignedIn)
+        }
+        .confirmationDialog(
+            "Unsubscribe from \(channel?.title ?? "this channel")?",
+            isPresented: $confirmsUnsubscribe,
+            titleVisibility: .visible
+        ) {
+            Button("Unsubscribe", role: .destructive) {
+                Task { await viewModel.toggleSubscription() }
+            }
+        }
+        .alert("Subscription", isPresented: Binding(
+            get: { viewModel.subscriptionError != nil },
+            set: { if !$0 { viewModel.subscriptionError = nil } }
+        )) {
+            Button("OK", role: .cancel) { viewModel.subscriptionError = nil }
+        } message: {
+            Text(viewModel.subscriptionError ?? "")
+        }
+    }
+
+    /// The account's real subscription — a `subscriptions.insert` or `delete` on YouTube, the
+    /// same list Library's Subscriptions reads. Only shown signed in, once the state is known.
+    @ViewBuilder
+    private var subscribeButton: some View {
+        switch viewModel.subscription {
+        case .unknown:
+            EmptyView()
+        case .notSubscribed:
+            Button {
+                Haptics.medium()
+                Task { await viewModel.toggleSubscription() }
+            } label: {
+                Text("Subscribe")
+            }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+            .disabled(viewModel.isChangingSubscription)
+        case .subscribed:
+            Button {
+                confirmsUnsubscribe = true
+            } label: {
+                Label("Subscribed", systemImage: "checkmark")
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+            .disabled(viewModel.isChangingSubscription)
         }
     }
 

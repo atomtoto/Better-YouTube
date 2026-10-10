@@ -114,8 +114,15 @@ struct SettingsPaneView: View {
 private struct PlaybackSection: View {
     @AppStorage(MiniPlayerStyle.storageKey) private var miniPlayerStyle = MiniPlayerStyle.platformDefault
     @AppStorage(FloatingMiniPlayerSize.storageKey) private var floatingSize = FloatingMiniPlayerSize.defaultSize
+    @AppStorage(PlayerManager.autoplayKey) private var autoplaysNext = true
 
     var body: some View {
+        Section {
+            Toggle("Autoplay", isOn: $autoplaysNext)
+        } footer: {
+            Text("Plays the next video in the list when one ends. Turned off, YouTube's own suggestions stay on screen at the end instead. In a car, the queue always continues.")
+        }
+
         Section {
             Picker("Mini Player", selection: $miniPlayerStyle) {
                 ForEach(MiniPlayerStyle.allCases) { style in
