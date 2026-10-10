@@ -81,18 +81,47 @@ enum BackgroundRefresh {
 #endif
 
     /// Fetches recent uploads, records them, and notifies about the ones that are new.
-    static func checkForNewVideos() async {
-        let (isEnabled, isSignedIn) = await MainActor.run {
-            (NotificationStore.shared.isEnabled, GoogleAuthService.shared.isSignedIn)
+    ///
+    /// The channels read are the ones notifications are actually on for. This used to read the
+    /// first 25 subscriptions — alphabetically, because that is how the API lists them — so a
+    /// channel whose bell was on but whose name came later in the alphabet was never checked
+    /// at all. Selected channels need no Google sign-in: their uploads are public, and an API
+    /// key reads them too.
+    ///
+    /// `force` skips the minimum interval, for an explicit pull to refresh. Every other trigger
+    /// — coming back to the app, the system's background refresh, the Mac's timer — respects it,
+    /// because each check costs about a quota unit per channel.
+    static func checkForNewVideos(force: Bool = false) async {
+        let (mode, isSignedIn, hasKey, isDue) = await MainActor.run {
+            (NotificationStore.shared.mode, GoogleAuthService.shared.isSignedIn,
+             APIKeyStore.shared.hasKey, NotificationStore.shared.isUploadCheckDue)
         }
-        guard isEnabled, isSignedIn else { return }
+        guard mode != .off, isSignedIn || hasKey, force || isDue else { return }
 
-        guard let videos = try? await YouTubeAPIService.shared.subscriptionFeed(
-            channelLimit: 25,
-            perChannel: 3
+        let subscriptions: [String]
+        if mode == .all {
+            guard isSignedIn,
+                  let channels = try? await YouTubeAPIService.shared.mySubscriptions() else { return }
+            subscriptions = channels.map(\.id)
+        } else {
+            subscriptions = []
+        }
+        let channelIDs = await MainActor.run {
+            NotificationStore.shared.channelsToCheck(subscriptions: subscriptions)
+        }
+        guard !channelIDs.isEmpty else { return }
+
+        guard let videos = try? await YouTubeAPIService.shared.videos(
+            fromChannels: channelIDs,
+            perChannel: 3,
+            limit: 300,
+            enriched: false
         ) else { return }
 
-        let fresh = await MainActor.run { NotificationStore.shared.ingest(videos) }
+        let fresh = await MainActor.run {
+            NotificationStore.shared.recordUploadCheck()
+            return NotificationStore.shared.ingest(videos)
+        }
         guard !fresh.isEmpty else { return }
 
         // Cap the burst so a quiet week doesn't turn into a wall of banners.

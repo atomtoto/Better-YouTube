@@ -47,7 +47,9 @@ enum NotificationMode: String, Codable, CaseIterable, Identifiable {
 /// Notification preferences, the seen-video ledger used to detect new uploads, and the inbox.
 @MainActor
 final class NotificationStore: ObservableObject {
-    static let shared = NotificationStore()
+    static let shared = NotificationStore(fileURL: FileManager.default
+        .urls(for: .documentDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("notifications.json"))
 
     @Published var mode: NotificationMode { didSet { persist() } }
     @Published private(set) var channelOptIns: Set<String> = []
@@ -71,23 +73,41 @@ final class NotificationStore: ObservableObject {
 
     /// Video IDs already accounted for, so a video is only ever announced once.
     private var seenVideoIds: Set<String> = []
+    /// The same IDs, least recently seen first — what decides which ones the cap forgets.
+    ///
+    /// A `Set` has no order, and trimming one with `prefix` dropped arbitrary IDs, recent ones
+    /// included. A forgotten ID that is still in a channel's latest uploads reads as new on the
+    /// next check, and was announced a second time.
+    private var seenOrder: [String] = []
+    /// Channels whose uploads have been read at least once. The first read of a channel only
+    /// records what it already has — otherwise turning the bell on for it, or a check that
+    /// reaches it for the first time, would announce its back catalogue as new.
+    private var knownChannels: Set<String> = []
     /// The first sync only records what already exists — otherwise every back-catalogue
     /// video would arrive as a notification at once.
     private var hasBootstrapped = false
+
+    private static let seenLimit = 2_000
+    /// A channel read for the first time still announces what it uploaded within this window:
+    /// that is news, where the rest of its latest uploads are not.
+    private static let freshUploadWindow: TimeInterval = 24 * 60 * 60
 
     private struct Snapshot: Codable {
         var mode: NotificationMode
         var channelOptIns: Set<String>
         var items: [NotificationItem]
-        var seenVideoIds: Set<String>
+        /// Oldest first. Files written before the ledger was ordered hold a set's array here,
+        /// which decodes the same way.
+        var seenVideoIds: [String]
         var hasBootstrapped: Bool
+        var knownChannels: Set<String>?
     }
 
     private let fileURL: URL
 
-    private init() {
-        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.fileURL = documents.appendingPathComponent("notifications.json")
+    /// Internal rather than private so tests can point a store at a file of their own.
+    init(fileURL: URL) {
+        self.fileURL = fileURL
         self.mode = .off
 
         if let data = try? Data(contentsOf: fileURL),
@@ -95,8 +115,42 @@ final class NotificationStore: ObservableObject {
             self.mode = snapshot.mode
             self.channelOptIns = snapshot.channelOptIns
             self.items = snapshot.items
-            self.seenVideoIds = snapshot.seenVideoIds
+            self.seenOrder = snapshot.seenVideoIds
+            self.seenVideoIds = Set(snapshot.seenVideoIds)
             self.hasBootstrapped = snapshot.hasBootstrapped
+            self.knownChannels = snapshot.knownChannels ?? []
+        }
+    }
+
+    // MARK: Checking for new uploads
+
+    private static let lastCheckKey = "notifications_last_upload_check"
+    /// The least time between two automatic checks. Coming back to the app is one of the
+    /// triggers, and each check reads every channel it covers — about a quota unit apiece.
+    static let minimumCheckInterval: TimeInterval = 30 * 60
+
+    /// Whether an automatic check is allowed yet. Pulling to refresh skips this.
+    var isUploadCheckDue: Bool {
+        guard let last = UserDefaults.standard.object(forKey: Self.lastCheckKey) as? Date else { return true }
+        return Date().timeIntervalSince(last) >= Self.minimumCheckInterval
+    }
+
+    func recordUploadCheck(at date: Date = Date()) {
+        UserDefaults.standard.set(date, forKey: Self.lastCheckKey)
+    }
+
+    /// The channels a check should read, in the order they should be read: the ones you rang
+    /// the bell for first, since the reader stops at a fixed number of channels.
+    func channelsToCheck(subscriptions: [String]) -> [String] {
+        switch mode {
+        case .off:
+            return []
+        case .selected:
+            return channelOptIns.sorted()
+        case .all:
+            let optedIn = channelOptIns.sorted()
+            let optedInSet = Set(optedIn)
+            return optedIn + subscriptions.filter { !optedInSet.contains($0) }
         }
     }
 
@@ -132,12 +186,11 @@ final class NotificationStore: ObservableObject {
     // MARK: Inbox
 
     /// Records `videos` as seen and returns the ones that are genuinely new *and* opted in.
-    func ingest(_ videos: [Video]) -> [Video] {
+    func ingest(_ videos: [Video], now: Date = Date()) -> [Video] {
         let unseen = videos.filter { !seenVideoIds.contains($0.id) }
-        seenVideoIds.formUnion(videos.map(\.id))
-        if seenVideoIds.count > 2_000 {
-            seenVideoIds = Set(seenVideoIds.prefix(2_000))
-        }
+        let newcomers = Set(videos.map(\.channelId)).subtracting(knownChannels)
+        markSeen(videos.map(\.id))
+        knownChannels.formUnion(videos.map(\.channelId).filter { !$0.isEmpty })
 
         guard hasBootstrapped else {
             hasBootstrapped = true
@@ -145,13 +198,37 @@ final class NotificationStore: ObservableObject {
             return []
         }
 
-        let announced = unseen.filter { isEnabled(for: $0.channelId) }
+        let announced = unseen.filter { video in
+            guard isEnabled(for: video.channelId) else { return false }
+            guard newcomers.contains(video.channelId) else { return true }
+            // A channel read for the first time: only what it uploaded just now is news.
+            guard let published = video.publishedAt else { return false }
+            return now.timeIntervalSince(published) < Self.freshUploadWindow
+        }
         if !announced.isEmpty {
             items.insert(contentsOf: announced.map { NotificationItem(video: $0) }, at: 0)
             if items.count > 100 { items.removeLast(items.count - 100) }
         }
         persist()
         return announced
+    }
+
+    /// Adds IDs to the ledger, or moves them to its recent end if they are already there, then
+    /// forgets the least recently seen beyond the cap. A video still among a channel's latest
+    /// uploads is seen again on every check, so it is never the one forgotten.
+    private func markSeen(_ ids: [String]) {
+        let batch = Set(ids)
+        guard !batch.isEmpty else { return }
+        seenOrder.removeAll { batch.contains($0) }
+        var appended = Set<String>()
+        for id in ids where appended.insert(id).inserted { seenOrder.append(id) }
+        seenVideoIds.formUnion(batch)
+
+        let overflow = seenOrder.count - Self.seenLimit
+        if overflow > 0 {
+            seenVideoIds.subtract(seenOrder.prefix(overflow))
+            seenOrder.removeFirst(overflow)
+        }
     }
 
     // MARK: YouTube's own notifications
@@ -212,7 +289,7 @@ final class NotificationStore: ObservableObject {
             items.sort { $0.date > $1.date }
             if items.count > 100 { items.removeLast(items.count - 100) }
 
-            seenVideoIds.formUnion(videos.map(\.id))
+            markSeen(videos.map(\.id))
             hasBootstrapped = true
             persist()
 
@@ -250,8 +327,14 @@ final class NotificationStore: ObservableObject {
         items = []
         channelOptIns = []
         seenVideoIds = []
+        seenOrder = []
+        knownChannels = []
         hasBootstrapped = false
         mode = .off
+        automaticallyImportYouTube = true
+        lastYouTubeImport = nil
+        lastYouTubeImportDate = nil
+        UserDefaults.standard.removeObject(forKey: Self.lastCheckKey)
         persist()
     }
 
@@ -260,8 +343,9 @@ final class NotificationStore: ObservableObject {
             mode: mode,
             channelOptIns: channelOptIns,
             items: items,
-            seenVideoIds: seenVideoIds,
-            hasBootstrapped: hasBootstrapped
+            seenVideoIds: seenOrder,
+            hasBootstrapped: hasBootstrapped,
+            knownChannels: knownChannels
         )
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         try? data.write(to: fileURL, options: .atomic)

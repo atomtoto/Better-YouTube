@@ -65,20 +65,15 @@ enum ISO8601DurationFormatter {
     }
 }
 
+/// View, like and subscriber counts the way YouTube prints them: "1.2K", "3M".
+///
+/// Foundation's compact notation rather than hand-rolled thresholds. The hand-rolled version
+/// rounded within a unit and never across one — 999,999 came out as "1000.0K" — and it spoke
+/// only English: a French reader gets "1,2 k" and "2 Md" here, as YouTube itself shows them.
 enum CountFormatter {
-    static func abbreviated(_ count: Int?) -> String {
+    static func abbreviated(_ count: Int?, locale: Locale = .autoupdatingCurrent) -> String {
         guard let count else { return "—" }
-        let number = Double(count)
-        switch count {
-        case 1_000_000_000...:
-            return String(format: "%.1fB", number / 1_000_000_000)
-        case 1_000_000...:
-            return String(format: "%.1fM", number / 1_000_000)
-        case 1_000...:
-            return String(format: "%.1fK", number / 1_000)
-        default:
-            return "\(count)"
-        }
+        return count.formatted(.number.notation(.compactName).locale(locale))
     }
 }
 

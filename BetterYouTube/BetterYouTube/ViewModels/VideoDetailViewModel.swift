@@ -156,8 +156,6 @@ final class VideoDetailViewModel: ObservableObject {
         isLoadingComments = false
     }
 
-    // MARK: - Comment conversations
-
     // MARK: - Comment actions
 
     func toggleCommentLike(_ comment: VideoComment) async {
@@ -173,14 +171,24 @@ final class VideoDetailViewModel: ObservableObject {
         comments[index].isLiked = !isLiked
         comments[index].likeCount = max(0, likeCount + (isLiked ? -1 : 1))
 
+        // The web round trip takes seconds, in which a posted comment is inserted at the top or
+        // the list is reloaded. The index read above may then name another comment, or none.
+        func update(_ change: (inout VideoComment) -> Void) {
+            guard let current = comments.firstIndex(where: { $0.id == comment.id }) else { return }
+            change(&comments[current])
+        }
+
         do {
             let actual = try await YouTubeWebCommentService.shared.toggleLike(commentID: comment.id, videoID: video.id)
-            comments[index].isLiked = actual
-            comments[index].likeCount = max(0, likeCount + (actual ? 1 : 0) - (isLiked ? 1 : 0))
+            update {
+                $0.isLiked = actual
+                $0.likeCount = max(0, likeCount + (actual ? 1 : 0) - (isLiked ? 1 : 0))
+            }
         } catch {
-            // Revert on failure
-            comments[index].isLiked = isLiked
-            comments[index].likeCount = likeCount
+            update {
+                $0.isLiked = isLiked
+                $0.likeCount = likeCount
+            }
             commentActionError = error.localizedDescription
         }
     }

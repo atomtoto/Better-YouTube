@@ -51,7 +51,9 @@ struct RootTabView: View {
         .task(id: router.pendingVideoId) {
             guard let videoId = router.pendingVideoId else { return }
             router.pendingVideoId = nil
-            await player.open(videoId: videoId)
+            // A tapped notification is in the inbox, which already knows the title and channel.
+            let known = notificationStore.items.first { $0.videoId == videoId }?.video
+            await player.open(videoId: videoId, fallback: known)
         }
         #if os(iOS)
         .onChange(of: showsSettingsTab) { _, visible in

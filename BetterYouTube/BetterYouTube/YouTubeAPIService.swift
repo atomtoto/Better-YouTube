@@ -678,12 +678,6 @@ actor YouTubeAPIService {
         return items.map(Video.init(resource:))
     }
 
-    /// Latest uploads across the channels the user follows, newest first.
-    func subscriptionFeed(channelLimit: Int = 25, perChannel: Int = 3) async throws -> [Video] {
-        let channels = try await mySubscriptions(limit: channelLimit)
-        return try await videos(fromChannels: channels.map(\.id), perChannel: perChannel)
-    }
-
     /// How many channels one feed reads. Each one costs a `playlistItems.list` of its own, so
     /// this is the knob that decides what a feed refresh costs; the caller puts the channels it
     /// cares about most at the front, because this takes them in order.
@@ -692,8 +686,15 @@ actor YouTubeAPIService {
     /// Recent uploads across an arbitrary set of channels, newest first.
     ///
     /// Costs a `channels.list` per 50 channels plus one `playlistItems.list` each (1 unit
-    /// apiece) — the same feed via `search.list` would cost 100 units per channel.
-    func videos(fromChannels channelIds: [String], perChannel: Int = 4, limit: Int = 40) async throws -> [Video] {
+    /// apiece) — the same feed via `search.list` would cost 100 units per channel. `enriched`
+    /// adds a `videos.list` per 50 results for durations and counts; a caller that only needs
+    /// titles and dates, like the new-upload check, can skip it.
+    func videos(
+        fromChannels channelIds: [String],
+        perChannel: Int = 4,
+        limit: Int = 40,
+        enriched: Bool = true
+    ) async throws -> [Video] {
         // Keep the caller's order while dropping duplicates. Running this through a `Set` used
         // to leave the order to the hash seed, so which channels survived the cap changed from
         // one launch to the next.
@@ -735,7 +736,8 @@ actor YouTubeAPIService {
         }
 
         let sorted = videos.sorted { ($0.publishedAt ?? .distantPast) > ($1.publishedAt ?? .distantPast) }
-        return await enrich(Array(sorted.prefix(limit)))
+        let newest = Array(sorted.prefix(limit))
+        return enriched ? await enrich(newest) : newest
     }
 
     /// Channel avatars for feed rows — one batched call per 50 channels, 1 unit each.

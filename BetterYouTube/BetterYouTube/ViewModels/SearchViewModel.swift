@@ -47,10 +47,14 @@ final class SearchViewModel: ObservableObject {
 
     func clear() {
         searchTask?.cancel()
+        searchTask = nil
         query = ""
         results = []
         hasSearched = false
         errorMessage = nil
+        // The cancelled search returns without touching state, so this is the only place left
+        // to say it stopped — otherwise clearing mid-search leaves a spinner up for good.
+        isSearching = false
     }
 
     private func performSearch(_ text: String) async {

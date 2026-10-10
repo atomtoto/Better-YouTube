@@ -33,7 +33,7 @@ struct NotificationsView: View {
                             Button {
                                 store.markRead(item)
                                 dismiss()
-                                Task { await player.open(videoId: item.videoId) }
+                                Task { await player.open(videoId: item.videoId, fallback: item.video) }
                             } label: {
                                 NotificationRow(item: item, avatarURL: channelAvatars[item.channelId])
                             }
@@ -132,11 +132,13 @@ struct NotificationsView: View {
     }
 
     private var emptyMessage: String {
-        if !auth.isSignedIn {
-            return "Sign in with Google to get notified when the channels you follow upload."
-        }
         if !store.isEnabled {
             return "Turn on new video notifications in Settings to see uploads here."
+        }
+        // Selected channels are read with an API key too; only All Subscriptions needs the
+        // account, to know which channels those are.
+        if store.mode == .all && !auth.isSignedIn {
+            return "Sign in with Google to get notified when the channels you follow upload."
         }
         return "You'll see new uploads from the channels you follow here."
     }
@@ -147,7 +149,7 @@ struct NotificationsView: View {
         if YouTubeWebSession.shared.isSignedIn {
             _ = await store.importFromYouTube()
         }
-        await BackgroundRefresh.checkForNewVideos()
+        await BackgroundRefresh.checkForNewVideos(force: true)
         isRefreshing = false
     }
 }

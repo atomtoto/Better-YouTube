@@ -593,11 +593,28 @@ final class PlayerManager: ObservableObject {
         issue = .loadFailed(message)
     }
 
-    /// Resolves a video ID (from a notification tap) and plays it.
-    func open(videoId: String) async {
-        if let video = try? await YouTubeAPIService.shared.video(id: videoId) {
-            play(video)
-        }
+    /// Resolves a video ID — from a notification, a link, YouTube's own page — and plays it.
+    ///
+    /// The Data API supplies the title, channel and counts, but the embed needs nothing beyond
+    /// the ID. So a lookup that fails — no credentials yet, the day's quota spent, no network
+    /// with the file already downloaded — still plays, under whatever is already known about
+    /// the video. It used to do nothing at all, which from a tapped notification looked broken.
+    func open(videoId: String, fallback: Video? = nil) async {
+        let resolved = try? await YouTubeAPIService.shared.video(id: videoId)
+        let video = resolved
+            ?? fallback
+            ?? DownloadStore.shared.record(for: videoId)?.video
+            ?? LibraryStore.shared.history.first { $0.id == videoId }
+            ?? Video(
+                id: videoId,
+                title: String(localized: "YouTube Video"),
+                channelId: "",
+                channelTitle: "",
+                description: "",
+                thumbnailURL: URL(string: "https://i.ytimg.com/vi/\(videoId)/hqdefault.jpg"),
+                publishedAt: nil
+            )
+        play(video)
     }
 
     func togglePlayPause() {
@@ -1040,7 +1057,11 @@ final class PlayerManager: ObservableObject {
       <script>
         var frame = document.getElementById('frame');
         var handshake;
+        // The ID of the video this page is playing. Never an element: the full-screen code
+        // keeps its video element in `fullScreenVideo`, and sharing one variable between the
+        // two used to stamp a DOM node onto outgoing reports as their `videoID`.
         var watchedVideo;
+        var fullScreenVideo;
         var reportedVideoID;
         var playbackID;
         var pendingStartSeconds = 0;
@@ -1063,6 +1084,7 @@ final class PlayerManager: ObservableObject {
         function setVideo(id, seconds, sessionID) {
           clearInterval(handshake);
           watchedVideo = id;
+          fullScreenVideo = null;
           reportedVideoID = null;
           playbackID = sessionID;
           pendingStartSeconds = seconds || 0;
@@ -1103,8 +1125,8 @@ final class PlayerManager: ObservableObject {
         // The system player reports its own comings and goings on the video element; the app
         // needs them to know when Done was tapped.
         function watch(video) {
-          if (watchedVideo === video) { return; }
-          watchedVideo = video;
+          if (fullScreenVideo === video) { return; }
+          fullScreenVideo = video;
           video.addEventListener('webkitbeginfullscreen', function () { reportFullScreen(true); });
           video.addEventListener('webkitendfullscreen', function () { reportFullScreen(false); });
         }
@@ -1131,7 +1153,7 @@ final class PlayerManager: ObservableObject {
         }
 
         function exitFullScreen() {
-          var video = watchedVideo || videoElement();
+          var video = fullScreenVideo || videoElement();
           if (video && video.webkitDisplayingFullscreen) {
             try { video.webkitExitFullscreen(); } catch (e) {}
             return;
@@ -1213,6 +1235,7 @@ final class PlayerManager: ObservableObject {
         function stopVideo() {
           clearInterval(handshake);
           watchedVideo = null;
+          fullScreenVideo = null;
           playing = false;
           frame.src = 'about:blank';
         }

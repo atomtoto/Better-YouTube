@@ -4,6 +4,7 @@ import SwiftUI
 /// channels you gave the bell to.
 struct NotificationsSection: View {
     @EnvironmentObject private var auth: GoogleAuthService
+    @EnvironmentObject private var apiKeyStore: APIKeyStore
     @EnvironmentObject private var notificationStore: NotificationStore
     @EnvironmentObject private var notifications: NotificationService
     @EnvironmentObject private var webSession: YouTubeWebSession
@@ -41,11 +42,14 @@ struct NotificationsSection: View {
             }
 
             Button {
-                Task { await BackgroundRefresh.checkForNewVideos() }
+                Task { await BackgroundRefresh.checkForNewVideos(force: true) }
             } label: {
                 Label("Check for New Videos Now", systemImage: "arrow.clockwise")
             }
-            .disabled(!notificationStore.isEnabled || !auth.isSignedIn)
+            // Selected channels are public uploads, which an API key reads as well as a
+            // sign-in does; All Subscriptions needs the account to list them.
+            .disabled(notificationStore.mode == .off
+                || (notificationStore.mode == .all ? !auth.isSignedIn : !(auth.isSignedIn || apiKeyStore.hasKey)))
 
             // Only on offer with a web session: the bell lives on YouTube's pages and nowhere
             // in the API.

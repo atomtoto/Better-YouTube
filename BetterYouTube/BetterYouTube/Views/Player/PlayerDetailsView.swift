@@ -193,7 +193,7 @@ struct PlayerDetailsView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     PlayerActionPill(
-                        title: displayed.likeCount.map(CountFormatter.abbreviated) ?? "Like",
+                        title: displayed.likeCount.map { CountFormatter.abbreviated($0) } ?? "Like",
                         systemImage: viewModel.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup",
                         isActive: viewModel.isLiked,
                         activeTint: .red,
