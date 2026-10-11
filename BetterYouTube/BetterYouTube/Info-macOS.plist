@@ -52,6 +52,10 @@
 	<string>Better YouTube connects to the download service you configured, when it runs on this network.</string>
 
 	<!-- Shared with Info.plist: `betteryoutube://downloads?…` setup links. -->
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>com.atomtoto.BetterYouTube.watching</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

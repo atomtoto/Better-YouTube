@@ -43,6 +43,7 @@ struct RootTabView: View {
         .onOpenURL { url in
             router.open(url)
         }
+        .handsOffPlayback(player)
         .onAppear {
             presentOnboardingIfNeeded()
         }

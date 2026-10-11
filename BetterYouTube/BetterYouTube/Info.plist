@@ -40,6 +40,10 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Better YouTube connects to the download service you configured, when it runs on this network.</string>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>com.atomtoto.BetterYouTube.watching</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
