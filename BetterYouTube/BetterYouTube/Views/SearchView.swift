@@ -58,9 +58,12 @@ struct SearchView: View {
             Text(viewModel.linkError ?? "")
         }
         .onAppear {
-            // Ready to type on arrival — unless there are results to come back to, which the
-            // keyboard would only cover.
-            if viewModel.results.isEmpty { isFieldFocused = true }
+            // Ready to type on arrival — unless there is a search to show: results to come back
+            // to, or one already on its way from Siri, Shortcuts or a link, which the keyboard
+            // and its suggestions would only cover.
+            if viewModel.results.isEmpty, !viewModel.isSearching, !viewModel.hasSearched {
+                isFieldFocused = true
+            }
         }
     }
 
@@ -271,8 +274,16 @@ private struct SearchField: ViewModifier {
                 Button {
                     viewModel.search(term: suggestion.text)
                 } label: {
-                    Label(suggestion.text, systemImage: suggestion.isRecent ? "clock.arrow.circlepath" : "magnifyingglass")
+                    // Text in the primary colour and a grey symbol, as the system's own search
+                    // suggestions are drawn — a tinted list reads as a list of links.
+                    Label {
+                        Text(suggestion.text)
+                    } icon: {
+                        Image(systemName: suggestion.isRecent ? "clock.arrow.circlepath" : "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                .tint(.primary)
             }
         }
     }

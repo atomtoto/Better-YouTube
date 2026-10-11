@@ -60,6 +60,11 @@ struct RootTabView: View {
             router.pendingLink = nil
             Task { await router.follow(link) }
         }
+        .onChange(of: router.pendingSearch, initial: true) { _, term in
+            guard let term else { return }
+            router.pendingSearch = nil
+            search.search(term: term)
+        }
         .alert("Couldn't Open Link", isPresented: Binding(
             get: { router.linkError != nil },
             set: { if !$0 { router.linkError = nil } }

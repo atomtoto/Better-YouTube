@@ -22,6 +22,9 @@ final class AppRouter: ObservableObject {
     @Published var pendingLink: YouTubeLink?
     /// Why the last link couldn't be followed, for the root view to say.
     @Published var linkError: String?
+    /// Words to search YouTube for, from Shortcuts, Siri, Spotlight or a
+    /// `betteryoutube://search?q=` link. The root view, which owns Search, runs it.
+    @Published var pendingSearch: String?
 
     private init() {}
 
@@ -39,6 +42,13 @@ final class AppRouter: ObservableObject {
     /// recognise, so the caller can leave other schemes alone.
     @discardableResult
     func open(_ url: URL) -> Bool {
+        if url.scheme?.lowercased() == YouTubeLink.appScheme, url.host()?.lowercased() == "search",
+           let term = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+               .queryItems?.first(where: { $0.name == "q" })?.value,
+           !term.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            search(term)
+            return true
+        }
         if let link = DownloadConfigLink(url: url) {
             pendingDownloadConfig = link
             return true
@@ -48,6 +58,13 @@ final class AppRouter: ObservableObject {
             return true
         }
         return false
+    }
+
+    /// Opens Search on these words and runs it, out from under the player if it is open.
+    func search(_ term: String) {
+        PlayerManager.shared.collapse()
+        selectedTab = .search
+        pendingSearch = term
     }
 
     /// Takes a link to what it names: a video plays, a channel or playlist opens in Home.

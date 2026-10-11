@@ -21,6 +21,9 @@ final class SearchViewModel: ObservableObject {
     /// What YouTube suggests for the text in the field, fetched as you type. Empty when that is
     /// turned off, or when the field holds a link.
     @Published private(set) var remoteSuggestions: [String] = []
+    /// The text of the search last run, while the field still holds it. Suggestions step aside
+    /// for its results until the text is edited again.
+    @Published private(set) var submittedQuery: String?
     /// A channel or playlist opened from a pasted link, which Search pushes onto its own stack.
     @Published var linkedChannel: Channel?
     @Published var linkedPlaylist: Playlist?
@@ -91,7 +94,8 @@ final class SearchViewModel: ObservableObject {
     func queryChanged(_ text: String) {
         if text.isEmpty {
             clear()
-        } else {
+        } else if text.trimmingCharacters(in: .whitespacesAndNewlines) != submittedQuery {
+            submittedQuery = nil
             fetchSuggestions(for: text)
         }
     }
@@ -100,7 +104,7 @@ final class SearchViewModel: ObservableObject {
     /// YouTube's, without repeating one, and only as many as fit above a phone's keyboard.
     func suggestions(recents terms: [String]) -> [SearchSuggestion] {
         let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, link == nil else { return [] }
+        guard !text.isEmpty, link == nil, submittedQuery == nil else { return [] }
         let recent = terms
             .filter { $0.localizedStandardContains(text) && $0.caseInsensitiveCompare(text) != .orderedSame }
             .prefix(3)
@@ -120,6 +124,7 @@ final class SearchViewModel: ObservableObject {
         suggestionTask?.cancel()
         suggestionTask = nil
         remoteSuggestions = []
+        submittedQuery = nil
         query = ""
         results = []
         hasSearched = false
@@ -195,6 +200,9 @@ final class SearchViewModel: ObservableObject {
     }
 
     private func run(_ text: String) {
+        submittedQuery = text
+        suggestionTask?.cancel()
+        remoteSuggestions = []
         searchTask?.cancel()
         searchTask = Task { await performSearch(text) }
     }

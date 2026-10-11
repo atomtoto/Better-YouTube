@@ -116,6 +116,7 @@
 		3364B21A99CB23DD0A76D6CE /* ImageSizing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44BE883D911F0BC28201B5B9 /* ImageSizing.swift */; };
 		2DE8358568326BE4E700B63D /* ImageSizingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69FD29141B3F67DB841FD010 /* ImageSizingTests.swift */; };
 		44109120DE7A299A5C07B29F /* Handoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA483609C61C308A58C97B35 /* Handoff.swift */; };
+		FE68AF15A52C825245B3A84F /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 477C1888D8D100965B317230 /* AppShortcuts.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -262,6 +263,7 @@
 		44BE883D911F0BC28201B5B9 /* ImageSizing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSizing.swift; sourceTree = "<group>"; };
 		69FD29141B3F67DB841FD010 /* ImageSizingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSizingTests.swift; sourceTree = "<group>"; };
 		DA483609C61C308A58C97B35 /* Handoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Handoff.swift; sourceTree = "<group>"; };
+		477C1888D8D100965B317230 /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -390,6 +392,7 @@
 		CE882751F8B3EE4485706ED4 /* BetterYouTube */ = {
 			isa = PBXGroup;
 			children = (
+				477C1888D8D100965B317230 /* AppShortcuts.swift */,
 				DA483609C61C308A58C97B35 /* Handoff.swift */,
 				23EB1F48CE0DABF67565B526 /* InfoPlist.xcstrings */,
 				D5368E4D0F5D6C2667C40B1D /* Localizable.xcstrings */,
@@ -631,6 +634,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE68AF15A52C825245B3A84F /* AppShortcuts.swift in Sources */,
 				44109120DE7A299A5C07B29F /* Handoff.swift in Sources */,
 				3AE0EDEC2E90C62F9ED73F8C /* ImageSizing.swift in Sources */,
 				77F55D4865EBEFE08CB0FEE9 /* OnboardingView.swift in Sources */,
