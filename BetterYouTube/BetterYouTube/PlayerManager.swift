@@ -143,7 +143,13 @@ final class PlayerManager: ObservableObject {
     private let resolveVideo: (String) async throws -> URL
     private let downloadedMediaURL: @MainActor (String) -> URL?
 
-    let webView: WKWebView
+    /// Made on first use rather than at launch. Creating it — and the web content process
+    /// behind it — was the largest single cost of starting the app, paid even when nothing
+    /// was ever played. The container asks for it once there is something to show.
+    private(set) lazy var webView: WKWebView = makeWebView()
+    /// Whether `webView` exists yet. Once it does, its surface stays in the container for good,
+    /// as it always has: the loading logic below counts on a surface that never goes away.
+    private(set) var hasWebView = false
     /// The other player. Both exist for the app's lifetime; `source` says which one is live.
     let local = LocalPlayback()
     var pictureInPictureFrame: WKFrameInfo?
@@ -256,6 +262,10 @@ final class PlayerManager: ObservableObject {
         self.resolveAudio = resolveAudio
         self.resolveVideo = resolveVideo
         self.downloadedMediaURL = downloadedMediaURL
+        wireLocalPlayback()
+    }
+
+    private func makeWebView() -> WKWebView {
         let configuration = WKWebViewConfiguration()
         #if os(iOS)
         // A Mac never plays video anywhere but inline, so there is nothing to ask for there.
@@ -277,7 +287,7 @@ final class PlayerManager: ObservableObject {
         }, true);
         """, injectionTime: .atDocumentStart, forMainFrameOnly: false))
 
-        webView = WKWebView(frame: .zero, configuration: configuration)
+        let webView = WKWebView(frame: .zero, configuration: configuration)
         // Black behind the page, so the letterboxing around a video that isn't the surface's
         // shape reads as part of the picture rather than as a gap. `underPageBackgroundColor`
         // is the one spelling both platforms share; the scroll view below is iOS's alone.
@@ -300,7 +310,8 @@ final class PlayerManager: ObservableObject {
             Task { @MainActor in PlayerManager.shared.setSystemFullScreen(active) }
         }
 
-        wireLocalPlayback()
+        hasWebView = true
+        return webView
     }
 
     /// Points the file player's reports at the same state the embed's bridge feeds, so everything
@@ -1053,6 +1064,9 @@ final class PlayerManager: ObservableObject {
     // MARK: - Web view plumbing
 
     private func evaluate(_ javaScript: String) {
+        // Without a web view there is no page to tell, and making one here would undo the point
+        // of making it late — a pause with nothing ever played is all that would reach this.
+        guard hasWebView else { return }
         webView.evaluateJavaScript(javaScript, completionHandler: nil)
     }
 

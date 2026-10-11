@@ -336,8 +336,11 @@ struct PlayerContainerView: View {
                 usesFullScreenControls: player.isFullScreen
             )
             #endif
-        } else {
+        } else if player.currentVideo != nil || player.hasWebView {
             PlayerSurface(webView: player.webView)
+        } else {
+            // Nothing has played yet, so there is no web view to show — see `webView`.
+            Color.black
         }
     }
 
