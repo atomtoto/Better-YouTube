@@ -16,15 +16,19 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
 - **Home** — *For You* (YouTube's charts for the categories you watch, woven with new uploads
   from the channels you watch most), *Subscriptions*, and — with a youtube.com session — your real
   YouTube home feed; see [Recommendations](#recommendations)
-- **Search** — videos and channels, run when you submit (a search costs 100 quota units), with
-  filters for sort order, length and upload date, *More Results* on demand and recent searches.
-  Pasting a YouTube link opens it instead of searching for it — see
-  [Opening YouTube links](#opening-youtube-links)
+- **Search** — the system's search field, in a button of its own at the end of the tab bar that
+  turns into the field along the bottom. Searches run when you submit (a search costs 100 quota
+  units), with filters for sort order, length and upload date, *More Results* on demand and recent
+  searches. As you type, the field suggests your matching recent searches and YouTube's own
+  completions — free of quota, and switched off in Settings → Library. Pasting a YouTube link
+  opens it instead of searching for it — see [Opening YouTube links](#opening-youtube-links)
 - **Playback** — the official YouTube embedded player (WKWebView), so playback stays within
   YouTube's Terms of Service. Turning the phone on its side hands the video to iOS's own
   full-screen presentation — the system's controls, over the app — and turning it back puts the
-  player where it was. On a Mac, ⇧⌘F fills the window instead. Autoplay of the next video can be
-  turned off in Settings → Playback
+  player where it was. On a Mac, ⇧⌘F fills the window instead. On an iPad held landscape the
+  player stands in two columns: the video with its details, and beside it up next and the
+  comments. Autoplay of the next video can be turned off in Settings → Playback, and a sleep timer
+  in the player's menu stops playback after a while or at the end of the video
 - **Resume playback** — reopening a video on iPhone, iPad or Mac continues from its last saved
   position, including downloaded videos. Positions survive app launches and sync through iCloud;
   videos that reached the end start again from the beginning. Artwork shows how much of a video
@@ -33,12 +37,19 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   open in the app, comments (Top or Newest, page after page, with tappable timestamps too), a
   share sheet — including *Share at 1:23* — and a thumbs-up that is the real like on your YouTube
   account (the heart beside it is the app's own favorites)
-- **Channels** — profile header, every upload page by page, and Subscribe/Unsubscribe on the
-  account
+- **Channels** — profile header, every upload page by page, the channel's public playlists, and
+  Subscribe/Unsubscribe on the account
 - **Library** —
   - *Signed in with Google*: your subscriptions, playlists and liked videos
   - *Your library*: favorites, the app's Watch Later and watch history, with iCloud sync
   - Every long list — subscriptions, playlists, history, Watch Later — can be filtered in place
+  - *Play* and *Shuffle* on a playlist take the whole of it, not just the part scrolled through
+- **Shortcuts, Siri and Spotlight** — *Open YouTube Link*, *Search YouTube*, *Resume Watching*
+  and *Play Library List* (Watch Later, Favorites or History, shuffled or not), with Siri phrases
+  in English and French that need no setup. A shortcut built on *Open YouTube Link* with *Show in
+  Share Sheet* turned on is how Safari or the YouTube app send a link here
+- **Handoff** — pause on the iPhone and the Mac offers to carry on from the same second, and the
+  other way round; a device without the app opens the video's page at that moment instead
 - **Languages** — English and French, on every platform; see [Localization](#localization)
 - **iCloud Sync** — favorites, the app's Watch Later, watch history, playback positions, and mini player style and
   size shared between iPhone, iPad and Mac using the same Apple Account; see [iCloud Sync](#icloud-sync)
@@ -466,7 +477,9 @@ out is recognised, on any of its hosts and with or without `https://`:
 The same links reach the app from outside through its own scheme, which is what Shortcuts or
 another app can use: swap `https` for `betteryoutube` in any YouTube link
 (`betteryoutube://youtu.be/dQw4w9WgXcQ?t=42`), or use `betteryoutube://watch?v=…&t=…` or
-`betteryoutube://open?url=<a percent-encoded YouTube link>`.
+`betteryoutube://open?url=<a percent-encoded YouTube link>`. `betteryoutube://search?q=…` opens
+Search on those words. The *Open YouTube Link* action in Shortcuts does the same without a URL to
+build.
 
 A video opened by link plays even before an API key or a sign-in is set up: the embed needs only
 the ID, and the title and channel come from YouTube's keyless oEmbed endpoint until the Data API
@@ -476,8 +489,9 @@ timestamps in them seek the video on screen.
 ## Localization
 
 The app ships in **English and French**, on iPhone, iPad, Mac, CarPlay and Apple Watch. Strings
-live in String Catalogs — `BetterYouTube/Localizable.xcstrings`, `BetterYouTube/InfoPlist.xcstrings`
-and `BetterYouTubeWatch/Localizable.xcstrings` — with plural variants for counts in both languages,
+live in String Catalogs — `BetterYouTube/Localizable.xcstrings`, `BetterYouTube/InfoPlist.xcstrings`,
+`BetterYouTube/AppShortcuts.xcstrings` (the Siri phrases) and `BetterYouTubeWatch/Localizable.xcstrings`
+— with plural variants for counts in both languages,
 and the French uses the informal *tu*. Numbers, dates, durations and percentages go through
 Foundation's formatters, so they follow the reader's region.
 
@@ -488,6 +502,10 @@ catalogs, or export with `xcodebuild -exportLocalizations -project BetterYouTube
 friends, or as `String(localized:)` when it has to travel as a `String`, so it is extracted.
 
 The test action is pinned to English, so tests that check a message read the same on any machine.
+
+`scripts/check-localizations.py` fails when any string the apps show has no French translation —
+one added in code and never put in a catalog as well as one left untranslated — and CI runs it on
+every push. It leaves the working copy as it found it, so it is safe to run locally too.
 
 ## Running on Apple Watch
 
@@ -542,7 +560,7 @@ Requirements: **macOS 26+**, Xcode 27+ for the full project.
 | Transport | The docked bar, the lock screen — and on an iPad, the same **Playback** menu and shortcuts | The bar, the **Playback** menu, ⌘P / ⌥⌘← / ⌥⌘→ / ⇧⌘N |
 | Settings | A tab; panes that push | Its own window, the same panes as a source list, ⌘, |
 | Refresh | Pull down | A Refresh button in the toolbar, ⌘R |
-| Search field | The system's, under the title, with recent searches as suggestions | In the window's toolbar, where a Mac keeps one |
+| Search field | A button of its own at the end of the tab bar, which turns into the field along the bottom | In the window's toolbar, where a Mac keeps one |
 | YouTube's own pages | `m.youtube.com` | `www.youtube.com` — a window holds the desktop site |
 | Periodic new-upload check | `BGAppRefreshTask`, on iOS's schedule | The app's own two-hour timer; an open Mac app is running |
 | Downloaded files | The Files app, under "Better YouTube" | Downloads → **Show in Finder** |
@@ -617,7 +635,7 @@ render.yaml                      One-click deploy of the resolver below
 resolver/                        A yt-dlp resolver: server.py, Dockerfile, compose, tests
 BetterYouTube/
   BetterYouTube.xcodeproj/       Xcode project (iOS/macOS app and watchOS app target)
-  Shared/                       Small data payloads shared by iPhone and Watch
+  Shared/                       Payloads shared by iPhone and Watch, and thumbnail sizing
   BetterYouTube/
     BetterYouTubeApp.swift       App entry point, both app delegates, the Mac's menu bar
     Platform.swift               The iOS/macOS seam: typealiases, colours, window, modifiers
@@ -642,16 +660,20 @@ BetterYouTube/
     YouTubeWebSession.swift      Optional youtube.com web session + home-feed reader
     Utilities.swift              Duration, count and relative-date formatters, Takeout CSV reader
     YouTubeLink.swift            Reads every shape of YouTube link, and the app's own scheme
+    AppShortcuts.swift           Shortcuts, Siri and Spotlight actions, and their phrases
+    Handoff.swift                The playing video, offered to your other devices
     RichText.swift               Tappable timestamps and links in descriptions and comments
     Localizable.xcstrings        The app's strings, in English and French
     InfoPlist.xcstrings          Info.plist strings, in English and French
+    AppShortcuts.xcstrings       Siri phrases, in English and French
     Keychain.swift               The two credentials this app keeps, and where they are kept
     ViewModels/                  One @MainActor view model per screen
     Views/                       SwiftUI screens
     Views/Settings/              One file per settings section, the panes, and each shell
     Views/Components/            Reusable cards and rows
   BetterYouTubeWatch/             Watch screens, API browsing, file downloads and audio playback
-  BetterYouTubeTests/            Unit tests for the pure parts
+  BetterYouTubeTests/            Unit tests, and the API client against canned responses
+scripts/check-localizations.py   Fails when a string has no French translation
 ```
 
 ## Continuous integration
@@ -666,8 +688,17 @@ are the ones worth pinning down because nothing on screen tells you when they ar
 8601 duration formatter, the Google Takeout CSV reader, the abbreviated counts in English and
 French, what a `betteryoutube://` setup link accepts and refuses, which YouTube links open what,
 which text in a description is a timestamp, and the new-upload ledger that decides what is worth a
-notification — alongside downloads, playback positions, CarPlay and iCloud sync. macOS rather than the simulator because it needs
-no device booted; the code under test has no platform in it either way.
+notification — alongside downloads, playback positions, CarPlay and iCloud sync. The API client
+is tested against canned responses in the Data API's own JSON: pagination, search decoding,
+errors and the quota each call is charged, with no network, key or charge to the real count.
+macOS rather than the simulator because it needs no device booted; the code under test has no
+platform in it either way.
+
+A fourth job fails the run when a string has no French translation — see
+[Localization](#localization).
+
+Every target builds in the Swift 6 language mode, so the compiler checks for data races across
+threads and actors.
 
 ## Notes
 
