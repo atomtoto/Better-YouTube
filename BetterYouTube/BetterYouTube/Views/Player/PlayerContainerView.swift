@@ -191,6 +191,9 @@ struct PlayerContainerView: View {
             if player.isExpanded, !player.isFullScreen {
                 ExpandedPlayerView(
                     videoHeight: video.height,
+                    sideBySide: layout.sideColumnWidth == nil
+                        ? nil
+                        : PlayerDetailsView.SideBySide(videoWidth: video.width, videoHeight: video.height),
                     headerHeight: metrics.headerHeight,
                     travel: layout.collapseTravel,
                     drag: $drag,
@@ -737,9 +740,24 @@ private struct PlayerLayout {
         isFullScreen ? fullScreenVideoFrame : headedVideoFrame
     }
 
-    /// The video across the width of the screen, sitting under the header.
+    /// The video across the width of the screen, sitting under the header — or, on a wide iPad,
+    /// across its own column, with the details' second column beside it.
     private var headedVideoFrame: CGRect {
-        CGRect(x: 0, y: metrics.headerHeight, width: size.width, height: size.width * 9 / 16)
+        let width = sideColumnWidth.map { size.width - $0 } ?? size.width
+        return CGRect(x: 0, y: metrics.headerHeight, width: width, height: width * 9 / 16)
+    }
+
+    /// The width of the details' second column on an iPad held landscape — wide enough for the
+    /// video to keep most of the screen and the comments to read comfortably. Nil everywhere
+    /// else: a phone, a portrait iPad, a narrow split-screen window, and the Mac, whose window
+    /// the player scrolls as one page.
+    var sideColumnWidth: CGFloat? {
+        #if os(iOS)
+        guard size.width >= 1000, size.width > size.height else { return nil }
+        return min(440, max(340, size.width * 0.32))
+        #else
+        return nil
+        #endif
     }
 
     /// The biggest 16:9 the screen holds, centred in it — height-bound in landscape, so the

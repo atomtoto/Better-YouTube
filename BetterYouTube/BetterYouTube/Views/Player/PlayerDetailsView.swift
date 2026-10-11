@@ -4,6 +4,16 @@ import SwiftUI
 /// the up-next queue and comments.
 struct PlayerDetailsView: View {
     let video: Video
+    /// Set on a wide iPad, where the details stand in two columns rather than one under the
+    /// video: the video's own column carries on below it with the title, actions and
+    /// description, and the column beside it holds what's next and the comments.
+    var sideBySide: SideBySide? = nil
+
+    /// The video's column, which the video surface fills from the top.
+    struct SideBySide: Equatable {
+        let videoWidth: CGFloat
+        let videoHeight: CGFloat
+    }
 
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var watchLater: WatchLaterStore
@@ -23,8 +33,9 @@ struct PlayerDetailsView: View {
     @State private var seeks = 0
     @State private var commentPosts = 0
 
-    init(video: Video) {
+    init(video: Video, sideBySide: SideBySide? = nil) {
         self.video = video
+        self.sideBySide = sideBySide
         _viewModel = StateObject(wrappedValue: VideoDetailViewModel(video: video))
     }
 
@@ -40,10 +51,14 @@ struct PlayerDetailsView: View {
             #if os(macOS)
             detailsContent
             #else
-            ScrollView {
-                detailsContent
+            if let sideBySide {
+                columns(sideBySide)
+            } else {
+                ScrollView {
+                    detailsContent
+                }
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
             #endif
         }
         .environment(\.openURL, linkAction)
@@ -88,6 +103,70 @@ struct PlayerDetailsView: View {
 
     private var detailsContent: some View {
         VStack(alignment: .leading, spacing: 18) {
+            aboutVideo
+
+            #if os(macOS)
+            commentsSection
+            #else
+            commentsPreview
+            #endif
+
+            if !player.upNext.isEmpty {
+                upNextSection
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Theme.Spacing.gutter)
+        .padding(.top, 16)
+        .padding(.bottom, 40)
+    }
+
+    #if os(iOS)
+    /// The iPad's two columns. Each scrolls on its own, as in the YouTube app: the video stays
+    /// put above its column, and the comments run on beside it.
+    private func columns(_ layout: SideBySide) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                // The video shows through this gap; touches must reach it.
+                Color.clear
+                    .frame(height: layout.videoHeight)
+                    .allowsHitTesting(false)
+
+                ScrollView {
+                    aboutVideo
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Theme.Spacing.gutter)
+                        .padding(.top, 16)
+                        .padding(.bottom, 40)
+                }
+                .scrollIndicators(.hidden)
+            }
+            .frame(width: layout.videoWidth)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    if !player.upNext.isEmpty {
+                        upNextSection
+                    }
+                    commentsSection
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Theme.Spacing.gutter)
+                .padding(.top, 16)
+                .padding(.bottom, 40)
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+    #endif
+
+    /// The video itself: any problem playing it, its title, what you can do with it, its
+    /// channel and its description.
+    @ViewBuilder
+    private var aboutVideo: some View {
+        VStack(alignment: .leading, spacing: 18) {
             if let issue = player.issue {
                 playbackIssueBanner(issue)
             }
@@ -118,21 +197,7 @@ struct PlayerDetailsView: View {
             if !displayed.description.isEmpty {
                 descriptionCard
             }
-
-            #if os(macOS)
-            commentsSection
-            #else
-            commentsPreview
-            #endif
-
-            if !player.upNext.isEmpty {
-                upNextSection
-            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Theme.Spacing.gutter)
-        .padding(.top, 16)
-        .padding(.bottom, 40)
     }
 
     /// Surfaces what actually went wrong rather than leaving a silent black player.

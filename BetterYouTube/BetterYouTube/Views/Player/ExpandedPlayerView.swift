@@ -9,6 +9,8 @@ import SwiftUI
 /// the container fades and moves it as one piece, so none of this re-flows mid-drag.
 struct ExpandedPlayerView: View {
     let videoHeight: CGFloat
+    /// Set on a wide iPad, where the details stand in two columns — see `PlayerDetailsView`.
+    var sideBySide: PlayerDetailsView.SideBySide? = nil
     let headerHeight: CGFloat
     /// How far the video travels to reach the docked bar.
     let travel: CGFloat
@@ -49,13 +51,18 @@ struct ExpandedPlayerView: View {
                 .contentShape(Rectangle())
                 .gesture(collapseDrag.gesture)
 
-            // The video shows through this gap; touches must reach it.
-            Color.clear
-                .frame(height: videoHeight)
-                .allowsHitTesting(false)
+            // The video shows through this gap; touches must reach it. Side by side, the
+            // details' first column leaves the gap itself.
+            if sideBySide == nil {
+                Color.clear
+                    .frame(height: videoHeight)
+                    .allowsHitTesting(false)
+            }
 
+            // One place for both layouts, so turning the iPad keeps the same details — and
+            // what they have loaded — rather than starting a new set.
             if let video = player.currentVideo {
-                PlayerDetailsView(video: video)
+                PlayerDetailsView(video: video, sideBySide: sideBySide)
                     .id(video.id)
             }
 
