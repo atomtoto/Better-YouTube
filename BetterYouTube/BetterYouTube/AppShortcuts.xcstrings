@@ -1,0 +1,118 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Continue my video in ${applicationName}" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuer ma vidéo dans ${applicationName}"
+          }
+        }
+      }
+    },
+    "Open a link in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Open a link in ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ouvrir un lien dans ${applicationName}"
+          }
+        }
+      }
+    },
+    "Play ${list} in ${applicationName}" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire ${list} dans ${applicationName}"
+          }
+        }
+      }
+    },
+    "Play my ${list} in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Play my ${list} in ${applicationName}",
+              "Play ${list} in ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lancer ${list} dans ${applicationName}"
+          }
+        }
+      }
+    },
+    "Resume watching in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Resume watching in ${applicationName}",
+              "Continue my video in ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reprendre la lecture dans ${applicationName}"
+          }
+        }
+      }
+    },
+    "Search ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Search ${applicationName}",
+              "Search in ${applicationName}"
+            ]
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rechercher dans ${applicationName}"
+          }
+        }
+      }
+    },
+    "Search in ${applicationName}" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chercher dans ${applicationName}"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

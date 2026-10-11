@@ -782,6 +782,16 @@
         }
       }
     },
+    "As you type, what is in the search field is sent to YouTube's suggestion service, which costs no quota. Turned off, the field suggests only your recent searches." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pendant la saisie, le contenu du champ de recherche est envoyé au service de suggestions de YouTube, qui ne consomme pas de quota. Désactivé, le champ ne propose que tes recherches récentes."
+          }
+        }
+      }
+    },
     "Automatically Import YouTube Notifications" : {
       "localizations" : {
         "fr" : {
@@ -1028,6 +1038,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tout effacer"
+          }
+        }
+      }
+    },
+    "Clear Recent Searches" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacer les recherches récentes"
           }
         }
       }
@@ -1298,6 +1318,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Impossible de charger la playlist"
+          }
+        }
+      }
+    },
+    "Couldn't Load Playlists" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de charger les playlists"
           }
         }
       }
@@ -1618,6 +1648,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Active l’API et crée un client OAuth dans ton projet Google Cloud."
+          }
+        }
+      }
+    },
+    "End of Video" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fin de la vidéo"
           }
         }
       }
@@ -2183,22 +2223,22 @@
         }
       }
     },
-    "Latest Videos" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dernières vidéos"
-          }
-        }
-      }
-    },
     "Library" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bibliothèque"
+          }
+        }
+      }
+    },
+    "Library List" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liste de la bibliothèque"
           }
         }
       }
@@ -2259,6 +2299,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ajoute ou retire ton « J’aime » sur ce commentaire"
+          }
+        }
+      }
+    },
+    "Link" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lien"
+          }
+        }
+      }
+    },
+    "List" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liste"
           }
         }
       }
@@ -2865,12 +2925,42 @@
         }
       }
     },
+    "Open YouTube Link" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir un lien YouTube"
+          }
+        }
+      }
+    },
     "Open in YouTube" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ouvrir dans YouTube"
+          }
+        }
+      }
+    },
+    "Opens Better YouTube's search on the words you give." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre la recherche de Better YouTube sur les mots que tu indiques."
+          }
+        }
+      }
+    },
+    "Opens a YouTube video, channel or playlist link in Better YouTube." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre un lien vers une vidéo, une chaîne ou une playlist YouTube dans Better YouTube."
           }
         }
       }
@@ -2975,12 +3065,42 @@
         }
       }
     },
+    "Play ${list}" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire ${list}"
+          }
+        }
+      }
+    },
     "Play All" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tout lire"
+          }
+        }
+      }
+    },
+    "Play Library List" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire une liste de la bibliothèque"
+          }
+        }
+      }
+    },
+    "Play from Library" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire depuis la bibliothèque"
           }
         }
       }
@@ -3072,6 +3192,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lance la vidéo suivante de la liste quand une vidéo se termine. Désactivée, ce sont les suggestions de YouTube qui restent à l’écran à la fin. En voiture, la file d’attente continue toujours."
+          }
+        }
+      }
+    },
+    "Plays the video you watched last, from where you stopped." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lit la dernière vidéo que tu as regardée, là où tu t’es arrêté."
+          }
+        }
+      }
+    },
+    "Plays your Watch Later, Favorites or History, in order or shuffled." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lit ta liste « À regarder plus tard », tes favoris ou ton historique, dans l’ordre ou en aléatoire."
           }
         }
       }
@@ -3416,6 +3556,16 @@
         }
       }
     },
+    "Resume Watching" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reprendre la lecture"
+          }
+        }
+      }
+    },
     "Retry" : {
       "localizations" : {
         "fr" : {
@@ -3502,6 +3652,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Échec de la recherche"
+          }
+        }
+      }
+    },
+    "Search Term" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terme de recherche"
           }
         }
       }
@@ -3622,6 +3782,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Partager à %@"
+          }
+        }
+      }
+    },
+    "Show" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher"
           }
         }
       }
@@ -3886,6 +4056,36 @@
         }
       }
     },
+    "Sleep Timer" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minuteur de veille"
+          }
+        }
+      }
+    },
+    "Sleep Timer: %@ left" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minuteur de veille : encore %@"
+          }
+        }
+      }
+    },
+    "Sleep Timer: End of Video" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minuteur de veille : fin de la vidéo"
+          }
+        }
+      }
+    },
     "Sort By" : {
       "localizations" : {
         "fr" : {
@@ -4016,6 +4216,16 @@
         }
       }
     },
+    "Suggestions from YouTube" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggestions de YouTube"
+          }
+        }
+      }
+    },
     "Switch to Floating" : {
       "localizations" : {
         "fr" : {
@@ -4092,6 +4302,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cette adresse de service de téléchargement n’est pas une URL http ou https valide."
+          }
+        }
+      }
+    },
+    "That isn't a link to a YouTube video, channel or playlist." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce n’est pas un lien vers une vidéo, une chaîne ou une playlist YouTube."
+          }
+        }
+      }
+    },
+    "That list is empty." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette liste est vide."
           }
         }
       }
@@ -4446,6 +4676,16 @@
         }
       }
     },
+    "This channel has no public playlists." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette chaîne n’a aucune playlist publique."
+          }
+        }
+      }
+    },
     "This clears the app's watch history on this device. Your YouTube account's history is unchanged." : {
       "localizations" : {
         "fr" : {
@@ -4602,6 +4842,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Essaie un autre terme de recherche."
+          }
+        }
+      }
+    },
+    "Turn Off Timer" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactiver le minuteur"
           }
         }
       }
@@ -4983,6 +5233,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tu peux aussi choisir une clé API pour les vidéos publiques, ou terminer la configuration plus tard dans les Réglages."
+          }
+        }
+      }
+    },
+    "You haven't watched anything yet." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu n’as encore rien regardé."
           }
         }
       }

@@ -118,6 +118,7 @@
 		44109120DE7A299A5C07B29F /* Handoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA483609C61C308A58C97B35 /* Handoff.swift */; };
 		FE68AF15A52C825245B3A84F /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 477C1888D8D100965B317230 /* AppShortcuts.swift */; };
 		980C5CAF1B97C724C3356A83 /* YouTubeAPIServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C416EC977C1672C457D27E8 /* YouTubeAPIServiceTests.swift */; };
+		0AB97B84E3EED22618A1E41D /* AppShortcuts.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 5B10657E9DB112B2219F9918 /* AppShortcuts.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -266,6 +267,7 @@
 		DA483609C61C308A58C97B35 /* Handoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Handoff.swift; sourceTree = "<group>"; };
 		477C1888D8D100965B317230 /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
 		1C416EC977C1672C457D27E8 /* YouTubeAPIServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeAPIServiceTests.swift; sourceTree = "<group>"; };
+		5B10657E9DB112B2219F9918 /* AppShortcuts.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = AppShortcuts.xcstrings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -395,6 +397,7 @@
 		CE882751F8B3EE4485706ED4 /* BetterYouTube */ = {
 			isa = PBXGroup;
 			children = (
+				5B10657E9DB112B2219F9918 /* AppShortcuts.xcstrings */,
 				477C1888D8D100965B317230 /* AppShortcuts.swift */,
 				DA483609C61C308A58C97B35 /* Handoff.swift */,
 				23EB1F48CE0DABF67565B526 /* InfoPlist.xcstrings */,
@@ -583,6 +586,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0AB97B84E3EED22618A1E41D /* AppShortcuts.xcstrings in Resources */,
 				16A857B67504CE575139962F /* InfoPlist.xcstrings in Resources */,
 				2C1B1382FF738E8CA53B27CC /* Localizable.xcstrings in Resources */,
 				D0687455C07D878E9DB04308 /* Assets.xcassets in Resources */,
