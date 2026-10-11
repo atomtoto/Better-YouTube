@@ -65,7 +65,7 @@ struct SettingsPaneView: View {
     let pane: SettingsPane
     @State private var showsYouTubeSignIn = false
     #if os(iOS)
-    @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
+    @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = true
     #endif
 
     var body: some View {
