@@ -179,12 +179,12 @@ extension Color {
 // MARK: - Search
 
 extension SearchFieldPlacement {
-    /// A search field that is always on screen: under the navigation bar's title on a phone —
-    /// in the bar, where it doesn't contend with the docked player and the tab bar below — and
-    /// in the toolbar on a Mac, where every Mac app keeps one.
-    static var pinned: SearchFieldPlacement {
+    /// Where Search keeps its field: in the search tab's own place along the bottom on a phone —
+    /// the system's choice for a tab with the search role, in thumb reach — and in the toolbar on
+    /// a Mac, where every Mac app keeps one.
+    static var searchTab: SearchFieldPlacement {
         #if os(iOS)
-        .navigationBarDrawer(displayMode: .always)
+        .automatic
         #else
         .toolbar
         #endif

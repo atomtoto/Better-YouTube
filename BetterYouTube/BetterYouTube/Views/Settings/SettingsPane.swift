@@ -79,6 +79,7 @@ struct SettingsPaneView: View {
                 ICloudSyncSection()
                 WatchLaterSection()
                 OnThisDeviceSection()
+                SearchSection()
             case .notifications:
                 NotificationsSection()
             case .youTubeHome:
@@ -108,6 +109,25 @@ struct SettingsPaneView: View {
         #if os(iOS)
         .minimizesPlayerBarOnScroll()
         #endif
+    }
+}
+
+private struct SearchSection: View {
+    @EnvironmentObject private var recents: RecentSearchStore
+    @AppStorage(SearchViewModel.remoteSuggestionsKey) private var suggestsFromYouTube = true
+
+    var body: some View {
+        Section {
+            Toggle("Suggestions from YouTube", isOn: $suggestsFromYouTube)
+            Button("Clear Recent Searches", role: .destructive) {
+                recents.clear()
+            }
+            .disabled(recents.terms.isEmpty)
+        } header: {
+            Text("Search")
+        } footer: {
+            Text("As you type, what is in the search field is sent to YouTube's suggestion service, which costs no quota. Turned off, the field suggests only your recent searches.")
+        }
     }
 }
 

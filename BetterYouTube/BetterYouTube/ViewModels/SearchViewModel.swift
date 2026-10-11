@@ -18,9 +18,22 @@ final class SearchViewModel: ObservableObject {
         }
     }
 
+    /// What YouTube suggests for the text in the field, fetched as you type. Empty when that is
+    /// turned off, or when the field holds a link.
+    @Published private(set) var remoteSuggestions: [String] = []
+    /// A channel or playlist opened from a pasted link, which Search pushes onto its own stack.
+    @Published var linkedChannel: Channel?
+    @Published var linkedPlaylist: Playlist?
+    @Published var linkError: String?
+
+    /// Whether the field asks YouTube for suggestions as you type. On by default; Settings →
+    /// Library turns it off.
+    static let remoteSuggestionsKey = "search_youtube_suggestions"
+
     private let service: YouTubeAPIService
     private let recents: RecentSearchStore
     private var searchTask: Task<Void, Never>?
+    private var suggestionTask: Task<Void, Never>?
     /// The text the results on screen are for, which is what a further page continues.
     private var lastQuery: String?
     private var nextPageToken: String?
@@ -64,9 +77,49 @@ final class SearchViewModel: ObservableObject {
         submit()
     }
 
+    /// What the field's Search key does: opens a pasted link, or searches for the text.
+    func submitOrOpen() {
+        if let link {
+            open(link)
+        } else {
+            submit()
+        }
+    }
+
+    /// Follows the field as it changes. Emptying it — its clear button, or Cancel — clears the
+    /// results with it; anything else is new text to suggest completions for.
+    func queryChanged(_ text: String) {
+        if text.isEmpty {
+            clear()
+        } else {
+            fetchSuggestions(for: text)
+        }
+    }
+
+    /// The suggestions to offer under the field: the recent searches that match first, then
+    /// YouTube's, without repeating one, and only as many as fit above a phone's keyboard.
+    func suggestions(recents terms: [String]) -> [SearchSuggestion] {
+        let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, link == nil else { return [] }
+        let recent = terms
+            .filter { $0.localizedStandardContains(text) && $0.caseInsensitiveCompare(text) != .orderedSame }
+            .prefix(3)
+            .map { SearchSuggestion(text: $0, isRecent: true) }
+        let remote = remoteSuggestions
+            .filter { term in
+                term.caseInsensitiveCompare(text) != .orderedSame
+                    && !recent.contains { $0.text.caseInsensitiveCompare(term) == .orderedSame }
+            }
+            .map { SearchSuggestion(text: $0, isRecent: false) }
+        return Array((recent + remote).prefix(8))
+    }
+
     func clear() {
         searchTask?.cancel()
         searchTask = nil
+        suggestionTask?.cancel()
+        suggestionTask = nil
+        remoteSuggestions = []
         query = ""
         results = []
         hasSearched = false
@@ -97,6 +150,50 @@ final class SearchViewModel: ObservableObject {
         isLoadingMore = false
     }
 
+    /// A pasted link goes straight to what it names — one unit at most, against the 100 a
+    /// search for it would cost, and exactly the thing that was shared.
+    private func open(_ link: YouTubeLink) {
+        switch link {
+        case .video(let id, let start):
+            Task { await PlayerManager.shared.open(videoId: id, startTime: start) }
+        case .playlist(let id):
+            linkedPlaylist = Playlist(id: id, title: "", description: "", thumbnailURL: nil)
+        case .channel(let id):
+            linkedChannel = Channel(id: id, title: "", description: "", thumbnailURL: nil)
+        case .handle(let handle):
+            Task {
+                do {
+                    if let channel = try await service.channel(handle: handle) {
+                        linkedChannel = channel
+                    } else {
+                        linkError = String(localized: "YouTube has no channel called \(handle).")
+                    }
+                } catch {
+                    linkError = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    /// Asks YouTube what people search for that starts this way, once typing pauses. Free of
+    /// quota — it is the suggestion service YouTube's own search box uses, not the Data API.
+    private func fetchSuggestions(for text: String) {
+        suggestionTask?.cancel()
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let enabled = UserDefaults.standard.object(forKey: Self.remoteSuggestionsKey) as? Bool ?? true
+        guard enabled, !trimmed.isEmpty, YouTubeLink(string: trimmed) == nil else {
+            remoteSuggestions = []
+            return
+        }
+        suggestionTask = Task {
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            let fetched = (try? await YouTubeSuggestions.fetch(for: trimmed)) ?? []
+            guard !Task.isCancelled else { return }
+            remoteSuggestions = fetched
+        }
+    }
+
     private func run(_ text: String) {
         searchTask?.cancel()
         searchTask = Task { await performSearch(text) }
@@ -123,5 +220,55 @@ final class SearchViewModel: ObservableObject {
             hasSearched = true
         }
         isSearching = false
+    }
+}
+
+/// One line under the search field.
+struct SearchSuggestion: Identifiable, Hashable {
+    let text: String
+    /// One of your own recent searches, rather than one of YouTube's.
+    let isRecent: Bool
+
+    var id: String { text }
+}
+
+/// YouTube's search suggestions — the completions its own search box offers.
+///
+/// They come from Google's suggestion service rather than the Data API, so they cost no quota
+/// and need no key, but they are not an official, documented interface: if it changes, the field
+/// simply offers your recent searches alone. The session keeps no cookies, so what you type is
+/// not tied to anything else.
+enum YouTubeSuggestions {
+    private static let session: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.httpCookieAcceptPolicy = .never
+        configuration.httpShouldSetCookies = false
+        configuration.timeoutIntervalForRequest = 5
+        return URLSession(configuration: configuration)
+    }()
+
+    static func fetch(for query: String, locale: Locale = .current) async throws -> [String] {
+        var components = URLComponents(string: "https://suggestqueries.google.com/complete/search")!
+        components.queryItems = [
+            URLQueryItem(name: "client", value: "firefox"),
+            URLQueryItem(name: "ds", value: "yt"),
+            URLQueryItem(name: "ie", value: "utf-8"),
+            URLQueryItem(name: "oe", value: "utf-8"),
+            URLQueryItem(name: "hl", value: locale.language.languageCode?.identifier ?? "en"),
+            URLQueryItem(name: "gl", value: locale.region?.identifier ?? "US"),
+            URLQueryItem(name: "q", value: query)
+        ]
+        let (data, _) = try await session.data(from: components.url!)
+        return parse(data)
+    }
+
+    /// The response is a JSON array: the query, then the list of suggestions, then extras this
+    /// app has no use for.
+    static func parse(_ data: Data) -> [String] {
+        guard let array = try? JSONSerialization.jsonObject(with: data) as? [Any],
+              array.count > 1,
+              let suggestions = array[1] as? [String]
+        else { return [] }
+        return suggestions
     }
 }

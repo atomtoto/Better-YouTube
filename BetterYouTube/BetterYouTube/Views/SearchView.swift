@@ -1,17 +1,14 @@
 import SwiftUI
 
-/// Search, in the system's own search field: under the title on a phone, in the window's toolbar
-/// on a Mac. Opening the tab raises the keyboard and shows recent searches — nothing is fetched
-/// until you ask.
+/// Search, in the system's own search field: along the bottom on a phone, where the search tab
+/// turns into it, and in the window's toolbar on a Mac. Opening the tab raises the keyboard and
+/// shows recent searches — nothing is fetched until you ask.
 struct SearchView: View {
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var recents: RecentSearchStore
-    @StateObject private var viewModel = SearchViewModel()
+    /// Owned by the root view, which on a phone holds the field itself — see `searchField(_:)`.
+    @ObservedObject var viewModel: SearchViewModel
     @FocusState private var isFieldFocused: Bool
-    /// A channel or playlist opened from a pasted link, pushed onto Search's own stack.
-    @State private var linkedChannel: Channel?
-    @State private var linkedPlaylist: Playlist?
-    @State private var linkError: String?
 
     var body: some View {
         Group {
@@ -33,30 +30,32 @@ struct SearchView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.appBackground)
-        .navigationTitle("Search")
-        .searchable(text: $viewModel.query, placement: .pinned, prompt: "Search or paste a YouTube link")
         .searchFocused($isFieldFocused)
-        .searchSuggestions { suggestions }
-        .onSubmit(of: .search, submit)
-        // Clearing the field — its own clear button, or Cancel — clears the results with it.
-        .onChange(of: viewModel.query) { _, query in
-            if query.isEmpty { viewModel.clear() }
+        .navigationTitle("Search")
+        #if os(macOS)
+        // On a Mac the field is Search's own, in its toolbar. On a phone the tab view holds it.
+        .searchField(viewModel)
+        #endif
+        // A search on its way — submitted, a suggestion or a recent search tapped, a filter
+        // changed — puts the keyboard away, so the results it brings are not hidden behind it.
+        .onChange(of: viewModel.isSearching) { _, searching in
+            if searching { isFieldFocused = false }
         }
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
-        .navigationDestination(item: $linkedChannel) { channel in
+        .navigationDestination(item: $viewModel.linkedChannel) { channel in
             ChannelView(channelId: channel.id, initialChannel: channel.title.isEmpty ? nil : channel)
         }
-        .navigationDestination(item: $linkedPlaylist) { PlaylistDetailView(playlist: $0) }
+        .navigationDestination(item: $viewModel.linkedPlaylist) { PlaylistDetailView(playlist: $0) }
         .toolbar {
             ToolbarItem(placement: .primaryAction) { filtersMenu }
         }
         .alert("Couldn't Open Link", isPresented: Binding(
-            get: { linkError != nil },
-            set: { if !$0 { linkError = nil } }
+            get: { viewModel.linkError != nil },
+            set: { if !$0 { viewModel.linkError = nil } }
         )) {
-            Button("OK", role: .cancel) { linkError = nil }
+            Button("OK", role: .cancel) { viewModel.linkError = nil }
         } message: {
-            Text(linkError ?? "")
+            Text(viewModel.linkError ?? "")
         }
         .onAppear {
             // Ready to type on arrival — unless there are results to come back to, which the
@@ -108,67 +107,6 @@ struct SearchView: View {
         }
     }
 
-    // MARK: Suggestions
-
-    /// What the field offers while you type: the link you pasted, ready to open, or the recent
-    /// searches that match.
-    @ViewBuilder
-    private var suggestions: some View {
-        if viewModel.link != nil {
-            Button(action: submit) {
-                Label("Open Link", systemImage: "arrow.up.forward.app")
-            }
-        } else {
-            let query = viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !query.isEmpty {
-                ForEach(recents.terms.filter {
-                    $0.localizedStandardContains(query) && $0.caseInsensitiveCompare(query) != .orderedSame
-                }.prefix(5), id: \.self) { term in
-                    Button {
-                        viewModel.search(term: term)
-                        isFieldFocused = false
-                    } label: {
-                        Label(term, systemImage: "clock.arrow.circlepath")
-                    }
-                }
-            }
-        }
-    }
-
-    private func submit() {
-        isFieldFocused = false
-        if let link = viewModel.link {
-            open(link)
-        } else {
-            viewModel.submit()
-        }
-    }
-
-    /// A pasted link goes straight to what it names — one unit at most, against the 100 a
-    /// search for it would cost, and exactly the thing that was shared.
-    private func open(_ link: YouTubeLink) {
-        switch link {
-        case .video(let id, let start):
-            Task { await player.open(videoId: id, startTime: start) }
-        case .playlist(let id):
-            linkedPlaylist = Playlist(id: id, title: "", description: "", thumbnailURL: nil)
-        case .channel(let id):
-            linkedChannel = Channel(id: id, title: "", description: "", thumbnailURL: nil)
-        case .handle(let handle):
-            Task {
-                do {
-                    if let channel = try await YouTubeAPIService.shared.channel(handle: handle) {
-                        linkedChannel = channel
-                    } else {
-                        linkError = String(localized: "YouTube has no channel called \(handle).")
-                    }
-                } catch {
-                    linkError = error.localizedDescription
-                }
-            }
-        }
-    }
-
     // MARK: Recents
 
     private var recentSearches: some View {
@@ -185,7 +123,6 @@ struct SearchView: View {
                         ForEach(recents.terms, id: \.self) { term in
                             Button {
                                 viewModel.search(term: term)
-                                isFieldFocused = false
                             } label: {
                                 HStack(spacing: 12) {
                                     Image(systemName: "clock.arrow.circlepath")
@@ -296,8 +233,53 @@ struct SearchView: View {
     }
 }
 
+// MARK: - The field
+
+extension View {
+    /// Search's field, what it suggests and what its Search key does — applied where the field
+    /// lives: on the tab view on a phone, whose search tab turns into it along the bottom, and on
+    /// Search itself on a Mac, whose toolbar holds it.
+    func searchField(_ viewModel: SearchViewModel) -> some View {
+        modifier(SearchField(viewModel: viewModel))
+    }
+}
+
+private struct SearchField: ViewModifier {
+    @ObservedObject var viewModel: SearchViewModel
+    @EnvironmentObject private var recents: RecentSearchStore
+
+    func body(content: Content) -> some View {
+        content
+            .searchable(text: $viewModel.query, placement: .searchTab, prompt: "Search or paste a YouTube link")
+            .searchSuggestions { suggestions }
+            .onSubmit(of: .search) { viewModel.submitOrOpen() }
+            .onChange(of: viewModel.query) { _, query in viewModel.queryChanged(query) }
+    }
+
+    /// What the field offers while you type: the link you pasted, ready to open, or the recent
+    /// searches that match followed by YouTube's own suggestions.
+    @ViewBuilder
+    private var suggestions: some View {
+        if viewModel.link != nil {
+            Button {
+                viewModel.submitOrOpen()
+            } label: {
+                Label("Open Link", systemImage: "arrow.up.forward.app")
+            }
+        } else {
+            ForEach(viewModel.suggestions(recents: recents.terms)) { suggestion in
+                Button {
+                    viewModel.search(term: suggestion.text)
+                } label: {
+                    Label(suggestion.text, systemImage: suggestion.isRecent ? "clock.arrow.circlepath" : "magnifyingglass")
+                }
+            }
+        }
+    }
+}
+
 #Preview {
-    NavigationStack { SearchView() }
+    NavigationStack { SearchView(viewModel: SearchViewModel()) }
         .environmentObject(LibraryStore.shared)
         .environmentObject(WatchLaterStore.shared)
         .environmentObject(RecentSearchStore.shared)

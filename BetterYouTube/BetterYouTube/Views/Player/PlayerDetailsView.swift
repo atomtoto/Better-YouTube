@@ -273,9 +273,9 @@ struct PlayerDetailsView: View {
 
                     if let url = displayed.watchURL {
                         ShareLink(item: url) {
-                            PillLabel(title: String(localized: "Share"), systemImage: "square.and.arrow.up")
+                            PlayerPillFace(title: String(localized: "Share"), systemImage: "square.and.arrow.up")
                         }
-                        .playerPillStyle(tint: nil)
+                        .buttonStyle(PillButtonStyle())
                         .simultaneousGesture(TapGesture().onEnded { shareTaps += 1 })
                     }
                 }
@@ -605,50 +605,61 @@ private struct PlayerDownloadPill: View {
     }
 }
 
-/// What every pill in the player shows: its symbol — a spinner while a write is in flight, so a
-/// tap that has to reach YouTube and back still looks like it landed — and its title, if any.
-private struct PillLabel: View {
+/// The face every pill in the player shares, the Share link's included, so they keep one shape.
+struct PlayerPillFace: View {
     let title: String
     let systemImage: String
-    var isActive = false
-    var isBusy = false
+    var isActive: Bool = false
+    var activeTint: Color = .red
+    /// Swaps the icon for a spinner while a write is in flight, so a tap that has to reach
+    /// YouTube and back still looks like it landed.
+    var isBusy: Bool = false
 
     var body: some View {
-        Group {
-            if title.isEmpty {
-                icon
+        HStack(spacing: 7) {
+            if isBusy {
+                ProgressView()
+                    .controlSize(.small)
             } else {
-                Label {
-                    Text(title)
-                        .lineLimit(1)
-                        .contentTransition(.numericText())
-                } icon: {
-                    icon
-                }
+                Image(systemName: systemImage)
+                    .font(.subheadline.weight(.semibold))
+                    .symbolEffect(.bounce, value: isActive)
+            }
+
+            if !title.isEmpty {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                    .contentTransition(.numericText())
             }
         }
-        .font(.subheadline.weight(.semibold))
-    }
-
-    @ViewBuilder
-    private var icon: some View {
-        if isBusy {
-            ProgressView().controlSize(.small)
-        } else {
-            Image(systemName: systemImage)
-                .symbolEffect(.bounce, value: isActive)
-        }
+        .foregroundStyle(isActive ? activeTint : Color.primary)
+        .padding(.horizontal, 15)
+        // A floor rather than a fixed height: the same pill at the default text size, and one
+        // that grows instead of clipping its title at the larger ones.
+        .frame(minHeight: 38)
+        .background(
+            Capsule()
+                .fill(isActive ? activeTint.opacity(0.16) : Color.appSecondaryBackground)
+        )
+        .overlay(
+            Capsule()
+                .strokeBorder(
+                    isActive ? activeTint.opacity(0.35) : Color.primary.opacity(0.06),
+                    lineWidth: 0.8
+                )
+        )
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isActive)
     }
 }
 
-private extension View {
-    /// The player's pills are the system's bordered capsule: neutral until their state is on,
-    /// then in that state's colour. Being the native button, they grow with the text size the
-    /// reader has chosen, where the hand-drawn ones were a fixed 38 points tall.
-    func playerPillStyle(tint: Color?) -> some View {
-        buttonStyle(.bordered)
-            .buttonBorderShape(.capsule)
-            .tint(tint ?? .primary)
+/// A springy press for the pills: a little smaller and dimmer while held.
+struct PillButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
+            .opacity(configuration.isPressed ? 0.82 : 1.0)
+            .animation(.spring(response: 0.22, dampingFraction: 0.62), value: configuration.isPressed)
     }
 }
 
@@ -668,11 +679,16 @@ private struct PlayerActionPill: View {
             taps += 1
             action()
         } label: {
-            PillLabel(title: title, systemImage: systemImage, isActive: isActive, isBusy: isBusy)
+            PlayerPillFace(
+                title: title,
+                systemImage: systemImage,
+                isActive: isActive,
+                activeTint: activeTint,
+                isBusy: isBusy
+            )
         }
-        .playerPillStyle(tint: isActive ? activeTint : nil)
+        .buttonStyle(PillButtonStyle())
         .disabled(isBusy)
-        .animation(.snappy, value: isActive)
         .sensoryFeedback(feedback, trigger: taps)
     }
 }
