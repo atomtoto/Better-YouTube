@@ -13,22 +13,33 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
 
 ## Features
 
-- **Home** — featured hero card, "From Your Subscriptions", "Trending Now" and "Continue Watching"
-  carousels
-- **Search** — debounced search for videos and channels, recent searches, browse categories
+- **Home** — *For You* (YouTube's charts for the categories you watch, woven with new uploads
+  from the channels you watch most), *Subscriptions*, and — with a youtube.com session — your real
+  YouTube home feed; see [Recommendations](#recommendations)
+- **Search** — videos and channels, run when you submit (a search costs 100 quota units), with
+  filters for sort order, length and upload date, *More Results* on demand and recent searches.
+  Pasting a YouTube link opens it instead of searching for it — see
+  [Opening YouTube links](#opening-youtube-links)
 - **Playback** — the official YouTube embedded player (WKWebView), so playback stays within
   YouTube's Terms of Service. Turning the phone on its side hands the video to iOS's own
   full-screen presentation — the system's controls, over the app — and turning it back puts the
-  player where it was. On a Mac, ⇧⌘F fills the window instead
+  player where it was. On a Mac, ⇧⌘F fills the window instead. Autoplay of the next video can be
+  turned off in Settings → Playback
 - **Resume playback** — reopening a video on iPhone, iPad or Mac continues from its last saved
   position, including downloaded videos. Positions survive app launches and sync through iCloud;
-  videos that reached the end start again from the beginning
-- **Video detail** — stats, expandable description, comments, share sheet, and a thumbs-up that
-  is the real like on your YouTube account (the heart beside it is the app's own favorites)
-- **Channels** — profile header plus latest uploads
+  videos that reached the end start again from the beginning. Artwork shows how much of a video
+  was watched, and Library lists what was left part-way through under *Continue Watching*
+- **Video detail** — stats, a description whose timestamps seek the video and whose YouTube links
+  open in the app, comments (Top or Newest, page after page, with tappable timestamps too), a
+  share sheet — including *Share at 1:23* — and a thumbs-up that is the real like on your YouTube
+  account (the heart beside it is the app's own favorites)
+- **Channels** — profile header, every upload page by page, and Subscribe/Unsubscribe on the
+  account
 - **Library** —
   - *Signed in with Google*: your subscriptions, playlists and liked videos
   - *Your library*: favorites, the app's Watch Later and watch history, with iCloud sync
+  - Every long list — subscriptions, playlists, history, Watch Later — can be filtered in place
+- **Languages** — English and French, on every platform; see [Localization](#localization)
 - **iCloud Sync** — favorites, the app's Watch Later, watch history, playback positions, and mini player style and
   size shared between iPhone, iPad and Mac using the same Apple Account; see [iCloud Sync](#icloud-sync)
 - **Downloads** — videos kept in a `Downloads` folder on the device and played from the file
@@ -265,7 +276,10 @@ otherwise sends one Google refuses to accept a sign-in from.
 Data API: a subscription resource carries `contentDetails.activityType` — a leftover from when the
 choice was uploads-or-everything — and nothing that maps to the bell's three settings. Neither is
 there a push channel for a personal account, so real-time notifications are out at any price; the
-app polls instead. What the web session can reach is the account's own notification inbox, and
+app polls instead — the channels you turned notifications on for in *Selected Channels* mode (an
+API key is enough for those), or your subscriptions in *All Subscriptions* mode, at most once every
+30 minutes unless you pull to refresh. A channel read for the first time only announces what it
+uploaded in the last day, so turning its bell on doesn't replay its back catalogue. What the web session can reach is the account's own notification inbox, and
 **Settings → Notifications → Import YouTube's Notifications** reads it: the notifications go into
 the app's inbox, already read, and the channels behind them become the app's per-channel opt-ins.
 A channel reaches that inbox only because its bell is on, which is what makes the list right — with
@@ -437,6 +451,44 @@ already watch is the ordinary case for it, and the risk sits on your account and
 not on anyone else. The local mode is available without configuration; server mode requires a
 valid endpoint before it can start downloading.
 
+## Opening YouTube links
+
+Search opens a pasted YouTube link rather than searching for it: one quota unit at most, against
+the hundred a search would cost, and exactly the thing that was shared. Every shape YouTube hands
+out is recognised, on any of its hosts and with or without `https://`:
+
+| Link | Opens |
+| --- | --- |
+| `youtube.com/watch?v=…`, `youtu.be/…`, `/shorts/…`, `/live/…`, `/embed/…` | The video, at the shared `t=` or `start=` time |
+| `youtube.com/playlist?list=…` | The playlist |
+| `youtube.com/channel/UC…`, `youtube.com/@handle`, or just `@handle` | The channel |
+
+The same links reach the app from outside through its own scheme, which is what Shortcuts or
+another app can use: swap `https` for `betteryoutube` in any YouTube link
+(`betteryoutube://youtu.be/dQw4w9WgXcQ?t=42`), or use `betteryoutube://watch?v=…&t=…` or
+`betteryoutube://open?url=<a percent-encoded YouTube link>`.
+
+A video opened by link plays even before an API key or a sign-in is set up: the embed needs only
+the ID, and the title and channel come from YouTube's keyless oEmbed endpoint until the Data API
+can be asked. Inside the app, YouTube links in descriptions and comments open the same way, and
+timestamps in them seek the video on screen.
+
+## Localization
+
+The app ships in **English and French**, on iPhone, iPad, Mac, CarPlay and Apple Watch. Strings
+live in String Catalogs — `BetterYouTube/Localizable.xcstrings`, `BetterYouTube/InfoPlist.xcstrings`
+and `BetterYouTubeWatch/Localizable.xcstrings` — with plural variants for counts in both languages,
+and the French uses the informal *tu*. Numbers, dates, durations and percentages go through
+Foundation's formatters, so they follow the reader's region.
+
+To add a language, add it in the project's Info → Localizations in Xcode and fill in the
+catalogs, or export with `xcodebuild -exportLocalizations -project BetterYouTube.xcodeproj
+-localizationPath out -exportLanguage <code>` and import the translated `.xcloc` back with
+`-importLocalizations`. Write new interface text as a literal in `Text`, `Label`, `Button` and
+friends, or as `String(localized:)` when it has to travel as a `String`, so it is extracted.
+
+The test action is pinned to English, so tests that check a message read the same on any machine.
+
 ## Running on Apple Watch
 
 The `BetterYouTubeWatch` target builds for **watchOS 26+** and is embedded in the iOS app. Build
@@ -487,7 +539,7 @@ Requirements: **macOS 26+**, Xcode 27+ for the full project.
 | Home's feed switcher | Segmented control at the top of the feed | In the window's toolbar, where a mode switcher belongs |
 | Player full screen | Turn the phone on its side | ⇧⌘F fills the window; the green button takes the window full screen |
 | Mini / expanded player | Tap the bar, flick it down | ⇧⌘P, or click the bar |
-| Transport | The docked bar, the lock screen | The bar, the **Playback** menu, ⌘P / ⌥⌘← / ⌥⌘→ / ⇧⌘N |
+| Transport | The docked bar, the lock screen — and on an iPad, the same **Playback** menu and shortcuts | The bar, the **Playback** menu, ⌘P / ⌥⌘← / ⌥⌘→ / ⇧⌘N |
 | Settings | A tab; panes that push | Its own window, the same panes as a source list, ⌘, |
 | Refresh | Pull down | A Refresh button in the toolbar, ⌘R |
 | Search field | Pinned to the bottom, in thumb reach | Pinned to the top, where a Mac keeps one |
@@ -573,7 +625,7 @@ BetterYouTube/
     Info-macOS.plist             macOS
     BetterYouTube-iOS.entitlements     CloudKit and iOS push notifications
     BetterYouTube-macOS.entitlements   Mac sandbox, CloudKit and push notifications
-    Theme.swift                  Design tokens + shared artwork/avatar/section components
+    Theme.swift                  Design tokens + shared artwork and avatar components
     Models.swift                 Domain models and YouTube API decoding
     YouTubeAPIService.swift      API client (actor) with OAuth + API key support
     GoogleAuthService.swift      OAuth 2.0 PKCE sign-in, keychain token storage
@@ -589,6 +641,10 @@ BetterYouTube/
     DownloadConfigLink.swift     betteryoutube:// setup links, and their QR codes
     YouTubeWebSession.swift      Optional youtube.com web session + home-feed reader
     Utilities.swift              Duration, count and relative-date formatters, Takeout CSV reader
+    YouTubeLink.swift            Reads every shape of YouTube link, and the app's own scheme
+    RichText.swift               Tappable timestamps and links in descriptions and comments
+    Localizable.xcstrings        The app's strings, in English and French
+    InfoPlist.xcstrings          Info.plist strings, in English and French
     Keychain.swift               The two credentials this app keeps, and where they are kept
     ViewModels/                  One @MainActor view model per screen
     Views/                       SwiftUI screens
@@ -607,8 +663,10 @@ compiling.
 
 A third job runs the unit tests (`BetterYouTubeTests`) on macOS. They cover the pure parts, which
 are the ones worth pinning down because nothing on screen tells you when they are wrong: the ISO
-8601 duration formatter, the Google Takeout CSV reader, the abbreviated counts, and what a
-`betteryoutube://` setup link accepts and refuses. macOS rather than the simulator because it needs
+8601 duration formatter, the Google Takeout CSV reader, the abbreviated counts in English and
+French, what a `betteryoutube://` setup link accepts and refuses, which YouTube links open what,
+which text in a description is a timestamp, and the new-upload ledger that decides what is worth a
+notification — alongside downloads, playback positions, CarPlay and iCloud sync. macOS rather than the simulator because it needs
 no device booted; the code under test has no platform in it either way.
 
 ## Notes
