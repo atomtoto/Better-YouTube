@@ -104,6 +104,6 @@ private struct QuotaBar: View {
         .frame(height: 10)
         .accessibilityElement()
         .accessibilityLabel("Quota spent")
-        .accessibilityValue("\(Int((fraction * 100).rounded())) percent")
+        .accessibilityValue(Text(fraction, format: .percent.precision(.fractionLength(0))))
     }
 }

@@ -8,8 +8,8 @@ enum WatchBridgeError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .phoneUnavailable: "L’iPhone doit être joignable pour préparer ou transférer ce téléchargement."
-        case .badReply: "L’iPhone n’a pas envoyé de réponse exploitable."
+        case .phoneUnavailable: String(localized: "The iPhone must be reachable to prepare or transfer this download.")
+        case .badReply: String(localized: "The iPhone didn’t send a usable reply.")
         case .phone(let message): message
         }
     }

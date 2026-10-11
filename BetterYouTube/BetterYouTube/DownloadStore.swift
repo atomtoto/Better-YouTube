@@ -376,7 +376,7 @@ final class DownloadStore: ObservableObject {
             switch records[index].state {
             case .ready:
                 if !manager.fileExists(atPath: paths.mediaURL(for: id).path) {
-                    records[index].state = .failed("The file is no longer on this device.")
+                    records[index].state = .failed(String(localized: "The file is no longer on this device."))
                     records[index].receivedBytes = 0
                     records[index].completedAt = nil
                     changed = true

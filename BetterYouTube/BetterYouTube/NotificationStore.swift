@@ -37,9 +37,9 @@ enum NotificationMode: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .off: return "Off"
-        case .all: return "All Subscriptions"
-        case .selected: return "Selected Channels"
+        case .off: return String(localized: "Off")
+        case .all: return String(localized: "All Subscriptions")
+        case .selected: return String(localized: "Selected Channels")
         }
     }
 }
@@ -250,7 +250,7 @@ final class NotificationStore: ObservableObject {
     /// the channels that appear here are the ones you asked to hear about — with the one gap
     /// that a channel which hasn't uploaded lately isn't in the list to be found.
     func importFromYouTube(enableNotifications: Bool = true) async -> YouTubeImport {
-        guard !isImportingYouTube else { return YouTubeImport(failure: "An import is already in progress.") }
+        guard !isImportingYouTube else { return YouTubeImport(failure: String(localized: "An import is already in progress.")) }
         isImportingYouTube = true
         lastYouTubeAttempt = Date()
         defer { isImportingYouTube = false }

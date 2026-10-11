@@ -125,27 +125,25 @@ struct DownloadsSection: View {
     private var footer: String {
         let backendDescription: String = switch settings.backend {
         case .local:
-            "On This Device downloads directly from YouTube and combines audio and video here, without a download server. Keep the app open while finding the video and finishing it. Media transfers can continue in the background. Some live or restricted videos may be unavailable."
+            String(localized: "On This Device downloads directly from YouTube and combines audio and video here, without a download server. Keep the app open while finding the video and finishing it. Media transfers can continue in the background. Some live or restricted videos may be unavailable.")
         case .server:
-            "My Server uses your saved resolver address and optional token. Addresses containing {id}, {videoId} or {url} are fetched directly; other addresses receive a JSON request. Share Setup shares only the server configuration."
+            String(localized: "My Server uses your saved resolver address and optional token. Addresses containing {id}, {videoId} or {url} are fetched directly; other addresses receive a JSON request. Share Setup shares only the server configuration.")
         }
 
-        return """
-        \(backendDescription)
-
-        Quality is a maximum; the best compatible format below it is selected. \(Platform.downloadsLocationDescription) Downloaded videos play offline throughout the app.
-        """
+        let quality = String(localized: "Quality is a maximum; the best compatible format below it is selected.")
+        let offline = String(localized: "Downloaded videos play offline throughout the app.")
+        return "\(backendDescription)\n\n\(quality) \(Platform.downloadsLocationDescription) \(offline)"
     }
 
     private var status: String {
         guard settings.isConfigured else {
             return settings.trimmedEndpoint.isEmpty
-                ? "Downloading is off"
-                : "Downloading is off — that isn't an http or https address"
+                ? String(localized: "Downloading is off")
+                : String(localized: "Downloading is off — that isn't an http or https address")
         }
         return settings.usesTemplate
-            ? "Saved — the address is filled in and fetched directly"
-            : "Saved — the address is sent a POST and read for a media link"
+            ? String(localized: "Saved — the address is filled in and fetched directly")
+            : String(localized: "Saved — the address is sent a POST and read for a media link")
     }
 
     private var hasChanges: Bool {

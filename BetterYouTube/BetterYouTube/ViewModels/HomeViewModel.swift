@@ -11,9 +11,9 @@ final class HomeViewModel: ObservableObject {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .youTube: return "YouTube"
-            case .forYou: return "For You"
-            case .subscriptions: return "Subscriptions"
+            case .youTube: return String(localized: "YouTube")
+            case .forYou: return String(localized: "For You")
+            case .subscriptions: return String(localized: "Subscriptions")
             }
         }
     }
@@ -183,7 +183,7 @@ final class HomeViewModel: ObservableObject {
             throw CancellationError()
         } catch {
             guard session.isSignedIn, session.feedGeneration == generation else { throw CancellationError() }
-            throw YouTubeFeedIssue.loadFailed("Hidden from this feed, but could not send feedback to YouTube: \(error.localizedDescription)")
+            throw YouTubeFeedIssue.loadFailed(String(localized: "Hidden from this feed, but could not send feedback to YouTube: \(error.localizedDescription)"))
         }
     }
 

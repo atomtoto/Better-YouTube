@@ -51,7 +51,7 @@ struct AccountSection: View {
             AvatarView(url: account?.thumbnailURL, size: 52)
                 .artworkShadow()
             VStack(alignment: .leading, spacing: 3) {
-                Text(account?.title ?? "Signed in with Google")
+                Text(account?.title ?? String(localized: "Signed in with Google"))
                     .font(.headline)
                     .lineLimit(1)
                 Text(detail)
@@ -150,13 +150,13 @@ struct AccountSection: View {
     private var detail: String {
         var parts: [String] = []
         if let subscribers = account?.subscriberCount {
-            parts.append("\(CountFormatter.abbreviated(subscribers)) subscribers")
+            parts.append(CountFormatter.subscribers(subscribers))
         }
         if let videos = account?.videoCount {
-            parts.append("\(CountFormatter.abbreviated(videos)) videos")
+            parts.append(CountFormatter.videos(videos))
         }
         return parts.isEmpty
-            ? "Subscriptions, playlists and likes are available in Library."
+            ? String(localized: "Subscriptions, playlists and likes are available in Library.")
             : parts.joined(separator: " · ")
     }
 

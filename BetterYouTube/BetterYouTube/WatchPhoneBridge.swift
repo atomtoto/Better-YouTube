@@ -151,7 +151,7 @@ final class WatchPhoneBridge: NSObject {
     private func refreshAccountLibrary() async -> String? {
         guard GoogleAuthService.shared.isSignedIn else {
             accountLibrary = .empty
-            return "Connecte le compte Google dans l’app iPhone pour synchroniser cette bibliothèque."
+            return String(localized: "Connect the Google account in the iPhone app to sync this library.")
         }
         if let lastAccountRefresh, Date().timeIntervalSince(lastAccountRefresh) < 15 * 60,
            FileManager.default.fileExists(atPath: accountLibraryURL.path) {
@@ -175,14 +175,14 @@ final class WatchPhoneBridge: NSObject {
                 likedVideos: likedVideos.map(WatchVideo.init)
             )
         } catch {
-            return "Synchronisation du compte impossible : \(error.localizedDescription)"
+            return String(localized: "Couldn’t sync the account: \(error.localizedDescription)")
         }
-        guard GoogleAuthService.shared.isSignedIn else { return "Le compte Google a été déconnecté." }
+        guard GoogleAuthService.shared.isSignedIn else { return String(localized: "The Google account was signed out.") }
         accountLibrary = fetched
         lastAccountRefresh = .now
         guard let data = try? JSONEncoder().encode(fetched),
               (try? data.write(to: accountLibraryURL, options: .atomic)) != nil else {
-            return "Impossible d’enregistrer la bibliothèque pour la montre."
+            return String(localized: "Couldn’t save the library for the watch.")
         }
         session.transferFile(accountLibraryURL, metadata: ["kind": "accountLibrary"])
         publishSoon()
@@ -191,7 +191,7 @@ final class WatchPhoneBridge: NSObject {
 
     private func handle(_ message: [String: Any]) async -> [String: Any] {
         guard let command = message[WatchMessage.command] as? String else {
-            return [WatchMessage.error: "Commande inconnue."]
+            return [WatchMessage.error: String(localized: "Unknown command.")]
         }
         let player = PlayerManager.shared
         var error: String?
@@ -203,7 +203,7 @@ final class WatchPhoneBridge: NSObject {
             guard let id = message[WatchMessage.videoID] as? String,
                   !id.isEmpty, id.count <= 128,
                   id.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_" || $0 == "-") }) else {
-                error = "Identifiant de liste invalide."
+                error = String(localized: "Invalid list ID.")
                 break
             }
             do {
@@ -215,26 +215,26 @@ final class WatchPhoneBridge: NSObject {
             } catch let loadError { error = loadError.localizedDescription }
         case "toggle":
             if player.currentVideo != nil { player.togglePlayPause() }
-            else { error = "Aucune lecture en cours sur l’iPhone." }
+            else { error = String(localized: "Nothing is playing on the iPhone.") }
         case "next":
             if !player.upNext.isEmpty { player.playNext() }
-            else { error = "La file d’attente est vide." }
+            else { error = String(localized: "The queue is empty.") }
         case "back15":
             if player.currentVideo != nil { player.seek(to: player.progress.currentTime - 15) }
-            else { error = "Aucune lecture en cours sur l’iPhone." }
+            else { error = String(localized: "Nothing is playing on the iPhone.") }
         case "forward15":
             if player.currentVideo != nil { player.seek(to: player.progress.currentTime + 15) }
-            else { error = "Aucune lecture en cours sur l’iPhone." }
+            else { error = String(localized: "Nothing is playing on the iPhone.") }
         case "play":
             guard let id = message[WatchMessage.videoID] as? String,
                   let video = video(withID: id) else {
-                error = "Cette vidéo n’est plus disponible dans la bibliothèque de l’iPhone."
+                error = String(localized: "This video is no longer in the iPhone’s library.")
                 break
             }
             // WebKit needs an on-screen surface to begin a new embed. An existing native
             // playback can still be controlled while the iPhone is locked.
             if UIApplication.shared.applicationState != .active {
-                error = "Ouvre Better YouTube sur l’iPhone pour démarrer cette vidéo."
+                error = String(localized: "Open Better YouTube on the iPhone to start this video.")
             } else {
                 player.play(video)
             }
@@ -243,7 +243,7 @@ final class WatchPhoneBridge: NSObject {
                   let video = video(withID: id),
                   let file = DownloadStore.shared.readyMediaURL(for: id),
                   let videoData = try? JSONEncoder().encode(WatchVideo(video)) else {
-                error = "Téléchargement introuvable sur l’iPhone."
+                error = String(localized: "Download not found on the iPhone.")
                 break
             }
             session.transferFile(file, metadata: ["video": videoData])
@@ -251,7 +251,7 @@ final class WatchPhoneBridge: NSObject {
             guard let id = message[WatchMessage.videoID] as? String,
                   id.count == 11,
                   id.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_" || $0 == "-") }) else {
-                error = "Identifiant vidéo invalide."
+                error = String(localized: "Invalid video ID.")
                 break
             }
             do {
@@ -262,7 +262,7 @@ final class WatchPhoneBridge: NSObject {
                 error = resolutionError.localizedDescription
             }
         default:
-            error = "Commande inconnue."
+            error = String(localized: "Unknown command.")
         }
         if let error { return [WatchMessage.error: error] }
         publishSoon()

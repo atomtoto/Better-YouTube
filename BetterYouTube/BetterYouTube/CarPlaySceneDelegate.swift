@@ -26,10 +26,10 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         sessionConfiguration = CPSessionConfiguration(delegate: self)
         PlayerManager.shared.setCarPlayConnected(true, supportsVideo: supportsVideo)
         lists = [
-            makeList("Favorites", symbol: "heart.fill"),
-            makeList("Watch Later", symbol: "clock.fill"),
-            makeList("History", symbol: "clock.arrow.circlepath"),
-            makeList("Downloads", symbol: "arrow.down.circle.fill")
+            makeList(String(localized: "Favorites"), symbol: "heart.fill"),
+            makeList(String(localized: "Watch Later"), symbol: "clock.fill"),
+            makeList(String(localized: "History"), symbol: "clock.arrow.circlepath"),
+            makeList(String(localized: "Downloads"), symbol: "arrow.down.circle.fill")
         ]
         updateLists()
         interfaceController.setRootTemplate(CPTabBarTemplate(templates: lists), animated: false,
@@ -70,9 +70,9 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         let template = CPListTemplate(title: title, sections: [])
         template.tabTitle = title
         template.tabImage = UIImage(systemName: symbol)
-        template.emptyViewTitleVariants = ["No items"]
-        template.emptyViewSubtitleVariants = ["Add items in Better YouTube on your iPhone."]
-        template.trailingNavigationBarButtons = [CPBarButton(title: "Now Playing") { [weak self] _ in
+        template.emptyViewTitleVariants = [String(localized: "No Items")]
+        template.emptyViewSubtitleVariants = [String(localized: "Add items in Better YouTube on your iPhone.")]
+        template.trailingNavigationBarButtons = [CPBarButton(title: String(localized: "Now Playing")) { [weak self] _ in
             self?.showNowPlaying()
         }]
         return template
@@ -116,9 +116,9 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             template.trailingNavigationBarButtons.first?.isEnabled = PlayerManager.shared.currentVideo != nil
         }
         if lists.count > 1 {
-            lists[1].emptyViewTitleVariants = [watchLater.isLoading ? "Loading…" : "No items"]
+            lists[1].emptyViewTitleVariants = [watchLater.isLoading ? String(localized: "Loading…") : String(localized: "No Items")]
             lists[1].emptyViewSubtitleVariants = [watchLater.errorMessage
-                ?? "Add items in Better YouTube on your iPhone."]
+                ?? String(localized: "Add items in Better YouTube on your iPhone.")]
         }
         queueTemplate?.updateSections(sections(for: PlayerManager.shared.upNext))
         CPNowPlayingTemplate.shared.isUpNextButtonEnabled = !PlayerManager.shared.upNext.isEmpty
@@ -168,8 +168,8 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     }
 
     func nowPlayingTemplateUpNextButtonTapped(_ nowPlayingTemplate: CPNowPlayingTemplate) {
-        let template = CPListTemplate(title: "Up Next", sections: sections(for: PlayerManager.shared.upNext))
-        template.emptyViewTitleVariants = ["The queue is empty"]
+        let template = CPListTemplate(title: String(localized: "Up Next"), sections: sections(for: PlayerManager.shared.upNext))
+        template.emptyViewTitleVariants = [String(localized: "The Queue Is Empty")]
         queueTemplate = template
         interfaceController?.pushTemplate(template, animated: true, completion: nil)
     }
@@ -179,10 +179,10 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         let message: String
         switch issue {
         case .loadFailed(let reason): message = reason
-        case .playerError: message = "This item cannot be played."
-        case .noResponse: message = "The player did not respond."
+        case .playerError: message = String(localized: "This item cannot be played.")
+        case .noResponse: message = String(localized: "The player did not respond.")
         }
-        let dismiss = CPAlertAction(title: "OK", style: .default) { [weak self] _ in
+        let dismiss = CPAlertAction(title: String(localized: "OK"), style: .default) { [weak self] _ in
             self?.interfaceController?.dismissTemplate(animated: true, completion: nil)
         }
         interfaceController.presentTemplate(CPAlertTemplate(titleVariants: [message], actions: [dismiss]),

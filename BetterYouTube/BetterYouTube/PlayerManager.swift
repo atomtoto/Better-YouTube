@@ -152,7 +152,7 @@ final class PlayerManager: ObservableObject {
     func startPictureInPicture() {
         if isLocal {
             expand()
-            pictureInPictureError = "Use the Picture in Picture button in the video's native playback controls."
+            pictureInPictureError = String(localized: "Use the Picture in Picture button in the video's native playback controls.")
             return
         }
         requestPictureInPicture(reportsFailure: true)
@@ -180,7 +180,7 @@ final class PlayerManager: ObservableObject {
     private func requestPictureInPicture(reportsFailure: Bool) {
         guard let frame = pictureInPictureFrame else {
             if reportsFailure {
-                pictureInPictureError = "Wait for the YouTube video to load before starting Picture in Picture."
+                pictureInPictureError = String(localized: "Wait for the YouTube video to load before starting Picture in Picture.")
             }
             return
         }
@@ -195,9 +195,13 @@ final class PlayerManager: ObservableObject {
             await video.requestPictureInPicture();
         } else { throw new Error('YouTube does not allow Picture in Picture for this video.'); }
         """, arguments: [:], in: frame, in: .page) { [weak self] result in
-            if reportsFailure, case .failure(let error) = result {
-                self?.pictureInPictureError = error.localizedDescription
-            }
+            guard reportsFailure, case .failure(let error) = result else { return }
+            // WebKit reports a thrown script error as "A JavaScript exception occurred"; the
+            // script's own message is what says which of its two refusals this was.
+            let message = (error as NSError).userInfo["WKJavaScriptExceptionMessage"] as? String ?? ""
+            self?.pictureInPictureError = message.contains("not ready")
+                ? String(localized: "Wait for the YouTube video to load before starting Picture in Picture.")
+                : String(localized: "YouTube doesn't allow Picture in Picture for this video.")
         }
     }
 

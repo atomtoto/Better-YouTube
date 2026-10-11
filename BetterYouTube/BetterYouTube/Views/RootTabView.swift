@@ -292,7 +292,7 @@ private struct OnboardingView: View {
         }
     }
 
-    private var stepTitle: String {
+    private var stepTitle: LocalizedStringKey {
         switch step {
         case .welcome: "Welcome to Better YouTube"
         case .cloud: "Prepare Google Cloud"
@@ -302,7 +302,7 @@ private struct OnboardingView: View {
         }
     }
 
-    private var stepSubtitle: String {
+    private var stepSubtitle: LocalizedStringKey {
         switch step {
         case .welcome: "A calmer way to browse. Set up access in a few short steps."
         case .cloud: "Enable the API and create an OAuth client in your Google Cloud project."
@@ -333,7 +333,7 @@ private struct OnboardingView: View {
         }
     }
 
-    private func feature(_ number: String, _ title: String, _ detail: String) -> some View {
+    private func feature(_ number: String, _ title: LocalizedStringKey, _ detail: LocalizedStringKey) -> some View {
         card {
             HStack(alignment: .top, spacing: 14) {
                 Text(number)
@@ -382,7 +382,7 @@ private struct OnboardingView: View {
         Bundle.main.bundleIdentifier ?? "com.atomtoto.BetterYouTube"
     }
 
-    private func setupLink(_ number: String, _ title: String, _ detail: String, _ url: URL) -> some View {
+    private func setupLink(_ number: String, _ title: LocalizedStringKey, _ detail: LocalizedStringKey, _ url: URL) -> some View {
         Link(destination: url) {
             card {
                 HStack(alignment: .top, spacing: 14) {
@@ -547,7 +547,7 @@ private struct OnboardingView: View {
         .background(.regularMaterial)
     }
 
-    private func primaryButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+    private func primaryButton(_ title: LocalizedStringKey, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
                 Text(title).font(.headline)
@@ -560,7 +560,7 @@ private struct OnboardingView: View {
         .controlSize(.large)
     }
 
-    private func secondaryButton(_ title: String, action: @escaping () -> Void) -> some View {
+    private func secondaryButton(_ title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(.headline)

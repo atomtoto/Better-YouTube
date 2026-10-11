@@ -25,7 +25,7 @@ actor LocalDownloadResolver {
             )
         }
         guard let url = Self.progressivePlaybackURL(candidates, maxHeight: maxHeight) else {
-            throw DownloadError.service("No native background stream is available for this video.")
+            throw DownloadError.service(String(localized: "No native background stream is available for this video."))
         }
         return url
     }
@@ -47,7 +47,7 @@ actor LocalDownloadResolver {
                 && $0.audioCodec == .mp4a && $0.fileExtension == .m4a
                 && $0.url.scheme == "https"
         }).max(by: { ($0.bitrate ?? 0) < ($1.bitrate ?? 0) }) else {
-            throw DownloadError.service("No compatible audio track is available for this video.")
+            throw DownloadError.service(String(localized: "No compatible audio track is available for this video."))
         }
         return audio.url
     }
@@ -79,7 +79,7 @@ actor LocalDownloadResolver {
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            throw DownloadError.service("On-device download couldn't resolve this video. \(error.localizedDescription) You can retry, update the app, or choose your server in Settings → Downloads.")
+            throw DownloadError.service(String(localized: "On-device download couldn't resolve this video. \(error.localizedDescription) You can retry, update the app, or choose your server in Settings → Downloads."))
         }
     }
 
@@ -99,7 +99,7 @@ actor LocalDownloadResolver {
             return $0.bitrate > $1.bitrate
         }
         guard let video = videos.first else {
-            throw DownloadError.service("No compatible video with audio is available at this quality. Try a higher quality or your server. Live and restricted videos may not be downloadable on this device.")
+            throw DownloadError.service(String(localized: "No compatible video with audio is available at this quality. Try a higher quality or your server. Live and restricted videos may not be downloadable on this device."))
         }
         return ResolvedMedia(url: video.url, byteCount: nil, audioURL: video.hasAudio ? nil : audio?.url)
     }
@@ -131,7 +131,7 @@ actor LocalDownloadResolver {
         guard response.statusCode == 206 else { throw DownloadError.http(response.statusCode) }
         guard let range = MediaByteRange(header: response.value(forHTTPHeaderField: "Content-Range")),
               range.start == 0, range.end == 0 else {
-            throw DownloadError.service("YouTube didn't provide the media length needed to download this video.")
+            throw DownloadError.service(String(localized: "YouTube didn't provide the media length needed to download this video."))
         }
         return range.total
     }
@@ -149,7 +149,7 @@ actor LocalDownloadResolver {
         }
         try Task.checkCancellation()
         guard allowed else {
-            throw DownloadError.service("Connect to Wi-Fi to download, or turn off Wi-Fi Only in Settings → Downloads.")
+            throw DownloadError.service(String(localized: "Connect to Wi-Fi to download, or turn off Wi-Fi Only in Settings → Downloads."))
         }
     }
 }
@@ -170,12 +170,12 @@ enum DownloadMediaAssembler {
         let audioAsset = AVURLAsset(url: audio)
         guard let videoTrack = try await videoAsset.loadTracks(withMediaType: .video).first,
               let audioTrack = try await audioAsset.loadTracks(withMediaType: .audio).first else {
-            throw DownloadError.service("The downloaded files are missing a video or audio track.")
+            throw DownloadError.service(String(localized: "The downloaded files are missing a video or audio track."))
         }
         let composition = AVMutableComposition()
         guard let picture = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
               let sound = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
-            throw DownloadError.service("Couldn't prepare the downloaded video.")
+            throw DownloadError.service(String(localized: "Couldn't prepare the downloaded video."))
         }
         let videoRange = try await videoTrack.load(.timeRange)
         let audioRange = try await audioTrack.load(.timeRange)
@@ -185,7 +185,7 @@ enum DownloadMediaAssembler {
         picture.preferredTransform = try await videoTrack.load(.preferredTransform)
         try sound.insertTimeRange(CMTimeRange(start: audioRange.start, duration: duration), of: audioTrack, at: .zero)
         guard let export = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough) else {
-            throw DownloadError.service("Couldn't assemble the downloaded video.")
+            throw DownloadError.service(String(localized: "Couldn't assemble the downloaded video."))
         }
         try Task.checkCancellation()
         try await withTaskCancellationHandler {
@@ -202,7 +202,7 @@ enum DownloadMediaAssembler {
         guard try await asset.load(.isPlayable),
               !(try await asset.loadTracks(withMediaType: .video)).isEmpty,
               !(try await asset.loadTracks(withMediaType: .audio)).isEmpty else {
-            throw DownloadError.service("The download isn't a playable video with audio.")
+            throw DownloadError.service(String(localized: "The download isn't a playable video with audio."))
         }
     }
 }

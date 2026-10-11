@@ -35,7 +35,7 @@ struct AboutSection: View {
 
     private static let licenses: String = {
         guard let url = Bundle.main.url(forResource: "ThirdPartyNotices", withExtension: "txt"),
-              let text = try? String(contentsOf: url, encoding: .utf8) else { return "License notices are unavailable." }
+              let text = try? String(contentsOf: url, encoding: .utf8) else { return String(localized: "License notices are unavailable.") }
         return text
     }()
 }

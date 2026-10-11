@@ -57,10 +57,9 @@ struct PlaylistPickerView: View {
                     }
                 }
 
-                if let savedID, !isSingleVideo {
-                    Text(savedCount == 1 ? "1 video added." : "\(savedCount) videos added.")
+                if savedID != nil, !isSingleVideo {
+                    Text("\(savedCount) videos added.")
                         .foregroundStyle(.secondary)
-                        .accessibilityLabel("Saved to \(savedID)")
                 }
             }
             .navigationTitle("Add to Playlist")
@@ -181,7 +180,7 @@ struct PlaylistPickerView: View {
     @ViewBuilder
     private var bulkImportPlaylistSections: some View {
         if watchLater.usesYouTubeWatchLater {
-            destinationButton(id: "WL", title: "Watch Later", systemImage: "clock") {
+            destinationButton(id: "WL", title: String(localized: "Watch Later"), systemImage: "clock") {
                 await saveBulkToWatchLater()
             }
         }
@@ -268,7 +267,7 @@ struct PlaylistPickerView: View {
                 errorMessage = err
             } else {
                 withAnimation {
-                    statusMessage = "Removed from Watch Later."
+                    statusMessage = String(localized: "Removed from Watch Later.")
                 }
             }
         } else {
@@ -277,7 +276,7 @@ struct PlaylistPickerView: View {
                 errorMessage = err
             } else {
                 withAnimation {
-                    statusMessage = "Added to Watch Later."
+                    statusMessage = String(localized: "Added to Watch Later.")
                 }
             }
         }
@@ -310,7 +309,7 @@ struct PlaylistPickerView: View {
                 cachedItemIDs[playlist.id] = []
                 withAnimation {
                     containedPlaylistIDs.remove(playlist.id)
-                    statusMessage = "Removed from \(playlist.title)."
+                    statusMessage = String(localized: "Removed from \(playlist.title).")
                 }
             } else {
                 let newItemId = try await YouTubeAPIService.shared.addToPlaylist(
@@ -320,7 +319,7 @@ struct PlaylistPickerView: View {
                 cachedItemIDs[playlist.id] = [newItemId]
                 withAnimation {
                     containedPlaylistIDs.insert(playlist.id)
-                    statusMessage = "Added to \(playlist.title)."
+                    statusMessage = String(localized: "Added to \(playlist.title).")
                 }
             }
         } catch {
@@ -348,7 +347,7 @@ struct PlaylistPickerView: View {
         } catch {
             errorMessage = savedCount == 0
                 ? error.localizedDescription
-                : "Added \(savedCount) videos, then stopped: \(error.localizedDescription)"
+                : String(localized: "Added \(savedCount) videos, then stopped: \(error.localizedDescription)")
         }
     }
 
@@ -363,12 +362,12 @@ struct PlaylistPickerView: View {
             if let failure = watchLater.errorMessage {
                 errorMessage = savedCount == 0
                     ? failure
-                    : "Added \(savedCount) videos, then stopped: \(failure)"
+                    : String(localized: "Added \(savedCount) videos, then stopped: \(failure)")
                 return
             }
             savedCount += 1
         }
-        savedID = "Watch Later"
+        savedID = "WL"
     }
 
     private func destinationButton(
@@ -382,7 +381,7 @@ struct PlaylistPickerView: View {
                 Label(title, systemImage: systemImage)
                 Spacer()
                 if mutatingID == id { ProgressView() }
-                if savedID == id || (id == "WL" && savedID == "Watch Later") {
+                if savedID == id {
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                 }
             }

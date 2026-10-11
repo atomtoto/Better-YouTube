@@ -1,0 +1,5464 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ of %@" : {
+      "comment" : "Download progress: 45% of 120 MB",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ sur %2$@"
+          }
+        }
+      }
+    },
+    "%@ spent today" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ unités utilisées aujourd’hui"
+          }
+        }
+      }
+    },
+    "%@ subscriber" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ abonné"
+          }
+        }
+      }
+    },
+    "%@ subscribers" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ abonnés"
+          }
+        }
+      }
+    },
+    "%@ video" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ vidéo"
+          }
+        }
+      }
+    },
+    "%@ videos" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ vidéos"
+          }
+        }
+      }
+    },
+    "%@ view" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ vue"
+          }
+        }
+      }
+    },
+    "%@ views" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ vues"
+          }
+        }
+      }
+    },
+    "%lld" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        }
+      }
+    },
+    "%lld GB" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Go"
+          }
+        }
+      }
+    },
+    "%lld added to the inbox" : {
+      "localizations" : {
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ajoutée à la boîte de réception"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ajoutées à la boîte de réception"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld channels with the bell on" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld channel with the bell on"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld channels with the bell on"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld chaîne avec la cloche activée"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld chaînes avec la cloche activée"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld no longer on YouTube" : {
+      "localizations" : {
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld n’est plus sur YouTube"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ne sont plus sur YouTube"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld older ones skipped" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld older one skipped"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld older ones skipped"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld plus ancienne ignorée"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld plus anciennes ignorées"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld replies" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld reply"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld replies"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld réponse"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld réponses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld videos" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld video"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld videos"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld vidéo"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld vidéos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld videos added." : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld video added."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld videos added."
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld vidéo ajoutée."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld vidéos ajoutées."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld videos from Google Takeout" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld video from Google Takeout"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld videos from Google Takeout"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld vidéo de Google Takeout"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld vidéos de Google Takeout"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "**Running it yourself?** The `resolver` folder in this project is a `docker compose up`, then paste the address into Settings." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "**Tu l’héberges toi-même ?** Le dossier `resolver` de ce projet se lance avec `docker compose up`, puis colle l’adresse dans les Réglages."
+          }
+        }
+      }
+    },
+    "**Somebody sent you a link or a QR code?** Open it, or scan it with the camera. That is the whole setup." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "**On t’a envoyé un lien ou un code QR ?** Ouvre-le, ou scanne-le avec l’appareil photo. C’est toute la configuration."
+          }
+        }
+      }
+    },
+    "4–20 Minutes" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4 à 20 minutes"
+          }
+        }
+      }
+    },
+    "A Google sign-in is already in progress." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une connexion Google est déjà en cours."
+          }
+        }
+      }
+    },
+    "A calmer way to browse. Set up access in a few short steps." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une façon plus calme de naviguer. Configure l’accès en quelques étapes."
+          }
+        }
+      }
+    },
+    "A separate, optional youtube.com connection brings in your personal feed and Watch Later." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une connexion youtube.com distincte et facultative apporte ton flux personnel et « À regarder plus tard »."
+          }
+        }
+      }
+    },
+    "API & Quota" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API et quota"
+          }
+        }
+      }
+    },
+    "API Quota" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quota de l’API"
+          }
+        }
+      }
+    },
+    "API key" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clé API"
+          }
+        }
+      }
+    },
+    "About" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À propos"
+          }
+        }
+      }
+    },
+    "Account" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compte"
+          }
+        }
+      }
+    },
+    "Add YouTube Home" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter l’accueil YouTube"
+          }
+        }
+      }
+    },
+    "Add a YouTube Data API key in Settings, or sign in with Google, to load content." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoute une clé YouTube Data API dans les Réglages, ou connecte-toi avec Google, pour charger du contenu."
+          }
+        }
+      }
+    },
+    "Add a comment" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter un commentaire"
+          }
+        }
+      }
+    },
+    "Add a test user (if Testing)" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter un utilisateur test (en mode Test)"
+          }
+        }
+      }
+    },
+    "Add items in Better YouTube on your iPhone." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoute des éléments dans Better YouTube sur ton iPhone."
+          }
+        }
+      }
+    },
+    "Add to Favorites" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter aux favoris"
+          }
+        }
+      }
+    },
+    "Add to Playlist" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter à une playlist"
+          }
+        }
+      }
+    },
+    "Add to Playlist…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter à une playlist…"
+          }
+        }
+      }
+    },
+    "Add to Watch Later" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter à « À regarder plus tard »"
+          }
+        }
+      }
+    },
+    "Add your Google OAuth client ID in Settings before signing in." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoute ton identifiant client OAuth Google dans les Réglages avant de te connecter."
+          }
+        }
+      }
+    },
+    "Add yourself as a test user" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoute-toi comme utilisateur test"
+          }
+        }
+      }
+    },
+    "Added %lld videos, then stopped: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added %#@videos@, then stopped: %2$@"
+          },
+          "substitutions" : {
+            "videos" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg video"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg videos"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@videos@, puis arrêt : %2$@"
+          },
+          "substitutions" : {
+            "videos" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg vidéo ajoutée"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg vidéos ajoutées"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Added to %@." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoutée à %@."
+          }
+        }
+      }
+    },
+    "Added to Watch Later." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoutée à « À regarder plus tard »."
+          }
+        }
+      }
+    },
+    "Advanced" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avancé"
+          }
+        }
+      }
+    },
+    "All Subscriptions" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tous les abonnements"
+          }
+        }
+      }
+    },
+    "Allow notifications in %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autoriser les notifications dans %@"
+          }
+        }
+      }
+    },
+    "An import is already in progress." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une importation est déjà en cours."
+          }
+        }
+      }
+    },
+    "An optional way to browse public videos without signing in." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une façon facultative de parcourir les vidéos publiques sans te connecter."
+          }
+        }
+      }
+    },
+    "An unofficial client built on the public YouTube Data API v3. Not affiliated with YouTube or Google." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un client non officiel basé sur l’API publique YouTube Data v3. Sans lien avec YouTube ni Google."
+          }
+        }
+      }
+    },
+    "Any Length" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toute durée"
+          }
+        }
+      }
+    },
+    "Any Time" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "N’importe quand"
+          }
+        }
+      }
+    },
+    "Anyone who gets this can use your resolver. Send it the way you'd send a password." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiconque reçoit ceci peut utiliser ton résolveur. Envoie-le comme tu enverrais un mot de passe."
+          }
+        }
+      }
+    },
+    "Automatically Import YouTube Notifications" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importer automatiquement les notifications YouTube"
+          }
+        }
+      }
+    },
+    "Autoplay" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture automatique"
+          }
+        }
+      }
+    },
+    "Back" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retour"
+          }
+        }
+      }
+    },
+    "Back to browsing" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revenir à la navigation"
+          }
+        }
+      }
+    },
+    "Bearer token (optional)" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeton Bearer (facultatif)"
+          }
+        }
+      }
+    },
+    "Better YouTube checks the channels you get notifications for and notifies you locally — the Data API offers no push channel for personal accounts, so delivery follows a check the app runs every couple of hours while it is open, plus the moment you bring it to the front. Turn the bell on from a channel page to pick individual channels." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Better YouTube vérifie les chaînes dont tu reçois les notifications et te prévient localement — l’API Data n’offre aucun canal push pour les comptes personnels, donc la livraison suit une vérification que l’app lance toutes les deux heures environ tant qu’elle est ouverte, ainsi qu’au moment où tu la ramènes au premier plan. Active la cloche depuis la page d’une chaîne pour choisir des chaînes une par une."
+          }
+        }
+      }
+    },
+    "Better YouTube checks the channels you get notifications for and notifies you locally — the Data API offers no push channel for personal accounts, so delivery follows iOS's background-refresh schedule and the moment you open the app. Turn the bell on from a channel page to pick individual channels." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Better YouTube vérifie les chaînes dont tu reçois les notifications et te prévient localement — l’API Data n’offre aucun canal push pour les comptes personnels, donc la livraison suit le calendrier d’actualisation en arrière-plan d’iOS et le moment où tu ouvres l’app. Active la cloche depuis la page d’une chaîne pour choisir des chaînes une par une."
+          }
+        }
+      }
+    },
+    "Bring in your YouTube Home" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoute ton accueil YouTube"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler"
+          }
+        }
+      }
+    },
+    "Cancel Download" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler le téléchargement"
+          }
+        }
+      }
+    },
+    "Changes are saved locally and waiting for iCloud." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les modifications sont enregistrées localement et attendent iCloud."
+          }
+        }
+      }
+    },
+    "Channel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaîne"
+          }
+        }
+      }
+    },
+    "Channels" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaînes"
+          }
+        }
+      }
+    },
+    "Channels with the bell on" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaînes avec la cloche activée"
+          }
+        }
+      }
+    },
+    "Channels you follow on YouTube appear here." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les chaînes que tu suis sur YouTube apparaissent ici."
+          }
+        }
+      }
+    },
+    "Check for New Videos Now" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher de nouvelles vidéos maintenant"
+          }
+        }
+      }
+    },
+    "Choose On This Device in Settings → Downloads to download directly from YouTube. You can also configure your own server below." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis « Sur cet appareil » dans Réglages → Téléchargements pour télécharger directement depuis YouTube. Tu peux aussi configurer ton propre serveur ci-dessous."
+          }
+        }
+      }
+    },
+    "Choose On This Device in Settings → Downloads, or configure your download server." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis « Sur cet appareil » dans Réglages → Téléchargements, ou configure ton serveur de téléchargement."
+          }
+        }
+      }
+    },
+    "Choose an iOS client (also used on macOS) with this app's bundle ID: %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis un client iOS (utilisé aussi sur macOS) avec l’identifiant de bundle de cette app : %@"
+          }
+        }
+      }
+    },
+    "Choose the destination. Custom playlists use the Google account connected in Settings." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis la destination. Les playlists personnalisées utilisent le compte Google connecté dans les Réglages."
+          }
+        }
+      }
+    },
+    "Choose the iOS application type, including on a Mac." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis le type d’application iOS, même sur Mac."
+          }
+        }
+      }
+    },
+    "Choose the same Google Cloud project on each linked page." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis le même projet Google Cloud sur chaque page liée."
+          }
+        }
+      }
+    },
+    "Choose your Google Cloud project first." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis d’abord ton projet Google Cloud."
+          }
+        }
+      }
+    },
+    "Clear" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacer"
+          }
+        }
+      }
+    },
+    "Clear All" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout effacer"
+          }
+        }
+      }
+    },
+    "Clear Watch History" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacer l’historique de visionnage"
+          }
+        }
+      }
+    },
+    "Clear Watch History?" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacer l’historique de visionnage ?"
+          }
+        }
+      }
+    },
+    "Clear search" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacer la recherche"
+          }
+        }
+      }
+    },
+    "Click here to add YouTube OAuth client ID" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touche ici pour ajouter l’identifiant client OAuth YouTube"
+          }
+        }
+      }
+    },
+    "Close player" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer le lecteur"
+          }
+        }
+      }
+    },
+    "Comments" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commentaires"
+          }
+        }
+      }
+    },
+    "Compact" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compact"
+          }
+        }
+      }
+    },
+    "Connect Google" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecter Google"
+          }
+        }
+      }
+    },
+    "Connect YouTube Home" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecter l’accueil YouTube"
+          }
+        }
+      }
+    },
+    "Connect the Google account in the iPhone app to sync this library." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte le compte Google dans l’app iPhone pour synchroniser cette bibliothèque."
+          }
+        }
+      }
+    },
+    "Connect to Wi-Fi to download, or turn off Wi-Fi Only in Settings → Downloads." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi au Wi-Fi pour télécharger, ou désactive « Wi-Fi uniquement » dans Réglages → Téléchargements."
+          }
+        }
+      }
+    },
+    "Connect to youtube.com to use YouTube's actual Watch Later playlist. Otherwise, the app's Watch Later can sync between your devices with iCloud Sync. A Google Takeout playlist can be imported into Watch Later or any custom playlist you choose." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi à youtube.com pour utiliser la vraie playlist « À regarder plus tard » de YouTube. Sinon, la liste « À regarder plus tard » de l’app peut se synchroniser entre tes appareils avec la synchro iCloud. Une playlist Google Takeout peut être importée dans « À regarder plus tard » ou dans la playlist personnalisée de ton choix."
+          }
+        }
+      }
+    },
+    "Connect your Google account" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte ton compte Google"
+          }
+        }
+      }
+    },
+    "Connect youtube.com for Watch Later, or sign in with Google for custom playlists." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte youtube.com pour « À regarder plus tard », ou connecte-toi avec Google pour les playlists personnalisées."
+          }
+        }
+      }
+    },
+    "Connect youtube.com for your personalized Home feed and Watch Later." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte youtube.com pour ton fil d’accueil personnalisé et « À regarder plus tard »."
+          }
+        }
+      }
+    },
+    "Connected to youtube.com" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecté à youtube.com"
+          }
+        }
+      }
+    },
+    "Connected with Google" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecté avec Google"
+          }
+        }
+      }
+    },
+    "Continue Watching" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reprendre la lecture"
+          }
+        }
+      }
+    },
+    "Continue Without YouTube Home" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuer sans l’accueil YouTube"
+          }
+        }
+      }
+    },
+    "Continue to YouTube Home" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuer vers l’accueil YouTube"
+          }
+        }
+      }
+    },
+    "Continue with API Key" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuer avec une clé API"
+          }
+        }
+      }
+    },
+    "Copied" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copié"
+          }
+        }
+      }
+    },
+    "Copy" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier"
+          }
+        }
+      }
+    },
+    "Could not build the request URL." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de construire l’URL de la requête."
+          }
+        }
+      }
+    },
+    "Could not build the sign-in URL." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de construire l’URL de connexion."
+          }
+        }
+      }
+    },
+    "Could not read the server's response." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire la réponse du serveur."
+          }
+        }
+      }
+    },
+    "Couldn't Load Channel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de charger la chaîne"
+          }
+        }
+      }
+    },
+    "Couldn't Load Playlist" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de charger la playlist"
+          }
+        }
+      }
+    },
+    "Couldn't Open Link" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’ouvrir le lien"
+          }
+        }
+      }
+    },
+    "Couldn't assemble the downloaded video." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’assembler la vidéo téléchargée."
+          }
+        }
+      }
+    },
+    "Couldn't prepare the downloaded video." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de préparer la vidéo téléchargée."
+          }
+        }
+      }
+    },
+    "Couldn't read that file as text." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire ce fichier comme du texte."
+          }
+        }
+      }
+    },
+    "Couldn't read that file." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire ce fichier."
+          }
+        }
+      }
+    },
+    "Couldn't save the iCloud upload queue. Your library is still stored locally." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’enregistrer la file d’envoi iCloud. Ta bibliothèque reste stockée localement."
+          }
+        }
+      }
+    },
+    "Couldn’t save the library for the watch." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’enregistrer la bibliothèque pour la montre."
+          }
+        }
+      }
+    },
+    "Couldn’t sync the account: %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisation du compte impossible : %@"
+          }
+        }
+      }
+    },
+    "Create an API key" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer une clé API"
+          }
+        }
+      }
+    },
+    "Create an OAuth client ID" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer un identifiant client OAuth"
+          }
+        }
+      }
+    },
+    "Create or find an API key" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer ou trouver une clé API"
+          }
+        }
+      }
+    },
+    "Create or find an OAuth client ID" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer ou trouver un identifiant client OAuth"
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer"
+          }
+        }
+      }
+    },
+    "Dislike" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je n’aime pas"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "Download" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Télécharger"
+          }
+        }
+      }
+    },
+    "Download Using" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Télécharger via"
+          }
+        }
+      }
+    },
+    "Download failed" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec du téléchargement"
+          }
+        }
+      }
+    },
+    "Download not found on the iPhone." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargement introuvable sur l’iPhone."
+          }
+        }
+      }
+    },
+    "Download over Wi-Fi Only" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Télécharger en Wi-Fi uniquement"
+          }
+        }
+      }
+    },
+    "Downloaded" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargée"
+          }
+        }
+      }
+    },
+    "Downloaded videos play offline throughout the app." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les vidéos téléchargées se lisent hors ligne partout dans l’app."
+          }
+        }
+      }
+    },
+    "Downloading" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargement"
+          }
+        }
+      }
+    },
+    "Downloading is off" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le téléchargement est désactivé"
+          }
+        }
+      }
+    },
+    "Downloading is off — that isn't an http or https address" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le téléchargement est désactivé — ce n’est pas une adresse http ou https"
+          }
+        }
+      }
+    },
+    "Downloading…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargement…"
+          }
+        }
+      }
+    },
+    "Downloads" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargements"
+          }
+        }
+      }
+    },
+    "Downloads are off" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargements désactivés"
+          }
+        }
+      }
+    },
+    "Duration" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Durée"
+          }
+        }
+      }
+    },
+    "Enable YouTube Data API v3" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activer YouTube Data API v3"
+          }
+        }
+      }
+    },
+    "Enable the API and create an OAuth client in your Google Cloud project." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active l’API et crée un client OAuth dans ton projet Google Cloud."
+          }
+        }
+      }
+    },
+    "Erase Everything" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout effacer"
+          }
+        }
+      }
+    },
+    "Erases everything on this device: the API key and OAuth client ID, both sign-ins, your favorites, Watch Later, watch history and recent searches, the notification inbox and its channels, the quota tally, and every downloaded video along with the download service's address. iCloud Sync is turned off on this device; your iCloud library stays saved and can be restored by enabling sync again. Your YouTube account itself is untouched — playlists, subscriptions and likes all stay where they are." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efface tout sur cet appareil : la clé API et l’identifiant client OAuth, les deux connexions, tes favoris, « À regarder plus tard », l’historique de visionnage et les recherches récentes, la boîte de notifications et ses chaînes, le décompte du quota, ainsi que chaque vidéo téléchargée et l’adresse du service de téléchargement. La synchro iCloud est désactivée sur cet appareil ; ta bibliothèque iCloud reste enregistrée et peut être restaurée en réactivant la synchro. Ton compte YouTube lui-même n’est pas touché — playlists, abonnements et « J’aime » restent où ils sont."
+          }
+        }
+      }
+    },
+    "Every video you download will be fetched through this server, which will see which videos they are." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque vidéo que tu télécharges passera par ce serveur, qui saura de quelles vidéos il s’agit."
+          }
+        }
+      }
+    },
+    "Exit Fill Window" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quitter le remplissage de la fenêtre"
+          }
+        }
+      }
+    },
+    "Favorite" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favori"
+          }
+        }
+      }
+    },
+    "Favorites" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favoris"
+          }
+        }
+      }
+    },
+    "Favorites, the app's Watch Later, watch history, playback positions, and mini player style and size sync between iPhone, iPad and Mac using the same Apple Account. Apple Watch receives the library through its paired iPhone. Downloaded media, sign-ins and credentials stay on each device. YouTube's Watch Later uses your separate youtube.com session. Turning off sync keeps your library on this device and in iCloud." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les favoris, la liste « À regarder plus tard » de l’app, l’historique de visionnage, les positions de lecture ainsi que le style et la taille du mini-lecteur se synchronisent entre iPhone, iPad et Mac utilisant le même compte Apple. L’Apple Watch reçoit la bibliothèque via son iPhone jumelé. Les fichiers téléchargés, les connexions et les identifiants restent sur chaque appareil. « À regarder plus tard » de YouTube utilise ta session youtube.com distincte. Désactiver la synchro conserve ta bibliothèque sur cet appareil et dans iCloud."
+          }
+        }
+      }
+    },
+    "Feed" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fil"
+          }
+        }
+      }
+    },
+    "Files land in Downloads, which the Files app shows under “Better YouTube”." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les fichiers arrivent dans Téléchargements, que l’app Fichiers affiche sous « Better YouTube »."
+          }
+        }
+      }
+    },
+    "Files land in the app's own Downloads folder, reachable from Downloads → Show in Finder." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les fichiers arrivent dans le dossier Téléchargements de l’app, accessible depuis Téléchargements → « Afficher dans le Finder »."
+          }
+        }
+      }
+    },
+    "Fill Window" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remplir la fenêtre"
+          }
+        }
+      }
+    },
+    "Filter by title or channel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filtrer par titre ou chaîne"
+          }
+        }
+      }
+    },
+    "Filter channels" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filtrer les chaînes"
+          }
+        }
+      }
+    },
+    "Filter playlists" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filtrer les playlists"
+          }
+        }
+      }
+    },
+    "Filters" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filtres"
+          }
+        }
+      }
+    },
+    "Find it under APIs & Services → Credentials." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu la trouveras sous API et services → Identifiants."
+          }
+        }
+      }
+    },
+    "Find your OAuth client ID" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trouver ton identifiant client OAuth"
+          }
+        }
+      }
+    },
+    "Finding the file…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recherche du fichier…"
+          }
+        }
+      }
+    },
+    "Finishing video…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finalisation de la vidéo…"
+          }
+        }
+      }
+    },
+    "Floating" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flottant"
+          }
+        }
+      }
+    },
+    "Floating Size" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taille du lecteur flottant"
+          }
+        }
+      }
+    },
+    "Floating keeps a resizable 16:9 player in a bottom corner. Playback Bar shows the title and channel across the bottom. Long-press the mini player and choose Switch to change style." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "« Flottant » garde un lecteur 16:9 redimensionnable dans un coin inférieur. « Barre de lecture » affiche le titre et la chaîne en bas de l’écran. Maintiens le doigt sur le mini-lecteur et choisis « Passer à… » pour changer de style."
+          }
+        }
+      }
+    },
+    "For You" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour toi"
+          }
+        }
+      }
+    },
+    "Found %lld videos — choose their destination" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Found %lld video — choose its destination"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Found %lld videos — choose their destination"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld vidéo trouvée — choisis sa destination"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld vidéos trouvées — choisis leur destination"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Google Cloud setup · select your project on each page" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configuration Google Cloud · sélectionne ton projet sur chaque page"
+          }
+        }
+      }
+    },
+    "Google refused the consent screen (access_denied). While the OAuth consent screen is in Testing, only accounts listed as test users can sign in — add your Google account under Google Auth Platform → Audience → Test users, or publish the app." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google a refusé l’écran de consentement (access_denied). Tant que l’écran de consentement OAuth est en mode Test, seuls les comptes listés comme utilisateurs test peuvent se connecter — ajoute ton compte Google sous Google Auth Platform → Audience → Utilisateurs test, ou publie l’app."
+          }
+        }
+      }
+    },
+    "Google refused the sign-in request (%@)." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google a refusé la demande de connexion (%@)."
+          }
+        }
+      }
+    },
+    "Google refused the sign-in request." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google a refusé la demande de connexion."
+          }
+        }
+      }
+    },
+    "Google refused “%@” for lack of permission, and a token's scope can't be widened in place. This almost always means the YouTube tick box on the consent screen — \"See, edit, and permanently delete your YouTube videos, ratings, comments and captions\" — was left unticked. Sign in again and tick it before Continue." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google a refusé « %@ » faute d’autorisation, et la portée d’un jeton ne peut pas être élargie après coup. Cela veut presque toujours dire que la case YouTube de l’écran de consentement — « Voir, modifier et supprimer définitivement vos vidéos, notes, commentaires et sous-titres YouTube » — n’a pas été cochée. Reconnecte-toi et coche-la avant de continuer."
+          }
+        }
+      }
+    },
+    "Google refused “%@” for lack of permission." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google a refusé « %@ » faute d’autorisation."
+          }
+        }
+      }
+    },
+    "Google sign-in could not start. Please try again." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connexion Google n’a pas pu démarrer. Réessaie."
+          }
+        }
+      }
+    },
+    "Google signed you in without the YouTube permission, which leaves the app able to do nothing with the account. On the consent screen there is a tick box — \"See, edit, and permanently delete your YouTube videos, ratings, comments and captions\" — and it has to be ticked before Continue. Sign in again and tick it." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google t’a connecté sans l’autorisation YouTube, ce qui ne laisse l’app rien faire avec le compte. Sur l’écran de consentement, il y a une case — « Voir, modifier et supprimer définitivement vos vidéos, notes, commentaires et sous-titres YouTube » — qu’il faut cocher avant de continuer. Reconnecte-toi et coche-la."
+          }
+        }
+      }
+    },
+    "Google stopped accepting the saved sign-in. While the OAuth consent screen is in Testing, refresh tokens expire after seven days — publishing the app under Google Auth Platform → Audience removes that limit. Sign in again to carry on." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google n’accepte plus la connexion enregistrée. Tant que l’écran de consentement OAuth est en mode Test, les jetons d’actualisation expirent après sept jours — publier l’app sous Google Auth Platform → Audience supprime cette limite. Reconnecte-toi pour continuer."
+          }
+        }
+      }
+    },
+    "Hidden from this feed, but could not send feedback to YouTube: %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masquée de ce fil, mais impossible d’envoyer l’avis à YouTube : %@"
+          }
+        }
+      }
+    },
+    "Hide Replies" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masquer les réponses"
+          }
+        }
+      }
+    },
+    "History" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Historique"
+          }
+        }
+      }
+    },
+    "Hold any video and choose Download. It lands in the Downloads folder and plays from there wherever you find it again — including with no network." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintiens le doigt sur une vidéo et choisis « Télécharger ». Elle arrive dans le dossier Téléchargements et se lit depuis là où que tu la retrouves — y compris sans réseau."
+          }
+        }
+      }
+    },
+    "Home" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accueil"
+          }
+        }
+      }
+    },
+    "I Have My OAuth Client ID" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "J’ai mon identifiant client OAuth"
+          }
+        }
+      }
+    },
+    "Import YouTube's Notifications" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importer les notifications YouTube"
+          }
+        }
+      }
+    },
+    "Import from Google Takeout…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importer depuis Google Takeout…"
+          }
+        }
+      }
+    },
+    "Include the access token" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inclure le jeton d’accès"
+          }
+        }
+      }
+    },
+    "Invalid authorization endpoint." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Point de terminaison d’autorisation non valide."
+          }
+        }
+      }
+    },
+    "Invalid list ID." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Identifiant de liste invalide."
+          }
+        }
+      }
+    },
+    "Invalid token endpoint." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Point de terminaison de jeton non valide."
+          }
+        }
+      }
+    },
+    "Invalid video ID." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Identifiant vidéo invalide."
+          }
+        }
+      }
+    },
+    "Invalid video reference." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Référence vidéo non valide."
+          }
+        }
+      }
+    },
+    "It ends in .apps.googleusercontent.com. You can find it under Google Cloud → Clients." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il se termine par .apps.googleusercontent.com. Tu le trouveras sous Google Cloud → Clients."
+          }
+        }
+      }
+    },
+    "Large" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grand"
+          }
+        }
+      }
+    },
+    "Last Synced" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dernière synchro"
+          }
+        }
+      }
+    },
+    "Last import" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dernière importation"
+          }
+        }
+      }
+    },
+    "Later" : {
+      "comment" : "Short button title that adds the video to Watch Later",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus tard"
+          }
+        }
+      }
+    },
+    "Latest Videos" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dernières vidéos"
+          }
+        }
+      }
+    },
+    "Library" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bibliothèque"
+          }
+        }
+      }
+    },
+    "License notices are unavailable." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les mentions de licence ne sont pas disponibles."
+          }
+        }
+      }
+    },
+    "Like" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "J’aime"
+          }
+        }
+      }
+    },
+    "Like Status" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "État des « J’aime »"
+          }
+        }
+      }
+    },
+    "Liked Videos" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vidéos aimées"
+          }
+        }
+      }
+    },
+    "Likes" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "J’aime"
+          }
+        }
+      }
+    },
+    "Likes or unlikes this comment" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoute ou retire ton « J’aime » sur ce commentaire"
+          }
+        }
+      }
+    },
+    "Loading playlists…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chargement des playlists…"
+          }
+        }
+      }
+    },
+    "Loading…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chargement…"
+          }
+        }
+      }
+    },
+    "Look for videos and channels, or paste a YouTube link to open it. Your recent searches will show up here." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cherche des vidéos et des chaînes, ou colle un lien YouTube pour l’ouvrir. Tes recherches récentes apparaîtront ici."
+          }
+        }
+      }
+    },
+    "Mark All as Read" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout marquer comme lu"
+          }
+        }
+      }
+    },
+    "Mark as Read" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marquer comme lu"
+          }
+        }
+      }
+    },
+    "Mini Player" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mini-lecteur"
+          }
+        }
+      }
+    },
+    "Minimize Player" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réduire le lecteur"
+          }
+        }
+      }
+    },
+    "Minimize player" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réduire le lecteur"
+          }
+        }
+      }
+    },
+    "More" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus"
+          }
+        }
+      }
+    },
+    "More Results" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus de résultats"
+          }
+        }
+      }
+    },
+    "My Server" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mon serveur"
+          }
+        }
+      }
+    },
+    "My Server uses your saved resolver address and optional token. Addresses containing {id}, {videoId} or {url} are fetched directly; other addresses receive a JSON request. Share Setup shares only the server configuration." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "« Mon serveur » utilise l’adresse de résolveur enregistrée et le jeton facultatif. Les adresses contenant {id}, {videoId} ou {url} sont récupérées directement ; les autres reçoivent une requête JSON. « Partager la configuration » ne partage que la configuration du serveur."
+          }
+        }
+      }
+    },
+    "Native Cards" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cartes natives"
+          }
+        }
+      }
+    },
+    "Navigation" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Navigation"
+          }
+        }
+      }
+    },
+    "Needed while the OAuth consent screen is in Testing." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nécessaire tant que l’écran de consentement OAuth est en mode Test."
+          }
+        }
+      }
+    },
+    "New Video" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouvelle vidéo"
+          }
+        }
+      }
+    },
+    "New videos" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouvelles vidéos"
+          }
+        }
+      }
+    },
+    "Newest" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus récents"
+          }
+        }
+      }
+    },
+    "Next Video" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vidéo suivante"
+          }
+        }
+      }
+    },
+    "No Downloads Yet" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun téléchargement"
+          }
+        }
+      }
+    },
+    "No Items" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun élément"
+          }
+        }
+      }
+    },
+    "No Notifications" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune notification"
+          }
+        }
+      }
+    },
+    "No Playlists" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune playlist"
+          }
+        }
+      }
+    },
+    "No Results" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun résultat"
+          }
+        }
+      }
+    },
+    "No Subscriptions" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun abonnement"
+          }
+        }
+      }
+    },
+    "No comments yet." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun commentaire pour l’instant."
+          }
+        }
+      }
+    },
+    "No compatible audio track is available for this video." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune piste audio compatible n’est disponible pour cette vidéo."
+          }
+        }
+      }
+    },
+    "No compatible video with audio is available at this quality. Try a higher quality or your server. Live and restricted videos may not be downloadable on this device." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune vidéo compatible avec audio n’est disponible dans cette qualité. Essaie une qualité supérieure ou ton serveur. Les directs et les vidéos restreintes peuvent ne pas être téléchargeables sur cet appareil."
+          }
+        }
+      }
+    },
+    "No custom playlists found. Create one on YouTube, then reload." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune playlist personnalisée trouvée. Crée-en une sur YouTube, puis recharge."
+          }
+        }
+      }
+    },
+    "No limit" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune limite"
+          }
+        }
+      }
+    },
+    "No native background stream is available for this video." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun flux natif en arrière-plan n’est disponible pour cette vidéo."
+          }
+        }
+      }
+    },
+    "No videos in that file. In the Takeout archive, look under “YouTube and YouTube Music” → “playlists” and pick the CSV for the playlist you want." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune vidéo dans ce fichier. Dans l’archive Takeout, regarde sous « YouTube et YouTube Music » → « playlists » et choisis le CSV de la playlist voulue."
+          }
+        }
+      }
+    },
+    "Not Interested" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas intéressé"
+          }
+        }
+      }
+    },
+    "Nothing Here Yet" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien pour l’instant"
+          }
+        }
+      }
+    },
+    "Nothing New Yet" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien de nouveau"
+          }
+        }
+      }
+    },
+    "Nothing Read Yet" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien n’a encore été lu"
+          }
+        }
+      }
+    },
+    "Nothing in YouTube's notifications yet." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien dans les notifications YouTube pour l’instant."
+          }
+        }
+      }
+    },
+    "Nothing is playing on the iPhone." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune lecture en cours sur l’iPhone."
+          }
+        }
+      }
+    },
+    "Notifications" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
+          }
+        }
+      }
+    },
+    "Notifications, %lld unread" : {
+      "localizations" : {
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Notifications, %lld non lue"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Notifications, %lld non lues"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Notify me about new videos from this channel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Me prévenir des nouvelles vidéos de cette chaîne"
+          }
+        }
+      }
+    },
+    "Now Playing" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture en cours"
+          }
+        }
+      }
+    },
+    "OAuth ID" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ID OAuth"
+          }
+        }
+      }
+    },
+    "OAuth client ID" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Identifiant client OAuth"
+          }
+        }
+      }
+    },
+    "OAuth is recommended for browsing and account features; an API key is optional. While the consent screen is in Testing, only accounts added under Test users can sign in. Watch Later uses the separate youtube.com session. The app's watch history can sync through iCloud; it is separate from your YouTube account's history.\n\nOn the consent screen, tick the YouTube permission before Continue: left unticked, Google issues a sign-in that can't do anything and the app has to throw it away.\n\nPasskeys don't work in the sign-in sheet — the system only offers them in Safari itself. Sign in to Google in Safari first, with your passkey, and this sheet borrows that session and won't ask for anything at all." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OAuth est recommandé pour la navigation et les fonctions du compte ; une clé API est facultative. Tant que l’écran de consentement est en mode Test, seuls les comptes ajoutés sous Utilisateurs test peuvent se connecter. « À regarder plus tard » utilise la session youtube.com distincte. L’historique de visionnage de l’app peut se synchroniser via iCloud ; il est distinct de l’historique de ton compte YouTube.\n\nSur l’écran de consentement, coche l’autorisation YouTube avant de continuer : sans elle, Google délivre une connexion qui ne peut rien faire et que l’app doit jeter.\n\nLes clés d’identification ne fonctionnent pas dans la fenêtre de connexion — le système ne les propose que dans Safari. Connecte-toi d’abord à Google dans Safari avec ta clé d’identification, et cette fenêtre reprendra cette session sans rien te demander."
+          }
+        }
+      }
+    },
+    "OAuth lets you browse and access your subscriptions, playlists and likes. No separate API key is needed." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OAuth te permet de naviguer et d’accéder à tes abonnements, playlists et « J’aime ». Aucune clé API distincte n’est nécessaire."
+          }
+        }
+      }
+    },
+    "OK" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "Off" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactivées"
+          }
+        }
+      }
+    },
+    "Offline. Changes will sync when the connection returns." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hors ligne. Les modifications se synchroniseront au retour de la connexion."
+          }
+        }
+      }
+    },
+    "On Google's consent screen, select the YouTube permission before continuing." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sur l’écran de consentement de Google, sélectionne l’autorisation YouTube avant de continuer."
+          }
+        }
+      }
+    },
+    "On This Device" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sur cet appareil"
+          }
+        }
+      }
+    },
+    "On This Device downloads directly from YouTube and combines audio and video here, without a download server. Keep the app open while finding the video and finishing it. Media transfers can continue in the background. Some live or restricted videos may be unavailable." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "« Sur cet appareil » télécharge directement depuis YouTube et assemble l’audio et la vidéo ici, sans serveur de téléchargement. Garde l’app ouverte pendant la recherche de la vidéo et sa finalisation. Les transferts peuvent continuer en arrière-plan. Certains directs ou vidéos restreintes peuvent être indisponibles."
+          }
+        }
+      }
+    },
+    "On-device download couldn't resolve this video. %@ You can retry, update the app, or choose your server in Settings → Downloads." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le téléchargement sur l’appareil n’a pas pu résoudre cette vidéo. %@ Tu peux réessayer, mettre l’app à jour ou choisir ton serveur dans Réglages → Téléchargements."
+          }
+        }
+      }
+    },
+    "Only accept this from someone you trust." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "N’accepte ceci que de quelqu’un de confiance."
+          }
+        }
+      }
+    },
+    "Open Better YouTube on the iPhone to start this video." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre Better YouTube sur l’iPhone pour démarrer cette vidéo."
+          }
+        }
+      }
+    },
+    "Open Link" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir le lien"
+          }
+        }
+      }
+    },
+    "Open Player" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir le lecteur"
+          }
+        }
+      }
+    },
+    "Open Settings" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir les Réglages"
+          }
+        }
+      }
+    },
+    "Open Source Licenses" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Licences open source"
+          }
+        }
+      }
+    },
+    "Open in YouTube" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir dans YouTube"
+          }
+        }
+      }
+    },
+    "Opens all comments" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre tous les commentaires"
+          }
+        }
+      }
+    },
+    "Over 20 Minutes" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus de 20 minutes"
+          }
+        }
+      }
+    },
+    "Paste it into the OAuth client's Bundle ID field." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colle-le dans le champ Bundle ID du client OAuth."
+          }
+        }
+      }
+    },
+    "Paste your API key" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colle ta clé API"
+          }
+        }
+      }
+    },
+    "Paste your OAuth client ID, then sign in securely with Google." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colle ton identifiant client OAuth, puis connecte-toi en toute sécurité avec Google."
+          }
+        }
+      }
+    },
+    "Paste your client ID" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colle ton identifiant client"
+          }
+        }
+      }
+    },
+    "Pause" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        }
+      }
+    },
+    "Paused" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En pause"
+          }
+        }
+      }
+    },
+    "Picture in Picture" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image dans l’image"
+          }
+        }
+      }
+    },
+    "Play" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire"
+          }
+        }
+      }
+    },
+    "Play All" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout lire"
+          }
+        }
+      }
+    },
+    "Playback" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture"
+          }
+        }
+      }
+    },
+    "Playback Bar" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barre de lecture"
+          }
+        }
+      }
+    },
+    "Player" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecteur"
+          }
+        }
+      }
+    },
+    "Playing from your downloads" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture depuis tes téléchargements"
+          }
+        }
+      }
+    },
+    "Playlist" : {
+      "comment" : "Short button title that adds the video to a playlist",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Playlist"
+          }
+        }
+      }
+    },
+    "Playlist Items" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Éléments de playlist"
+          }
+        }
+      }
+    },
+    "Playlists" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Playlists"
+          }
+        }
+      }
+    },
+    "Playlists you create or save on YouTube appear here." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les playlists que tu crées ou enregistres sur YouTube apparaissent ici."
+          }
+        }
+      }
+    },
+    "Plays the next video in the list when one ends. Turned off, YouTube's own suggestions stay on screen at the end instead. In a car, the queue always continues." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lance la vidéo suivante de la liste quand une vidéo se termine. Désactivée, ce sont les suggestions de YouTube qui restent à l’écran à la fin. En voiture, la file d’attente continue toujours."
+          }
+        }
+      }
+    },
+    "Point a camera at this to set up the same service on another phone." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vise ceci avec un appareil photo pour configurer le même service sur un autre téléphone."
+          }
+        }
+      }
+    },
+    "Post comment" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publier le commentaire"
+          }
+        }
+      }
+    },
+    "Post reply" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publier la réponse"
+          }
+        }
+      }
+    },
+    "Prepare Google Cloud" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prépare Google Cloud"
+          }
+        }
+      }
+    },
+    "Pull down to read YouTube's home page again." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tire vers le bas pour relire la page d’accueil de YouTube."
+          }
+        }
+      }
+    },
+    "Quality" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qualité"
+          }
+        }
+      }
+    },
+    "Quality is a maximum; the best compatible format below it is selected." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La qualité est un maximum ; le meilleur format compatible en dessous est choisi."
+          }
+        }
+      }
+    },
+    "Quota spent" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quota utilisé"
+          }
+        }
+      }
+    },
+    "Rating" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note"
+          }
+        }
+      }
+    },
+    "Recent Searches" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recherches récentes"
+          }
+        }
+      }
+    },
+    "Recently Watched" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regardées récemment"
+          }
+        }
+      }
+    },
+    "Refresh" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualiser"
+          }
+        }
+      }
+    },
+    "Refreshes every 15 minutes while the app is active. An unsuccessful import is retried after a minute." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualise toutes les 15 minutes tant que l’app est active. Une importation qui échoue est relancée au bout d’une minute."
+          }
+        }
+      }
+    },
+    "Relevance" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pertinence"
+          }
+        }
+      }
+    },
+    "Reload Playlists" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recharger les playlists"
+          }
+        }
+      }
+    },
+    "Remove" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer"
+          }
+        }
+      }
+    },
+    "Remove All" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout retirer"
+          }
+        }
+      }
+    },
+    "Remove All Downloads" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer tous les téléchargements"
+          }
+        }
+      }
+    },
+    "Remove Download" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer le téléchargement"
+          }
+        }
+      }
+    },
+    "Remove all downloads?" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer tous les téléchargements ?"
+          }
+        }
+      }
+    },
+    "Remove from Favorites" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer des favoris"
+          }
+        }
+      }
+    },
+    "Remove from Watch Later" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer de « À regarder plus tard »"
+          }
+        }
+      }
+    },
+    "Removed from %@." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirée de %@."
+          }
+        }
+      }
+    },
+    "Removed from Watch Later." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirée de « À regarder plus tard »."
+          }
+        }
+      }
+    },
+    "Reply" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Répondre"
+          }
+        }
+      }
+    },
+    "Required for browsing and account features." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nécessaire pour la navigation et les fonctions du compte."
+          }
+        }
+      }
+    },
+    "Reset" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réinitialisation"
+          }
+        }
+      }
+    },
+    "Reset App" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réinitialiser l’app"
+          }
+        }
+      }
+    },
+    "Reset Better YouTube?" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réinitialiser Better YouTube ?"
+          }
+        }
+      }
+    },
+    "Reset Counter" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remettre le compteur à zéro"
+          }
+        }
+      }
+    },
+    "Reset Filters" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réinitialiser les filtres"
+          }
+        }
+      }
+    },
+    "Resets at %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réinitialisation à %@"
+          }
+        }
+      }
+    },
+    "Resume" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reprendre"
+          }
+        }
+      }
+    },
+    "Resume Download" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reprendre le téléchargement"
+          }
+        }
+      }
+    },
+    "Retry" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réessayer"
+          }
+        }
+      }
+    },
+    "Retry Download" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réessayer le téléchargement"
+          }
+        }
+      }
+    },
+    "Save Download Service" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer le service de téléchargement"
+          }
+        }
+      }
+    },
+    "Save Key" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer la clé"
+          }
+        }
+      }
+    },
+    "Saved" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrée"
+          }
+        }
+      }
+    },
+    "Saved — the address is filled in and fetched directly" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistré — l’adresse est complétée puis récupérée directement"
+          }
+        }
+      }
+    },
+    "Saved — the address is sent a POST and read for a media link" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistré — l’adresse reçoit un POST et sa réponse est lue pour y trouver un lien média"
+          }
+        }
+      }
+    },
+    "Search" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher"
+          }
+        }
+      }
+    },
+    "Search Failed" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec de la recherche"
+          }
+        }
+      }
+    },
+    "Search YouTube" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher sur YouTube"
+          }
+        }
+      }
+    },
+    "Search or paste a YouTube link" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher ou coller un lien YouTube"
+          }
+        }
+      }
+    },
+    "Select your Google Cloud project on each linked page, enable the API, then choose Create credentials → API key. Google OAuth can load public content without a separate key; account features still need OAuth. The key is stored only on this device." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sélectionne ton projet Google Cloud sur chaque page liée, active l’API, puis choisis Créer des identifiants → Clé API. OAuth Google peut charger le contenu public sans clé distincte ; les fonctions du compte nécessitent toujours OAuth. La clé n’est enregistrée que sur cet appareil."
+          }
+        }
+      }
+    },
+    "Selected Channels" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaînes sélectionnées"
+          }
+        }
+      }
+    },
+    "Set Up Google" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurer Google"
+          }
+        }
+      }
+    },
+    "Set Up Later" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurer plus tard"
+          }
+        }
+      }
+    },
+    "Set a download service up first and there will be something to share." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configure d’abord un service de téléchargement, et il y aura quelque chose à partager."
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages"
+          }
+        }
+      }
+    },
+    "Setup step %lld of 4" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Étape de configuration %lld sur 4"
+          }
+        }
+      }
+    },
+    "Share" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partager"
+          }
+        }
+      }
+    },
+    "Share Link" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partager le lien"
+          }
+        }
+      }
+    },
+    "Share Setup" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partager la configuration"
+          }
+        }
+      }
+    },
+    "Share at %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partager à %@"
+          }
+        }
+      }
+    },
+    "Show Less" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher moins"
+          }
+        }
+      }
+    },
+    "Show More" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher plus"
+          }
+        }
+      }
+    },
+    "Show More Comments" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher plus de commentaires"
+          }
+        }
+      }
+    },
+    "Show Settings in Tab Bar" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher Réglages dans la barre d’onglets"
+          }
+        }
+      }
+    },
+    "Show as" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher comme"
+          }
+        }
+      }
+    },
+    "Show in Finder" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher dans le Finder"
+          }
+        }
+      }
+    },
+    "Shuffle" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aléatoire"
+          }
+        }
+      }
+    },
+    "Sign Out" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se déconnecter"
+          }
+        }
+      }
+    },
+    "Sign Out of youtube.com" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se déconnecter de youtube.com"
+          }
+        }
+      }
+    },
+    "Sign in to iCloud in system settings to sync this library." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi à iCloud dans les réglages du système pour synchroniser cette bibliothèque."
+          }
+        }
+      }
+    },
+    "Sign in to youtube.com" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se connecter à youtube.com"
+          }
+        }
+      }
+    },
+    "Sign in to youtube.com from Settings to see your own home feed." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi à youtube.com depuis les Réglages pour voir ton propre fil d’accueil."
+          }
+        }
+      }
+    },
+    "Sign in to youtube.com to see your personalized Home and YouTube Watch Later playlist here." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi à youtube.com pour voir ici ton accueil personnalisé et ta playlist YouTube « À regarder plus tard »."
+          }
+        }
+      }
+    },
+    "Sign in with Google" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se connecter avec Google"
+          }
+        }
+      }
+    },
+    "Sign in with Google from Settings to browse your subscriptions, playlists and liked videos. Connect to youtube.com for YouTube's Watch Later. The app's favorites, Watch Later and watch history can sync across your Apple devices with iCloud Sync in Settings." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi avec Google depuis les Réglages pour parcourir tes abonnements, tes playlists et tes vidéos aimées. Connecte youtube.com pour « À regarder plus tard » de YouTube. Les favoris, la liste « À regarder plus tard » et l’historique de l’app peuvent se synchroniser sur tes appareils Apple grâce à la synchro iCloud dans les Réglages."
+          }
+        }
+      }
+    },
+    "Sign in with Google in Settings to add videos to your custom playlists." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi avec Google dans les Réglages pour ajouter des vidéos à tes playlists personnalisées."
+          }
+        }
+      }
+    },
+    "Sign in with Google in Settings to manage your custom playlists." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi avec Google dans les Réglages pour gérer tes playlists personnalisées."
+          }
+        }
+      }
+    },
+    "Sign in with Google in Settings to see your subscriptions, or search for something to get started." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi avec Google dans les Réglages pour voir tes abonnements, ou lance une recherche pour commencer."
+          }
+        }
+      }
+    },
+    "Sign in with Google in Settings to see your subscriptions, playlists and likes." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi avec Google dans les Réglages pour voir tes abonnements, tes playlists et tes « J’aime »."
+          }
+        }
+      }
+    },
+    "Sign in with Google to get notified when the channels you follow upload." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi avec Google pour être prévenu quand les chaînes que tu suis publient une vidéo."
+          }
+        }
+      }
+    },
+    "Sign-in could not find the app window. Close this screen and try again." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connexion n’a pas trouvé la fenêtre de l’app. Ferme cet écran et réessaie."
+          }
+        }
+      }
+    },
+    "Sign-in was cancelled." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connexion annulée."
+          }
+        }
+      }
+    },
+    "Signed in to youtube.com" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecté à youtube.com"
+          }
+        }
+      }
+    },
+    "Signed in with Google" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecté avec Google"
+          }
+        }
+      }
+    },
+    "Skip Back 15 Seconds" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reculer de 15 secondes"
+          }
+        }
+      }
+    },
+    "Skip Forward 15 Seconds" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avancer de 15 secondes"
+          }
+        }
+      }
+    },
+    "Sort By" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trier par"
+          }
+        }
+      }
+    },
+    "Sort Comments" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trier les commentaires"
+          }
+        }
+      }
+    },
+    "Standard" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        }
+      }
+    },
+    "Start Using Better YouTube" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commencer à utiliser Better YouTube"
+          }
+        }
+      }
+    },
+    "Still reading the last page from YouTube. Try again in a moment." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture de la dernière page YouTube en cours. Réessaie dans un instant."
+          }
+        }
+      }
+    },
+    "Stop Playback" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrêter la lecture"
+          }
+        }
+      }
+    },
+    "Storage Limit" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limite de stockage"
+          }
+        }
+      }
+    },
+    "Storage Used" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stockage utilisé"
+          }
+        }
+      }
+    },
+    "Subscribe" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S’abonner"
+          }
+        }
+      }
+    },
+    "Subscribed" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abonné"
+          }
+        }
+      }
+    },
+    "Subscription" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abonnement"
+          }
+        }
+      }
+    },
+    "Subscriptions" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abonnements"
+          }
+        }
+      }
+    },
+    "Subscriptions, playlists and likes are available in Library." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les abonnements, les playlists et les « J’aime » sont disponibles dans la Bibliothèque."
+          }
+        }
+      }
+    },
+    "Switch to Floating" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passer au lecteur flottant"
+          }
+        }
+      }
+    },
+    "Switch to Playback Bar" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passer à la barre de lecture"
+          }
+        }
+      }
+    },
+    "Sync Now" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchroniser maintenant"
+          }
+        }
+      }
+    },
+    "Syncing with iCloud…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisation avec iCloud…"
+          }
+        }
+      }
+    },
+    "System Settings" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages Système"
+          }
+        }
+      }
+    },
+    "Tap a playlist to add or remove this video." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touche une playlist pour y ajouter ou en retirer cette vidéo."
+          }
+        }
+      }
+    },
+    "That doesn't look like an Apple-platform OAuth client ID. Copy the Client ID value ending in .apps.googleusercontent.com." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cela ne ressemble pas à un identifiant client OAuth pour plateformes Apple. Copie la valeur Client ID qui se termine par .apps.googleusercontent.com."
+          }
+        }
+      }
+    },
+    "That download service address isn't a valid http or https URL." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette adresse de service de téléchargement n’est pas une URL http ou https valide."
+          }
+        }
+      }
+    },
+    "That's no longer on YouTube." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce contenu n’est plus sur YouTube."
+          }
+        }
+      }
+    },
+    "The Data API gives a Cloud project %@ units a day and no way to ask what is left, so this is the app's own tally of what it has spent: a search costs 100 units, every other read 1, and each change to a custom playlist costs 50. Anything else using the same Cloud project spends from the same allowance without appearing here. Google refills it at midnight Pacific time." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’API Data accorde %@ unités par jour à un projet Cloud, sans moyen de savoir ce qu’il en reste : voici donc le décompte de l’app elle-même. Une recherche coûte 100 unités, toute autre lecture 1, et chaque modification d’une playlist personnalisée 50. Tout ce qui utilise le même projet Cloud puise dans la même réserve sans apparaître ici. Google la recharge à minuit, heure du Pacifique."
+          }
+        }
+      }
+    },
+    "The Google account was signed out." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le compte Google a été déconnecté."
+          }
+        }
+      }
+    },
+    "The Queue Is Empty" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La file d’attente est vide"
+          }
+        }
+      }
+    },
+    "The app's Watch Later can sync between your devices with iCloud Sync in Settings." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La liste « À regarder plus tard » de l’app peut se synchroniser entre tes appareils avec la synchro iCloud dans les Réglages."
+          }
+        }
+      }
+    },
+    "The channel doesn't allow this video to play outside YouTube." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La chaîne n’autorise pas la lecture de cette vidéo en dehors de YouTube."
+          }
+        }
+      }
+    },
+    "The download isn't a playable video with audio." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le téléchargement n’est pas une vidéo lisible avec audio."
+          }
+        }
+      }
+    },
+    "The download service replied, but there was no media link in its answer." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le service de téléchargement a répondu, mais sa réponse ne contenait aucun lien média."
+          }
+        }
+      }
+    },
+    "The download service reported an error." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le service de téléchargement a signalé une erreur."
+          }
+        }
+      }
+    },
+    "The download service sent the video and audio as separate streams, which this app can't join. Ask it for a single muxed file — on cobalt, a lower quality usually returns one." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le service de téléchargement a envoyé la vidéo et l’audio en flux séparés, que cette app ne sait pas assembler. Demande-lui un fichier unique multiplexé — avec cobalt, une qualité plus basse en renvoie généralement un."
+          }
+        }
+      }
+    },
+    "The downloaded file couldn't be played." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le fichier téléchargé n’a pas pu être lu."
+          }
+        }
+      }
+    },
+    "The downloaded files are missing a video or audio track." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il manque une piste vidéo ou audio aux fichiers téléchargés."
+          }
+        }
+      }
+    },
+    "The file is no longer on this device." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le fichier n’est plus sur cet appareil."
+          }
+        }
+      }
+    },
+    "The files go from this device. Nothing changes on your YouTube account, and you can download them again." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les fichiers sont retirés de cet appareil. Rien ne change sur ton compte YouTube, et tu peux les télécharger à nouveau."
+          }
+        }
+      }
+    },
+    "The files go from this device. Nothing changes on your YouTube account." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les fichiers sont retirés de cet appareil. Rien ne change sur ton compte YouTube."
+          }
+        }
+      }
+    },
+    "The iCloud library was removed. Turn sync on to upload your local library again." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La bibliothèque iCloud a été supprimée. Active la synchro pour envoyer à nouveau ta bibliothèque locale."
+          }
+        }
+      }
+    },
+    "The iCloud sync cache couldn't be read. Turn sync on to merge your local library again." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le cache de synchro iCloud n’a pas pu être lu. Active la synchro pour fusionner à nouveau ta bibliothèque locale."
+          }
+        }
+      }
+    },
+    "The link carries an access token, which will be saved too." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le lien contient un jeton d’accès, qui sera enregistré aussi."
+          }
+        }
+      }
+    },
+    "The media server answered with status %lld." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le serveur média a répondu avec le code %lld."
+          }
+        }
+      }
+    },
+    "The media server returned an incomplete or unexpected byte range. Retry the download." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le serveur média a renvoyé une plage d’octets incomplète ou inattendue. Relance le téléchargement."
+          }
+        }
+      }
+    },
+    "The order comes from your YouTube home page, read in a signed-in web view. Everything shown about each video comes from the Data API." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’ordre provient de ta page d’accueil YouTube, lue dans une vue web connectée. Tout ce qui est affiché pour chaque vidéo provient de l’API Data."
+          }
+        }
+      }
+    },
+    "The player did not respond." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le lecteur n’a pas répondu."
+          }
+        }
+      }
+    },
+    "The player page couldn't load — check the network connection." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La page du lecteur n’a pas pu se charger — vérifie la connexion réseau."
+          }
+        }
+      }
+    },
+    "The player page loaded but never started. This is a bug in the app, not in the video." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La page du lecteur s’est chargée mais n’a jamais démarré. C’est un bug de l’app, pas de la vidéo."
+          }
+        }
+      }
+    },
+    "The queue is empty." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La file d’attente est vide."
+          }
+        }
+      }
+    },
+    "The server responded with status %lld." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le serveur a répondu avec le code %lld."
+          }
+        }
+      }
+    },
+    "The video can't play in this HTML5 player." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La vidéo ne peut pas être lue dans ce lecteur HTML5."
+          }
+        }
+      }
+    },
+    "The video was removed or made private." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La vidéo a été supprimée ou rendue privée."
+          }
+        }
+      }
+    },
+    "There isn't enough free space on this device for that video." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il n’y a pas assez d’espace libre sur cet appareil pour cette vidéo."
+          }
+        }
+      }
+    },
+    "These play with no network at all — here, and anywhere else the video turns up in the app." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elles se lisent sans aucun réseau — ici, et partout ailleurs où la vidéo apparaît dans l’app."
+          }
+        }
+      }
+    },
+    "This Month" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce mois-ci"
+          }
+        }
+      }
+    },
+    "This Week" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette semaine"
+          }
+        }
+      }
+    },
+    "This Year" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette année"
+          }
+        }
+      }
+    },
+    "This address is plain http, so nothing sent to it is encrypted." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette adresse est en http simple, donc rien de ce qui lui est envoyé n’est chiffré."
+          }
+        }
+      }
+    },
+    "This also clears the app's watch history on your other devices using iCloud Sync. Your YouTube account's history is unchanged." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cela efface aussi l’historique de visionnage de l’app sur tes autres appareils qui utilisent la synchro iCloud. L’historique de ton compte YouTube ne change pas."
+          }
+        }
+      }
+    },
+    "This clears the app's watch history on this device. Your YouTube account's history is unchanged." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cela efface l’historique de visionnage de l’app sur cet appareil. L’historique de ton compte YouTube ne change pas."
+          }
+        }
+      }
+    },
+    "This device goes back to a fresh install and iCloud Sync is turned off here. Your library stays in iCloud and on your other devices. Nothing changes on your YouTube account." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cet appareil revient à une installation neuve et la synchro iCloud y est désactivée. Ta bibliothèque reste dans iCloud et sur tes autres appareils. Rien ne change sur ton compte YouTube."
+          }
+        }
+      }
+    },
+    "This is a web address, not an OAuth client ID. In Google Cloud, copy the Client ID value only; it ends in .apps.googleusercontent.com." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ceci est une adresse web, pas un identifiant client OAuth. Dans Google Cloud, copie uniquement la valeur Client ID ; elle se termine par .apps.googleusercontent.com."
+          }
+        }
+      }
+    },
+    "This item cannot be played." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cet élément ne peut pas être lu."
+          }
+        }
+      }
+    },
+    "This playlist has no videos." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette playlist ne contient aucune vidéo."
+          }
+        }
+      }
+    },
+    "This replaces the service already set up." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cela remplace le service déjà configuré."
+          }
+        }
+      }
+    },
+    "This sign-in doesn't allow changes to your YouTube account. Sign in again from Settings and allow access to YouTube." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette connexion ne permet pas de modifier ton compte YouTube. Reconnecte-toi depuis les Réglages et autorise l’accès à YouTube."
+          }
+        }
+      }
+    },
+    "This video didn't start" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette vidéo n’a pas démarré"
+          }
+        }
+      }
+    },
+    "This video is no longer in the iPhone’s library." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette vidéo n’est plus disponible dans la bibliothèque de l’iPhone."
+          }
+        }
+      }
+    },
+    "This website connection is separate from Google OAuth. Use the same Google account when YouTube asks you to sign in." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette connexion au site est distincte d’OAuth Google. Utilise le même compte Google quand YouTube te demande de te connecter."
+          }
+        }
+      }
+    },
+    "This would exceed the Downloads storage limit. Raise it in Settings or remove a download. Assembling separate tracks also needs temporary space." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cela dépasserait la limite de stockage des téléchargements. Augmente-la dans les Réglages ou retire un téléchargement. L’assemblage de pistes séparées nécessite aussi de l’espace temporaire."
+          }
+        }
+      }
+    },
+    "Today" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aujourd’hui"
+          }
+        }
+      }
+    },
+    "Token request failed." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La demande de jeton a échoué."
+          }
+        }
+      }
+    },
+    "Top" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top"
+          }
+        }
+      }
+    },
+    "Try Again" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réessayer"
+          }
+        }
+      }
+    },
+    "Try a different search term." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essaie un autre terme de recherche."
+          }
+        }
+      }
+    },
+    "Turn off notifications for this channel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactiver les notifications pour cette chaîne"
+          }
+        }
+      }
+    },
+    "Turn on new video notifications in Settings to see uploads here." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active les notifications de nouvelles vidéos dans les Réglages pour voir les mises en ligne ici."
+          }
+        }
+      }
+    },
+    "Under 4 Minutes" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moins de 4 minutes"
+          }
+        }
+      }
+    },
+    "Unknown command." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commande inconnue."
+          }
+        }
+      }
+    },
+    "Unsubscribe" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se désabonner"
+          }
+        }
+      }
+    },
+    "Unsubscribe from %@?" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se désabonner de %@ ?"
+          }
+        }
+      }
+    },
+    "Unsubscribe from this channel?" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se désabonner de cette chaîne ?"
+          }
+        }
+      }
+    },
+    "Up Next" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À suivre"
+          }
+        }
+      }
+    },
+    "Up to date with iCloud." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À jour avec iCloud."
+          }
+        }
+      }
+    },
+    "Update the app to read an unsupported iCloud record." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mets l’app à jour pour lire un enregistrement iCloud non pris en charge."
+          }
+        }
+      }
+    },
+    "Update the app to read this iCloud sync data." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mets l’app à jour pour lire ces données de synchro iCloud."
+          }
+        }
+      }
+    },
+    "Upload Date" : {
+      "comment" : "Search sort order: newest first",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Date de mise en ligne"
+          }
+        }
+      }
+    },
+    "Use This Service" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utiliser ce service"
+          }
+        }
+      }
+    },
+    "Use an API key" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utiliser une clé API"
+          }
+        }
+      }
+    },
+    "Use an API key instead" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utiliser plutôt une clé API"
+          }
+        }
+      }
+    },
+    "Use the Picture in Picture button in the video's native playback controls." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilise le bouton Image dans l’image des commandes de lecture natives de la vidéo."
+          }
+        }
+      }
+    },
+    "Use this bundle ID" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilise cet identifiant de bundle"
+          }
+        }
+      }
+    },
+    "Use this download service?" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utiliser ce service de téléchargement ?"
+          }
+        }
+      }
+    },
+    "Version" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version"
+          }
+        }
+      }
+    },
+    "Videos" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vidéos"
+          }
+        }
+      }
+    },
+    "Videos you add will show up in this list." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les vidéos que tu ajoutes apparaîtront dans cette liste."
+          }
+        }
+      }
+    },
+    "View Count" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nombre de vues"
+          }
+        }
+      }
+    },
+    "View channel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voir la chaîne"
+          }
+        }
+      }
+    },
+    "Wait for the YouTube video to load before starting Picture in Picture." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attends que la vidéo YouTube se charge avant de lancer Image dans l’image."
+          }
+        }
+      }
+    },
+    "Waiting for iCloud changes." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En attente des modifications iCloud."
+          }
+        }
+      }
+    },
+    "Waiting for iCloud." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En attente d’iCloud."
+          }
+        }
+      }
+    },
+    "Waiting…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En attente…"
+          }
+        }
+      }
+    },
+    "Watch Later" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À regarder plus tard"
+          }
+        }
+      }
+    },
+    "Watch Later is synced with the account connected to youtube.com." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "« À regarder plus tard » est synchronisé avec le compte connecté à youtube.com."
+          }
+        }
+      }
+    },
+    "Watch Now" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regarder maintenant"
+          }
+        }
+      }
+    },
+    "Watch a few videos and this feed will fill up with more from the channels you spend time on." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regarde quelques vidéos et ce fil se remplira de vidéos des chaînes où tu passes du temps."
+          }
+        }
+      }
+    },
+    "Watched" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regardée"
+          }
+        }
+      }
+    },
+    "Welcome to Better YouTube" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bienvenue dans Better YouTube"
+          }
+        }
+      }
+    },
+    "Which channels you gave the bell to on YouTube isn't in the API either — a subscription says whether it covers uploads or everything, and nothing about the bell's three settings. With a YouTube Home session signed in, the button above reads your real notification inbox instead and takes the channels from it: a channel only appears there because its bell is on. One gap comes with that — a channel that hasn't uploaded recently has nothing in the inbox to be found by." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les chaînes dont tu as activé la cloche sur YouTube ne figurent pas non plus dans l’API — un abonnement indique s’il couvre les mises en ligne ou tout, mais rien des trois réglages de la cloche. Avec une session Accueil YouTube connectée, le bouton ci-dessus lit plutôt ta vraie boîte de notifications et en tire les chaînes : une chaîne n’y apparaît que parce que sa cloche est activée. Une lacune en découle — une chaîne qui n’a rien publié récemment n’a rien dans la boîte qui permette de la trouver."
+          }
+        }
+      }
+    },
+    "Write a reply" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écrire une réponse"
+          }
+        }
+      }
+    },
+    "You can add OAuth later in Settings for subscriptions, playlists and likes." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu pourras ajouter OAuth plus tard dans les Réglages pour les abonnements, les playlists et les « J’aime »."
+          }
+        }
+      }
+    },
+    "You can also choose an API key for public videos, or finish setup later in Settings." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu peux aussi choisir une clé API pour les vidéos publiques, ou terminer la configuration plus tard dans les Réglages."
+          }
+        }
+      }
+    },
+    "You'll see new uploads from the channels you follow here." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu verras ici les nouvelles vidéos des chaînes que tu suis."
+          }
+        }
+      }
+    },
+    "YouTube" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube"
+          }
+        }
+      }
+    },
+    "YouTube Account" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compte YouTube"
+          }
+        }
+      }
+    },
+    "YouTube Data API v3 Key (Optional)" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clé YouTube Data API v3 (facultative)"
+          }
+        }
+      }
+    },
+    "YouTube Home" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accueil YouTube"
+          }
+        }
+      }
+    },
+    "YouTube Home reads the website outside the official API and may need attention if YouTube changes its pages." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’accueil YouTube lit le site en dehors de l’API officielle et pourrait nécessiter une mise à jour si YouTube modifie ses pages."
+          }
+        }
+      }
+    },
+    "YouTube Video" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vidéo YouTube"
+          }
+        }
+      }
+    },
+    "YouTube did not confirm the comment rating." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube n’a pas confirmé le « J’aime » du commentaire."
+          }
+        }
+      }
+    },
+    "YouTube did not confirm the feedback." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube n’a pas confirmé l’avis."
+          }
+        }
+      }
+    },
+    "YouTube didn't provide the media length needed to download this video." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube n’a pas fourni la taille du média nécessaire pour télécharger cette vidéo."
+          }
+        }
+      }
+    },
+    "YouTube doesn't allow Picture in Picture for this video." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube n’autorise pas Image dans l’image pour cette vidéo."
+          }
+        }
+      }
+    },
+    "YouTube has no channel called %@." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube n’a aucune chaîne nommée %@."
+          }
+        }
+      }
+    },
+    "YouTube is asking for consent. Open the sign-in screen in Settings once more and accept it there." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube demande ton consentement. Rouvre l’écran de connexion dans les Réglages et accepte-le là."
+          }
+        }
+      }
+    },
+    "YouTube rejected the video ID." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube a refusé l’identifiant de la vidéo."
+          }
+        }
+      }
+    },
+    "YouTube returned an invalid comment reference." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube a renvoyé une référence de commentaire non valide."
+          }
+        }
+      }
+    },
+    "YouTube returned an unreadable playlist library." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube a renvoyé une bibliothèque de playlists illisible."
+          }
+        }
+      }
+    },
+    "YouTube returned an unreadable playlist." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube a renvoyé une playlist illisible."
+          }
+        }
+      }
+    },
+    "YouTube · Watch Later" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube · À regarder plus tard"
+          }
+        }
+      }
+    },
+    "YouTube's Page" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Page YouTube"
+          }
+        }
+      }
+    },
+    "YouTube's home page came back without any videos. The session may have expired — sign in again from Settings." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La page d’accueil de YouTube est revenue sans aucune vidéo. La session a peut-être expiré — reconnecte-toi depuis les Réglages."
+          }
+        }
+      }
+    },
+    "YouTube's notification panel could not be read. Open youtube.com from Settings, check that the bell opens your notifications, then retry." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le panneau de notifications de YouTube n’a pas pu être lu. Ouvre youtube.com depuis les Réglages, vérifie que la cloche ouvre bien tes notifications, puis réessaie."
+          }
+        }
+      }
+    },
+    "YouTube's page didn't finish loading." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La page YouTube n’a pas fini de se charger."
+          }
+        }
+      }
+    },
+    "YouTube's personalized feed isn't open to apps. For You mixes YouTube's own charts for the categories you watch with new uploads from the channels you watch most." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le fil personnalisé de YouTube n’est pas accessible aux apps. « Pour toi » mélange les classements de YouTube pour les catégories que tu regardes avec les nouvelles vidéos des chaînes que tu regardes le plus."
+          }
+        }
+      }
+    },
+    "YouTube's player refused to start this video." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le lecteur de YouTube a refusé de démarrer cette vidéo."
+          }
+        }
+      }
+    },
+    "Your Feed Lives Here" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton fil s’affiche ici"
+          }
+        }
+      }
+    },
+    "Your Library" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta bibliothèque"
+          }
+        }
+      }
+    },
+    "Your YouTube library" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta bibliothèque YouTube"
+          }
+        }
+      }
+    },
+    "Your own YouTube feed" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton propre fil YouTube"
+          }
+        }
+      }
+    },
+    "Your real home feed exists only on YouTube's own page: the Data API dropped the personalized feed in 2016 and related videos in 2023. Signing in here opens youtube.com in a web view and keeps its cookies on this device, apart from the Google sign-in above — that one is a token scoped to the API, this one is a browser session. The app reads the order of the videos on your home page and fetches everything it shows about them through the API. That is outside what YouTube's terms allow apps to do, it can break whenever the page changes, and it is your account that carries the risk. Sign out here and the app forgets the session and the Home segment with it." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton vrai fil d’accueil n’existe que sur la page de YouTube : l’API Data a abandonné le fil personnalisé en 2016 et les vidéos associées en 2023. Te connecter ici ouvre youtube.com dans une vue web et garde ses cookies sur cet appareil, à part de la connexion Google ci-dessus — celle-là est un jeton limité à l’API, celle-ci une session de navigateur. L’app lit l’ordre des vidéos de ta page d’accueil et récupère via l’API tout ce qu’elle affiche à leur sujet. Cela sort de ce que les conditions de YouTube autorisent aux apps, cela peut casser à chaque changement de la page, et c’est ton compte qui en porte le risque. Déconnecte-toi ici et l’app oublie la session, et le segment Accueil avec elle."
+          }
+        }
+      }
+    },
+    "https://…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "https://…"
+          }
+        }
+      }
+    },
+    "iCloud" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud"
+          }
+        }
+      }
+    },
+    "iCloud Sync" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchro iCloud"
+          }
+        }
+      }
+    },
+    "iCloud account changed. Turn sync on to merge this device's library with the new account." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le compte iCloud a changé. Active la synchro pour fusionner la bibliothèque de cet appareil avec le nouveau compte."
+          }
+        }
+      }
+    },
+    "iCloud requires a signed build with the iCloud capability." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud nécessite une version signée avec la fonctionnalité iCloud."
+          }
+        }
+      }
+    },
+    "iCloud signed out. Your library is kept on this device." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déconnecté d’iCloud. Ta bibliothèque est conservée sur cet appareil."
+          }
+        }
+      }
+    },
+    "iCloud storage is full. Free some space to continue syncing." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le stockage iCloud est plein. Libère de l’espace pour continuer la synchro."
+          }
+        }
+      }
+    },
+    "iCloud sync couldn't finish: %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La synchro iCloud n’a pas pu se terminer : %@"
+          }
+        }
+      }
+    },
+    "iCloud sync is off on this device." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La synchro iCloud est désactivée sur cet appareil."
+          }
+        }
+      }
+    },
+    "iOS Settings" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages d’iOS"
+          }
+        }
+      }
+    },
+    "load failed: %@ · video %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "load failed: %1$@ · video %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "échec du chargement : %1$@ · vidéo %2$@"
+          }
+        }
+      }
+    },
+    "no handshake after 8s · video %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "aucune réponse après 8 s · vidéo %@"
+          }
+        }
+      }
+    },
+    "nothing new to add" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "rien de nouveau à ajouter"
+          }
+        }
+      }
+    },
+    "of %@ units left" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "unités restantes sur %@"
+          }
+        }
+      }
+    },
+    "player error %lld · video %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "player error %1$lld · video %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "erreur du lecteur %lld · vidéo %@"
+          }
+        }
+      }
+    },
+    "youtube.com" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "youtube.com"
+          }
+        }
+      }
+    },
+    "·" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "·"
+          }
+        }
+      }
+    },
+    "•" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "•"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

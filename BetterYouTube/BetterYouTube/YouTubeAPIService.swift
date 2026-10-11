@@ -16,21 +16,21 @@ enum APIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingCredentials:
-            return "Add a YouTube Data API key in Settings, or sign in with Google, to load content."
+            return String(localized: "Add a YouTube Data API key in Settings, or sign in with Google, to load content.")
         case .notSignedIn:
-            return "Sign in with Google in Settings to see your subscriptions, playlists and likes."
+            return String(localized: "Sign in with Google in Settings to see your subscriptions, playlists and likes.")
         case .insufficientScope:
-            return "This sign-in doesn't allow changes to your YouTube account. Sign in again from Settings to let the app manage its Watch Later playlist."
+            return String(localized: "This sign-in doesn't allow changes to your YouTube account. Sign in again from Settings and allow access to YouTube.")
         case .notFound:
-            return "That's no longer on YouTube."
+            return String(localized: "That's no longer on YouTube.")
         case .invalidURL:
-            return "Could not build the request URL."
+            return String(localized: "Could not build the request URL.")
         case .server(let message):
             return message
         case .http(let code):
-            return "The server responded with status \(code)."
+            return String(localized: "The server responded with status \(code).")
         case .decoding:
-            return "Could not read the server's response."
+            return String(localized: "Could not read the server's response.")
         case .transport(let error):
             return error.localizedDescription
         }
@@ -314,7 +314,7 @@ actor YouTubeAPIService {
                 // every video they opened. Surface it as the ordinary failure it is instead.
                 if await GoogleAuthService.shared.holdsRequestedScope {
                     throw APIError.server(
-                        message ?? "Google refused “\(endpoint)” for lack of permission."
+                        message ?? String(localized: "Google refused “\(endpoint)” for lack of permission.")
                     )
                 }
                 await GoogleAuthService.shared.signOutForInsufficientScope(endpoint: endpoint)

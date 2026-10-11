@@ -17,12 +17,12 @@ struct SearchView: View {
             if viewModel.isSearching && viewModel.results.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let message = viewModel.errorMessage, viewModel.results.isEmpty {
-                EmptyStateView(title: "Search failed", systemImage: "exclamationmark.triangle", message: message)
+                ContentUnavailableView("Search Failed", systemImage: "exclamationmark.triangle", description: Text(message))
             } else if viewModel.results.isEmpty && viewModel.hasSearched {
-                EmptyStateView(
-                    title: "No Results",
+                ContentUnavailableView(
+                    "No Results",
                     systemImage: "magnifyingglass",
-                    message: "Try a different search term."
+                    description: Text("Try a different search term.")
                 )
             } else if viewModel.results.isEmpty {
                 recentSearches
@@ -208,10 +208,10 @@ struct SearchView: View {
     private var recentSearches: some View {
         Group {
             if recents.terms.isEmpty {
-                EmptyStateView(
-                    title: "Search YouTube",
+                ContentUnavailableView(
+                    "Search YouTube",
                     systemImage: "magnifyingglass",
-                    message: "Look for videos and channels. Your recent searches will show up here."
+                    description: Text("Look for videos and channels, or paste a YouTube link to open it. Your recent searches will show up here.")
                 )
             } else {
                 List {

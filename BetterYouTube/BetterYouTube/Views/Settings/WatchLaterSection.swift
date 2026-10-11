@@ -14,7 +14,9 @@ struct WatchLaterSection: View {
         Section {
             LabeledContent(
                 "Playlist",
-                value: watchLater.usesYouTubeWatchLater ? "YouTube · Watch Later" : "Your Library"
+                value: watchLater.usesYouTubeWatchLater
+                    ? String(localized: "YouTube · Watch Later")
+                    : String(localized: "Your Library")
             )
 
             // Parsing is available signed out; destination choices are shown afterwards.
@@ -75,12 +77,10 @@ struct WatchLaterSection: View {
     /// The result of an import, in the terms someone reading it cares about.
     private static func describe(_ summary: WatchLaterStore.TakeoutImport) -> String {
         if let failure = summary.failure { return failure }
-        var parts = [summary.videos.count == 1
-                     ? "Found 1 video — choose its destination"
-                     : "Found \(summary.videos.count) videos — choose their destination"]
-        if summary.missing > 0 { parts.append("\(summary.missing) no longer on YouTube") }
+        var parts = [String(localized: "Found \(summary.videos.count) videos — choose their destination")]
+        if summary.missing > 0 { parts.append(String(localized: "\(summary.missing) no longer on YouTube")) }
         // Say what was left behind, or a truncated import looks like a botched one.
-        if summary.skippedOlder > 0 { parts.append("\(summary.skippedOlder) older ones skipped") }
+        if summary.skippedOlder > 0 { parts.append(String(localized: "\(summary.skippedOlder) older ones skipped")) }
         return parts.joined(separator: " · ")
     }
 }

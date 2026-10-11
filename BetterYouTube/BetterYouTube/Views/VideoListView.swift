@@ -3,7 +3,7 @@ import SwiftUI
 /// Reusable list of videos, used for "See All" destinations and every library category.
 struct VideoListView: View {
     @EnvironmentObject private var player: PlayerManager
-    let title: String
+    let title: LocalizedStringKey
     let videos: [Video]
     var onDelete: ((IndexSet) -> Void)?
     var onRefresh: (@Sendable () async -> Void)? = nil
@@ -21,10 +21,10 @@ struct VideoListView: View {
     var body: some View {
         Group {
             if videos.isEmpty {
-                EmptyStateView(
-                    title: "Nothing here yet",
+                ContentUnavailableView(
+                    "Nothing Here Yet",
                     systemImage: "tray",
-                    message: "Videos you add will show up in this list."
+                    description: Text("Videos you add will show up in this list.")
                 )
             } else {
                 List {
@@ -83,10 +83,10 @@ struct SubscriptionsView: View {
     var body: some View {
         Group {
             if channels.isEmpty {
-                EmptyStateView(
-                    title: "No subscriptions",
+                ContentUnavailableView(
+                    "No Subscriptions",
                     systemImage: "person.2",
-                    message: "Channels you follow on YouTube appear here."
+                    description: Text("Channels you follow on YouTube appear here.")
                 )
             } else {
                 ScrollView {
@@ -145,10 +145,10 @@ struct PlaylistsView: View {
     var body: some View {
         Group {
             if displayedPlaylists.isEmpty {
-                EmptyStateView(
-                    title: "No playlists",
+                ContentUnavailableView(
+                    "No Playlists",
                     systemImage: "music.note.list",
-                    message: "Playlists you create or save on YouTube appear here."
+                    description: Text("Playlists you create or save on YouTube appear here.")
                 )
             } else {
                 List(shown) { playlist in
@@ -206,7 +206,7 @@ struct PlaylistDetailView: View {
             if viewModel.isLoading && viewModel.videos.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let message = viewModel.errorMessage, viewModel.videos.isEmpty {
-                EmptyStateView(title: "Couldn't load playlist", message: message)
+                ContentUnavailableView("Couldn't Load Playlist", systemImage: "exclamationmark.triangle", description: Text(message))
             } else {
                 List {
                     Section {
@@ -309,7 +309,7 @@ struct PlaylistHeaderView: View {
                     }
                     let count = playlist.itemCount ?? videoCount
                     if count > 0 {
-                        Text("\(count) \(count == 1 ? "video" : "videos")")
+                        Text("\(count) videos")
                     }
                 }
                 .font(.subheadline)

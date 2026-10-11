@@ -23,7 +23,7 @@ struct ChannelView: View {
             if viewModel.isLoading && channel == nil {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let message = viewModel.errorMessage, channel == nil {
-                EmptyStateView(title: "Couldn't load channel", message: message)
+                ContentUnavailableView("Couldn't Load Channel", systemImage: "exclamationmark.triangle", description: Text(message))
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 20) {
@@ -66,7 +66,7 @@ struct ChannelView: View {
                 .minimizesPlayerBarOnScroll()
             }
         }
-        .navigationTitle(channel?.title ?? "Channel")
+        .navigationTitle(channel?.title ?? String(localized: "Channel"))
         .inlineNavigationBar()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -89,7 +89,7 @@ struct ChannelView: View {
             await viewModel.loadSubscription(isSignedIn: auth.isSignedIn)
         }
         .confirmationDialog(
-            "Unsubscribe from \(channel?.title ?? "this channel")?",
+            channel.map { Text("Unsubscribe from \($0.title)?") } ?? Text("Unsubscribe from this channel?"),
             isPresented: $confirmsUnsubscribe,
             titleVisibility: .visible
         ) {
@@ -185,10 +185,10 @@ struct ChannelHeaderView: View {
     private var statsLine: String {
         var parts: [String] = []
         if let subs = channel.subscriberCount {
-            parts.append("\(CountFormatter.abbreviated(subs)) subscribers")
+            parts.append(CountFormatter.subscribers(subs))
         }
         if let videos = channel.videoCount {
-            parts.append("\(CountFormatter.abbreviated(videos)) videos")
+            parts.append(CountFormatter.videos(videos))
         }
         return parts.joined(separator: " · ")
     }

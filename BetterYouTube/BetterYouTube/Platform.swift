@@ -105,18 +105,18 @@ enum Platform {
     /// What to call the place above, in a sentence.
     static var settingsAppName: String {
         #if os(macOS)
-        "System Settings"
+        String(localized: "System Settings")
         #else
-        "iOS Settings"
+        String(localized: "iOS Settings")
         #endif
     }
 
     /// Where downloaded files show up for the user, named as they would name it.
     static var downloadsLocationDescription: String {
         #if os(macOS)
-        "Files land in the app's own Downloads folder, reachable from Downloads → Show in Finder."
+        String(localized: "Files land in the app's own Downloads folder, reachable from Downloads → Show in Finder.")
         #else
-        "Files land in Downloads, which the Files app shows under “Better YouTube”."
+        String(localized: "Files land in Downloads, which the Files app shows under “Better YouTube”.")
         #endif
     }
 

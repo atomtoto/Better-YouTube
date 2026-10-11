@@ -75,6 +75,28 @@ enum CountFormatter {
         guard let count else { return "—" }
         return count.formatted(.number.notation(.compactName).locale(locale))
     }
+
+    // The number shown is abbreviated, so it can't choose its own plural; the full count does.
+    // One is the only count that reads as singular in every language the app speaks — French
+    // also treats zero that way, but "0 vues" is what YouTube prints there too.
+
+    /// "1.2K views".
+    static func views(_ count: Int) -> String {
+        let number = abbreviated(count)
+        return count == 1 ? String(localized: "\(number) view") : String(localized: "\(number) views")
+    }
+
+    /// "3.4M subscribers".
+    static func subscribers(_ count: Int) -> String {
+        let number = abbreviated(count)
+        return count == 1 ? String(localized: "\(number) subscriber") : String(localized: "\(number) subscribers")
+    }
+
+    /// "342 videos", for a channel's or a playlist's size.
+    static func videos(_ count: Int) -> String {
+        let number = abbreviated(count)
+        return count == 1 ? String(localized: "\(number) video") : String(localized: "\(number) videos")
+    }
 }
 
 /// A moment in a video as a clock reads it: "1:23", "1:02:03".

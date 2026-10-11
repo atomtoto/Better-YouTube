@@ -90,35 +90,42 @@ struct NotificationsSection: View {
 
     /// The schedule is the platform's, so the sentence describing it is too.
     private static var footer: String {
+        // Whole sentences per platform rather than a clause slotted into one: a translation can
+        // only get the grammar right around words it can see.
         #if os(macOS)
-        let delivery = "delivery follows a check the app runs every couple of hours while it is open, "
-            + "plus the moment you bring it to the front"
+        let delivery = String(localized: """
+        Better YouTube checks the channels you get notifications for and notifies you locally — \
+        the Data API offers no push channel for personal accounts, so delivery follows a check \
+        the app runs every couple of hours while it is open, plus the moment you bring it to the \
+        front. Turn the bell on from a channel page to pick individual channels.
+        """)
         #else
-        let delivery = "delivery follows iOS's background-refresh schedule and the moment you open the app"
+        let delivery = String(localized: """
+        Better YouTube checks the channels you get notifications for and notifies you locally — \
+        the Data API offers no push channel for personal accounts, so delivery follows iOS's \
+        background-refresh schedule and the moment you open the app. Turn the bell on from a \
+        channel page to pick individual channels.
+        """)
         #endif
-        return """
-        Better YouTube checks your subscriptions for new uploads and notifies you locally — the \
-        Data API offers no push channel for personal accounts, so \(delivery). Turn the bell on \
-        from a channel page to pick individual channels.
-
+        let bell = String(localized: """
         Which channels you gave the bell to on YouTube isn't in the API either — a subscription \
         says whether it covers uploads or everything, and nothing about the bell's three \
         settings. With a YouTube Home session signed in, the button above reads your real \
         notification inbox instead and takes the channels from it: a channel only appears there \
         because its bell is on. One gap comes with that — a channel that hasn't uploaded recently \
         has nothing in the inbox to be found by.
-        """
+        """)
+        return delivery + "\n\n" + bell
     }
 
     /// What came back from YouTube's notification inbox.
     private static func describe(_ summary: NotificationStore.YouTubeImport) -> String {
         if let failure = summary.failure { return failure }
-        guard summary.channels > 0 else { return "Nothing in YouTube's notifications yet." }
-        let channels = summary.channels == 1
-            ? "1 channel with the bell on"
-            : "\(summary.channels) channels with the bell on"
-        return summary.notifications == 0
-            ? "\(channels) · nothing new to add"
-            : "\(channels) · \(summary.notifications) added to the inbox"
+        guard summary.channels > 0 else { return String(localized: "Nothing in YouTube's notifications yet.") }
+        let channels = String(localized: "\(summary.channels) channels with the bell on")
+        let added = summary.notifications == 0
+            ? String(localized: "nothing new to add")
+            : String(localized: "\(summary.notifications) added to the inbox")
+        return "\(channels) · \(added)"
     }
 }

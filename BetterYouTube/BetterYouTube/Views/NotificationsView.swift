@@ -22,10 +22,10 @@ struct NotificationsView: View {
         NavigationStack {
             Group {
                 if store.items.isEmpty {
-                    EmptyStateView(
-                        title: "No Notifications",
+                    ContentUnavailableView(
+                        "No Notifications",
                         systemImage: "bell",
-                        message: emptyMessage
+                        description: Text(emptyMessage)
                     )
                 } else {
                     List {
@@ -133,14 +133,14 @@ struct NotificationsView: View {
 
     private var emptyMessage: String {
         if !store.isEnabled {
-            return "Turn on new video notifications in Settings to see uploads here."
+            return String(localized: "Turn on new video notifications in Settings to see uploads here.")
         }
         // Selected channels are read with an API key too; only All Subscriptions needs the
         // account, to know which channels those are.
         if store.mode == .all && !auth.isSignedIn {
-            return "Sign in with Google to get notified when the channels you follow upload."
+            return String(localized: "Sign in with Google to get notified when the channels you follow upload.")
         }
-        return "You'll see new uploads from the channels you follow here."
+        return String(localized: "You'll see new uploads from the channels you follow here.")
     }
 
     private func refresh() async {

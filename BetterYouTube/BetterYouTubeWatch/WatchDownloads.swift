@@ -53,7 +53,7 @@ final class WatchDownloads: ObservableObject {
         records.removeAll { $0.id == video.id }
         records.insert(Record(video: video, fileExtension: fileExtension, savedAt: .now), at: 0)
         persist()
-        message = "Disponible hors ligne sur la montre."
+        message = String(localized: "Available offline on the watch.")
     }
 
     func delete(_ video: WatchVideo) {
@@ -69,7 +69,7 @@ final class WatchDownloads: ObservableObject {
         activeTask = Task {
             do {
                 _ = try await WatchBridge.shared.request("transferDownload", videoID: video.id)
-                message = "Transfert demandé à l’iPhone. Il peut prendre quelques minutes."
+                message = String(localized: "Transfer requested from the iPhone. It may take a few minutes.")
             } catch { message = error.localizedDescription }
         }
     }
@@ -91,7 +91,7 @@ final class WatchDownloads: ObservableObject {
                 register(video, extension: "m4a")
             } catch {
                 message = Task.isCancelled
-                    ? "Téléchargement interrompu. Réessaie pour reprendre."
+                    ? String(localized: "Download interrupted. Try again to resume.")
                     : error.localizedDescription
             }
         }
@@ -99,7 +99,7 @@ final class WatchDownloads: ObservableObject {
 
     func cancelDownload() {
         activeTask?.cancel()
-        message = "Téléchargement interrompu. Réessaie pour reprendre."
+        message = String(localized: "Download interrupted. Try again to resume.")
     }
 
     private func fetchInRanges(from url: URL, length: Int64, video: WatchVideo) async throws {
@@ -125,7 +125,7 @@ final class WatchDownloads: ObservableObject {
         let available = (try? FileManager.default.attributesOfFileSystem(forPath: Self.root.path)[.systemFreeSize]
             as? NSNumber)?.int64Value ?? 0
         guard available == 0 || available > length - offset + 20 * 1_048_576 else {
-            throw WatchBridgeError.phone("Espace insuffisant sur la montre pour ce fichier audio.")
+            throw WatchBridgeError.phone(String(localized: "Not enough space on the watch for this audio file."))
         }
         let block: Int64 = 4 * 1_048_576
         while offset < length {

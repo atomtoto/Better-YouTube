@@ -183,7 +183,7 @@ final class LocalPlayback {
                     self.reportProgress(at: self.player.currentTime())
                 case .failed:
                     let reason = item.error?.localizedDescription
-                        ?? "The downloaded file couldn't be played."
+                        ?? String(localized: "The downloaded file couldn't be played.")
                     self.onFailure?(reason)
                 default:
                     break

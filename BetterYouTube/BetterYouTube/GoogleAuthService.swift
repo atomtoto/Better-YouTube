@@ -26,29 +26,32 @@ enum AuthError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingClientId:
-            return "Add your Google OAuth client ID in Settings before signing in."
+            return String(localized: "Add your Google OAuth client ID in Settings before signing in.")
         case .clientIdIsURL:
-            return "This is a web address, not an OAuth client ID. In Google Cloud, copy the Client ID value only; it ends in .apps.googleusercontent.com."
+            return String(localized: "This is a web address, not an OAuth client ID. In Google Cloud, copy the Client ID value only; it ends in .apps.googleusercontent.com.")
         case .invalidClientId:
-            return "That doesn't look like an Apple-platform OAuth client ID. Copy the Client ID value ending in .apps.googleusercontent.com."
+            return String(localized: "That doesn't look like an Apple-platform OAuth client ID. Copy the Client ID value ending in .apps.googleusercontent.com.")
         case .cancelled:
-            return "Sign-in was cancelled."
+            return String(localized: "Sign-in was cancelled.")
         case .scopeDeclined:
-            return """
+            return String(localized: """
             Google signed you in without the YouTube permission, which leaves the app able to do \
             nothing with the account. On the consent screen there is a tick box — "See, edit, and \
             permanently delete your YouTube videos, ratings, comments and captions" — and it has \
             to be ticked before Continue. Sign in again and tick it.
-            """
+            """)
         case .consentDenied(let reason):
             if reason == "access_denied" {
-                return """
+                return String(localized: """
                 Google refused the consent screen (access_denied). While the OAuth consent screen is \
                 in Testing, only accounts listed as test users can sign in — add your Google account \
                 under Google Auth Platform → Audience → Test users, or publish the app.
-                """
+                """)
             }
-            return "Google refused the sign-in request" + (reason.map { " (\($0))" } ?? "") + "."
+            if let reason {
+                return String(localized: "Google refused the sign-in request (\(reason)).")
+            }
+            return String(localized: "Google refused the sign-in request.")
         case .exchangeFailed(let message):
             return message
         case .tokenRejected(let message):
@@ -151,11 +154,13 @@ final class GoogleAuthService: ObservableObject {
     @Published private(set) var lastSignOutReason: String?
 
     /// What a rejected refresh token almost always means here.
-    private static let testingExpiryExplanation = """
-    Google stopped accepting the saved sign-in. While the OAuth consent screen is in Testing, \
-    refresh tokens expire after seven days — publishing the app under Google Auth Platform → \
-    Audience removes that limit. Sign in again to carry on.
-    """
+    private static var testingExpiryExplanation: String {
+        String(localized: """
+        Google stopped accepting the saved sign-in. While the OAuth consent screen is in Testing, \
+        refresh tokens expire after seven days — publishing the app under Google Auth Platform → \
+        Audience removes that limit. Sign in again to carry on.
+        """)
+    }
     @Published var clientId: String {
         didSet { UserDefaults.standard.set(clientId, forKey: Self.clientIdKey) }
     }
@@ -241,7 +246,7 @@ final class GoogleAuthService: ObservableObject {
         let redirectURI = "\(scheme):/oauth2redirect"
 
         guard var components = URLComponents(string: Self.authEndpoint) else {
-            throw AuthError.exchangeFailed("Invalid authorization endpoint.")
+            throw AuthError.exchangeFailed(String(localized: "Invalid authorization endpoint."))
         }
         components.queryItems = [
             URLQueryItem(name: "client_id", value: trimmedClientId),
@@ -254,7 +259,7 @@ final class GoogleAuthService: ObservableObject {
             URLQueryItem(name: "prompt", value: "consent")
         ]
         guard let authURL = components.url else {
-            throw AuthError.exchangeFailed("Could not build the sign-in URL.")
+            throw AuthError.exchangeFailed(String(localized: "Could not build the sign-in URL."))
         }
 
         let callbackURL = try await authenticate(url: authURL, scheme: scheme)
@@ -318,12 +323,12 @@ final class GoogleAuthService: ObservableObject {
     /// `endpoint` is named in the message on purpose: a refusal says which call was refused, and
     /// without that the only way to find out is to guess.
     func signOutForInsufficientScope(endpoint: String) {
-        signOut(reason: """
+        signOut(reason: String(localized: """
         Google refused “\(endpoint)” for lack of permission, and a token's scope can't be widened \
         in place. This almost always means the YouTube tick box on the consent screen — "See, \
         edit, and permanently delete your YouTube videos, ratings, comments and captions" — was \
         left unticked. Sign in again and tick it before Continue.
-        """)
+        """))
     }
 
     /// Returns a valid access token, refreshing it first when needed. `nil` means "not signed in".
@@ -368,10 +373,10 @@ final class GoogleAuthService: ObservableObject {
 
     private func authenticate(url: URL, scheme: String) async throws -> URL {
         guard session == nil else {
-            throw AuthError.exchangeFailed("A Google sign-in is already in progress.")
+            throw AuthError.exchangeFailed(String(localized: "A Google sign-in is already in progress."))
         }
         guard let anchor = Platform.keyWindow else {
-            throw AuthError.exchangeFailed("Sign-in could not find the app window. Close this screen and try again.")
+            throw AuthError.exchangeFailed(String(localized: "Sign-in could not find the app window. Close this screen and try again."))
         }
         let presenter = WebAuthPresenter(anchor: anchor)
         self.presenter = presenter
@@ -394,7 +399,7 @@ final class GoogleAuthService: ObservableObject {
             session.prefersEphemeralWebBrowserSession = false
             self.session = session
             if !session.start() {
-                completion.resume(.failure(AuthError.exchangeFailed("Google sign-in could not start. Please try again.")))
+                completion.resume(.failure(AuthError.exchangeFailed(String(localized: "Google sign-in could not start. Please try again."))))
             }
         }
     }
@@ -436,7 +441,7 @@ final class GoogleAuthService: ObservableObject {
 
     private func postToken(parameters: [String: String]) async throws -> OAuthTokens {
         guard let url = URL(string: Self.tokenEndpoint) else {
-            throw AuthError.exchangeFailed("Invalid token endpoint.")
+            throw AuthError.exchangeFailed(String(localized: "Invalid token endpoint."))
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -448,7 +453,7 @@ final class GoogleAuthService: ObservableObject {
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "Token request failed."
+            let message = String(data: data, encoding: .utf8) ?? String(localized: "Token request failed.")
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             // 400/401 means Google rejected the grant itself, not a transient problem.
             throw (400...401).contains(status)

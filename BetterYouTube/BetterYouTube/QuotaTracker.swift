@@ -10,15 +10,15 @@ struct QuotaSpend: Identifiable {
     /// The endpoint under a name that means something outside the API client.
     var title: String {
         switch endpoint {
-        case "search": return "Search"
-        case "videos": return "Videos"
-        case "channels": return "Channels"
-        case "playlists": return "Playlists"
-        case "playlistItems": return "Playlist items"
-        case "subscriptions": return "Subscriptions"
-        case "commentThreads": return "Comments"
-        case "rate": return "Likes"
-        case "getRating": return "Like status"
+        case "search": return String(localized: "Search")
+        case "videos": return String(localized: "Videos")
+        case "channels": return String(localized: "Channels")
+        case "playlists": return String(localized: "Playlists")
+        case "playlistItems": return String(localized: "Playlist Items")
+        case "subscriptions": return String(localized: "Subscriptions")
+        case "commentThreads": return String(localized: "Comments")
+        case "rate": return String(localized: "Likes")
+        case "getRating": return String(localized: "Like Status")
         default: return endpoint.capitalized
         }
     }

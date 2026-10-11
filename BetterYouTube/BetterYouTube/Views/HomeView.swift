@@ -233,11 +233,15 @@ struct HomeView: View {
     @ViewBuilder
     private var currentEmptyState: some View {
         if viewModel.feed == .youTube {
-            EmptyStateView(
-                title: "Nothing read yet",
-                systemImage: "sparkles.tv",
-                message: viewModel.youTubeIssue ?? "Pull down to read YouTube's home page again."
-            )
+            ContentUnavailableView {
+                Label("Nothing Read Yet", systemImage: "sparkles.tv")
+            } description: {
+                if let issue = viewModel.youTubeIssue {
+                    Text(issue)
+                } else {
+                    Text("Pull down to read YouTube's home page again.")
+                }
+            }
         } else {
             emptyState
         }
@@ -248,21 +252,21 @@ struct HomeView: View {
     private var feedSourceNote: String? {
         switch viewModel.feed {
         case .youTube:
-            return "The order comes from your YouTube home page, read in a signed-in web view. Everything shown about each video comes from the Data API."
+            return String(localized: "The order comes from your YouTube home page, read in a signed-in web view. Everything shown about each video comes from the Data API.")
         case .forYou:
-            return "YouTube's personalized feed isn't open to apps. For You mixes YouTube's own charts for the categories you watch with new uploads from the channels you watch most."
+            return String(localized: "YouTube's personalized feed isn't open to apps. For You mixes YouTube's own charts for the categories you watch with new uploads from the channels you watch most.")
         case .subscriptions:
             return nil
         }
     }
 
     private var emptyState: some View {
-        EmptyStateView(
-            title: auth.isSignedIn ? "Nothing new yet" : "Your feed lives here",
+        ContentUnavailableView(
+            auth.isSignedIn ? "Nothing New Yet" : "Your Feed Lives Here",
             systemImage: "sparkles.tv",
-            message: auth.isSignedIn
+            description: Text(auth.isSignedIn
                 ? "Watch a few videos and this feed will fill up with more from the channels you spend time on."
-                : "Sign in with Google in Settings to see your subscriptions, or search for something to get started."
+                : "Sign in with Google in Settings to see your subscriptions, or search for something to get started.")
         )
     }
 

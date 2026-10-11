@@ -24,12 +24,12 @@ final class NotificationService: NSObject, ObservableObject {
     func configure() {
         let watchLater = UNNotificationAction(
             identifier: NotificationIdentifier.watchLater,
-            title: "Watch Later",
+            title: String(localized: "Watch Later"),
             options: []
         )
         let open = UNNotificationAction(
             identifier: NotificationIdentifier.open,
-            title: "Watch Now",
+            title: String(localized: "Watch Now"),
             options: [.foreground]
         )
         let category = UNNotificationCategory(
@@ -60,7 +60,7 @@ final class NotificationService: NSObject, ObservableObject {
         guard authorizationStatus == .authorized || authorizationStatus == .provisional else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = video.channelTitle.isEmpty ? "New video" : video.channelTitle
+        content.title = video.channelTitle.isEmpty ? String(localized: "New Video") : video.channelTitle
         content.body = video.title
         content.sound = .default
         content.categoryIdentifier = NotificationIdentifier.category

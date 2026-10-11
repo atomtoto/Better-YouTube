@@ -313,7 +313,7 @@ final class DownloadManager: ObservableObject {
               range.start == offset, range.total == total,
               range.end == offset + min(chunkSize, total - offset) - 1,
               byteCount == range.end - range.start + 1 else {
-            throw DownloadError.service("The media server returned an incomplete or unexpected byte range. Retry the download.")
+            throw DownloadError.service(String(localized: "The media server returned an incomplete or unexpected byte range. Retry the download."))
         }
         let destination = store.paths.componentURL(for: id, audio: transfer.downloadingAudio)
         try FileManager.default.createDirectory(at: store.paths.folder(for: id), withIntermediateDirectories: true)
@@ -467,7 +467,7 @@ final class DownloadManager: ObservableObject {
         let free = try? store.paths.root.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage
         if let free, (remaining ?? bytes) + Self.freeSpaceFloor > free { return .noSpace }
         if let limit = DownloadSettings.shared.storageLimitBytes, store.bytesOnDisk() - excludingOnDisk + bytes > limit {
-            return .overStorageLimit("This would exceed the Downloads storage limit. Raise it in Settings or remove a download. Assembling separate tracks also needs temporary space.")
+            return .overStorageLimit(String(localized: "This would exceed the Downloads storage limit. Raise it in Settings or remove a download. Assembling separate tracks also needs temporary space."))
         }
         return nil
     }

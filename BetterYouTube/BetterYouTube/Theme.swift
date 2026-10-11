@@ -15,7 +15,6 @@ enum Theme {
     }
 
     enum Size {
-        static let carouselCard: CGFloat = 260
         static let compactThumbnail: CGFloat = 132
     }
 }
@@ -37,9 +36,9 @@ extension View {
 /// A consistent label for links that leave the app. Hierarchical rendering keeps the arrow in
 /// the accent color and gives the surrounding circle its secondary level.
 struct ExternalLinkLabel: View {
-    let title: String
+    let title: LocalizedStringKey
 
-    init(_ title: String) {
+    init(_ title: LocalizedStringKey) {
         self.title = title
     }
 
@@ -137,54 +136,5 @@ struct AvatarView: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
-    }
-}
-
-/// Section title with an optional "See All" affordance, as used across Apple's apps.
-struct SectionHeader<Destination: View>: View {
-    private let title: String
-    private let subtitle: String?
-    private let showsSeeAll: Bool
-    private let destination: () -> Destination
-
-    init(title: String, subtitle: String? = nil, @ViewBuilder destination: @escaping () -> Destination) {
-        self.title = title
-        self.subtitle = subtitle
-        self.showsSeeAll = true
-        self.destination = destination
-    }
-
-    fileprivate init(title: String, subtitle: String?, showsSeeAll: Bool, destination: @escaping () -> Destination) {
-        self.title = title
-        self.subtitle = subtitle
-        self.showsSeeAll = showsSeeAll
-        self.destination = destination
-    }
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 2) {
-                if let subtitle {
-                    Text(subtitle.uppercased())
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                Text(title)
-                    .font(.title2.bold())
-            }
-            Spacer(minLength: 12)
-            if showsSeeAll {
-                NavigationLink(destination: destination) {
-                    Text("See All")
-                        .font(.subheadline.weight(.semibold))
-                }
-            }
-        }
-    }
-}
-
-extension SectionHeader where Destination == EmptyView {
-    init(title: String, subtitle: String? = nil) {
-        self.init(title: title, subtitle: subtitle, showsSeeAll: false) { EmptyView() }
     }
 }

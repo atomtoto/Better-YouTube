@@ -15,12 +15,12 @@ struct WatchRootView: View {
                             .lineLimit(2)
                     }
                 }
-                NavigationLink { WatchHomeView() } label: { Label("Accueil", systemImage: "house.fill") }
-                NavigationLink { WatchSearchView() } label: { Label("Recherche", systemImage: "magnifyingglass") }
-                NavigationLink { WatchLibraryView() } label: { Label("Bibliothèque", systemImage: "rectangle.stack.fill") }
-                NavigationLink { WatchDownloadsView() } label: { Label("Téléchargements", systemImage: "arrow.down.circle.fill") }
+                NavigationLink { WatchHomeView() } label: { Label("Home", systemImage: "house.fill") }
+                NavigationLink { WatchSearchView() } label: { Label("Search", systemImage: "magnifyingglass") }
+                NavigationLink { WatchLibraryView() } label: { Label("Library", systemImage: "rectangle.stack.fill") }
+                NavigationLink { WatchDownloadsView() } label: { Label("Downloads", systemImage: "arrow.down.circle.fill") }
                 if bridge.apiKey.isEmpty {
-                    Text("Configure une clé API dans l’app iPhone pour l’accueil et la recherche.")
+                    Text("Set an API key in the iPhone app for Home and Search.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -64,13 +64,13 @@ struct WatchHomeView: View {
     var body: some View {
         List {
             if bridge.snapshot.homeFeed.isEmpty {
-                Text("Ouvre l’accueil YouTube dans l’app iPhone pour synchroniser ton flux.")
+                Text("Open YouTube Home in the iPhone app to sync your feed.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             ForEach(bridge.snapshot.homeFeed) { WatchVideoRow(video: $0) }
         }
-        .navigationTitle("Accueil")
-        .toolbar { Button("Synchroniser", systemImage: "arrow.clockwise") { Task { await bridge.refresh() } } }
+        .navigationTitle("Home")
+        .toolbar { Button("Sync", systemImage: "arrow.clockwise") { Task { await bridge.refresh() } } }
     }
 }
 
@@ -83,9 +83,9 @@ struct WatchSearchView: View {
 
     var body: some View {
         List {
-            TextField("Vidéo ou chaîne", text: $query)
+            TextField("Video or channel", text: $query)
                 .onSubmit { Task { await search() } }
-            Button("Rechercher", systemImage: "magnifyingglass") { Task { await search() } }
+            Button("Search", systemImage: "magnifyingglass") { Task { await search() } }
                 .disabled(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
             if isLoading { ProgressView() }
             if let errorMessage { Text(errorMessage).font(.footnote).foregroundStyle(.secondary) }
@@ -101,7 +101,7 @@ struct WatchSearchView: View {
                 }
             }
         }
-        .navigationTitle("Recherche")
+        .navigationTitle("Search")
     }
 
     private func search() async {
@@ -120,32 +120,32 @@ struct WatchLibraryView: View {
 
     var body: some View {
         List {
-            Section("Sur cet appareil") {
-                NavigationLink { WatchVideoListView(title: "Favoris", videos: bridge.localLibrary?.favorites ?? bridge.snapshot.favorites) }
-                    label: { Label("Favoris", systemImage: "heart.fill") }
-                NavigationLink { WatchVideoListView(title: "À regarder plus tard", videos: bridge.localLibrary?.watchLater ?? bridge.snapshot.watchLater) }
-                    label: { Label("À regarder plus tard", systemImage: "clock.fill") }
-                NavigationLink { WatchVideoListView(title: "Historique", videos: bridge.localLibrary?.history ?? bridge.snapshot.history) }
-                    label: { Label("Historique", systemImage: "arrow.counterclockwise") }
+            Section("On This Device") {
+                NavigationLink { WatchVideoListView(title: "Favorites", videos: bridge.localLibrary?.favorites ?? bridge.snapshot.favorites) }
+                    label: { Label("Favorites", systemImage: "heart.fill") }
+                NavigationLink { WatchVideoListView(title: "Watch Later", videos: bridge.localLibrary?.watchLater ?? bridge.snapshot.watchLater) }
+                    label: { Label("Watch Later", systemImage: "clock.fill") }
+                NavigationLink { WatchVideoListView(title: "History", videos: bridge.localLibrary?.history ?? bridge.snapshot.history) }
+                    label: { Label("History", systemImage: "arrow.counterclockwise") }
                 NavigationLink { WatchDownloadsView() }
-                    label: { Label("Téléchargements", systemImage: "arrow.down.circle.fill") }
+                    label: { Label("Downloads", systemImage: "arrow.down.circle.fill") }
             }
-            Section("Compte Google") {
+            Section("Google Account") {
                 if bridge.snapshot.accountSignedIn {
                     NavigationLink { WatchChannelListView() }
-                        label: { Label("Abonnements", systemImage: "person.2.fill") }
+                        label: { Label("Subscriptions", systemImage: "person.2.fill") }
                     NavigationLink { WatchPlaylistListView() }
                         label: { Label("Playlists", systemImage: "music.note.list") }
-                    NavigationLink { WatchVideoListView(title: "Vidéos aimées", videos: account.library.likedVideos) }
-                        label: { Label("Vidéos aimées", systemImage: "hand.thumbsup.fill") }
+                    NavigationLink { WatchVideoListView(title: "Liked Videos", videos: account.library.likedVideos) }
+                        label: { Label("Liked Videos", systemImage: "hand.thumbsup.fill") }
                 } else {
-                    Text("Connecte ton compte Google sur l’iPhone.").foregroundStyle(.secondary)
+                    Text("Connect your Google account on the iPhone.").foregroundStyle(.secondary)
                 }
             }
             if let message = account.message { Text(message).font(.footnote).foregroundStyle(.secondary) }
         }
-        .navigationTitle("Bibliothèque")
-        .toolbar { Button("Synchroniser", systemImage: "arrow.clockwise") { Task { await refresh() } } }
+        .navigationTitle("Library")
+        .toolbar { Button("Sync", systemImage: "arrow.clockwise") { Task { await refresh() } } }
         .task { await refresh() }
     }
 
@@ -157,12 +157,12 @@ struct WatchLibraryView: View {
 }
 
 private struct WatchVideoListView: View {
-    let title: String
+    let title: LocalizedStringKey
     let videos: [WatchVideo]
 
     var body: some View {
         List {
-            if videos.isEmpty { Text("Aucune vidéo synchronisée.").foregroundStyle(.secondary) }
+            if videos.isEmpty { Text("No synced videos.").foregroundStyle(.secondary) }
             ForEach(videos) { WatchVideoRow(video: $0) }
         }
         .navigationTitle(title)
@@ -175,7 +175,7 @@ private struct WatchChannelListView: View {
     var body: some View {
         List {
             if account.library.subscriptions.isEmpty {
-                Text("Aucun abonnement synchronisé.").foregroundStyle(.secondary)
+                Text("No synced subscriptions.").foregroundStyle(.secondary)
             }
             ForEach(account.library.subscriptions) { channel in
                 NavigationLink {
@@ -183,7 +183,7 @@ private struct WatchChannelListView: View {
                 } label: { Text(channel.title).lineLimit(2) }
             }
         }
-        .navigationTitle("Abonnements")
+        .navigationTitle("Subscriptions")
     }
 }
 
@@ -193,7 +193,7 @@ private struct WatchPlaylistListView: View {
     var body: some View {
         List {
             if account.library.playlists.isEmpty {
-                Text("Aucune playlist synchronisée.").foregroundStyle(.secondary)
+                Text("No synced playlists.").foregroundStyle(.secondary)
             }
             ForEach(account.library.playlists) { playlist in
                 NavigationLink {
@@ -218,7 +218,7 @@ private struct WatchAccountVideosView: View {
         List {
             if isLoading { ProgressView() }
             if videos.isEmpty && !isLoading {
-                Text(account.message ?? "Aucune vidéo enregistrée.")
+                Text(account.message ?? String(localized: "No saved videos."))
                     .font(.footnote).foregroundStyle(.secondary)
             }
             ForEach(videos) { WatchVideoRow(video: $0) }
@@ -239,23 +239,23 @@ struct WatchDownloadsView: View {
 
     var body: some View {
         List {
-            Section("Sur la montre") {
+            Section("On the Watch") {
                 if downloads.records.isEmpty {
-                    Text("Aucun contenu hors ligne.").foregroundStyle(.secondary)
+                    Text("Nothing available offline.").foregroundStyle(.secondary)
                 }
                 ForEach(downloads.records) { record in
                     WatchVideoRow(video: record.video)
-                        .swipeActions { Button("Supprimer", role: .destructive) { downloads.delete(record.video) } }
+                        .swipeActions { Button("Delete", role: .destructive) { downloads.delete(record.video) } }
                 }
             }
-            Section("Sur l’iPhone") {
+            Section("On the iPhone") {
                 if (bridge.localLibrary?.downloads ?? bridge.snapshot.downloads).isEmpty {
-                    Text("Aucun téléchargement synchronisé.").foregroundStyle(.secondary)
+                    Text("No synced downloads.").foregroundStyle(.secondary)
                 }
                 ForEach(bridge.localLibrary?.downloads ?? bridge.snapshot.downloads) { video in WatchVideoRow(video: video) }
             }
         }
-        .navigationTitle("Téléchargements")
+        .navigationTitle("Downloads")
     }
 }
 
@@ -279,31 +279,31 @@ struct WatchVideoDetail: View {
                 Text(video.title).font(.headline).multilineTextAlignment(.center)
                 Text(video.channel).font(.footnote).foregroundStyle(.secondary)
                 if downloads.localURL(for: video) != nil {
-                    Button("Écouter", systemImage: "play.fill") { Task { await player.play(video) } }
+                    Button("Listen", systemImage: "play.fill") { Task { await player.play(video) } }
                         .buttonStyle(.borderedProminent)
                     if player.current?.id == video.id {
-                        NavigationLink("Lecture en cours") { WatchNowPlayingView() }
+                        NavigationLink("Now Playing") { WatchNowPlayingView() }
                     }
-                    Button("Supprimer de la montre", role: .destructive) { downloads.delete(video) }
+                    Button("Remove from Watch", role: .destructive) { downloads.delete(video) }
                 } else {
-                    Button("Télécharger sur la montre", systemImage: "arrow.down.circle") {
+                    Button("Download to Watch", systemImage: "arrow.down.circle") {
                         downloads.downloadOnWatch(video)
                     }
                     .disabled(!bridge.isReachable || downloads.downloadingID != nil)
                     if (bridge.localLibrary?.downloads ?? bridge.snapshot.downloads).contains(where: { $0.id == video.id }) {
-                        Button("Transférer depuis l’iPhone", systemImage: "iphone.gen3.radiowaves.left.and.right") {
+                        Button("Transfer from iPhone", systemImage: "iphone.gen3.radiowaves.left.and.right") {
                             downloads.transferFromPhone(video)
                         }
                         .disabled(!bridge.isReachable)
                     }
                     if !bridge.isReachable {
-                        Text("Rapproche l’iPhone pour préparer le téléchargement.")
+                        Text("Bring the iPhone closer to prepare the download.")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
                 }
                 if downloads.downloadingID == video.id {
                     ProgressView(value: downloads.progress)
-                    Button("Arrêter", role: .cancel) { downloads.cancelDownload() }
+                    Button("Stop", role: .cancel) { downloads.cancelDownload() }
                 }
                 if let message = downloads.message {
                     Text(message).font(.caption2).foregroundStyle(.secondary)
@@ -314,7 +314,7 @@ struct WatchVideoDetail: View {
             }
             .padding(.horizontal, 4)
         }
-        .navigationTitle("Vidéo")
+        .navigationTitle("Video")
     }
 }
 
@@ -323,21 +323,21 @@ struct WatchNowPlayingView: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Text(player.current?.title ?? "Aucune lecture")
+            Text(player.current?.title ?? String(localized: "Nothing Playing"))
                 .font(.headline).lineLimit(3).multilineTextAlignment(.center)
             Text(player.current?.channel ?? "")
                 .font(.footnote).foregroundStyle(.secondary).lineLimit(1)
             HStack(spacing: 20) {
-                Button("Reculer", systemImage: "gobackward.15") { player.seek(by: -15) }
-                Button(player.isPlaying ? "Pause" : "Lire",
+                Button("Skip Back", systemImage: "gobackward.15") { player.seek(by: -15) }
+                Button(player.isPlaying ? "Pause" : "Play",
                        systemImage: player.isPlaying ? "pause.fill" : "play.fill") { player.toggle() }
                     .buttonStyle(.borderedProminent)
-                Button("Avancer", systemImage: "goforward.15") { player.seek(by: 15) }
+                Button("Skip Forward", systemImage: "goforward.15") { player.seek(by: 15) }
             }
             .labelStyle(.iconOnly)
             ProgressView(value: player.duration > 0 ? player.elapsed / player.duration : 0)
-            Button("Arrêter", role: .cancel) { player.stop() }
+            Button("Stop", role: .cancel) { player.stop() }
         }
-        .navigationTitle("Lecture")
+        .navigationTitle("Playback")
     }
 }

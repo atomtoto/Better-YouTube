@@ -155,27 +155,27 @@ struct PlayerDetailsView: View {
         switch issue {
         case .playerError(let code):
             switch code {
-            case 2: return "YouTube rejected the video ID."
-            case 5: return "The video can't play in this HTML5 player."
-            case 100: return "The video was removed or made private."
-            case 101, 150: return "The channel doesn't allow this video to play outside YouTube."
-            default: return "YouTube's player refused to start this video."
+            case 2: return String(localized: "YouTube rejected the video ID.")
+            case 5: return String(localized: "The video can't play in this HTML5 player.")
+            case 100: return String(localized: "The video was removed or made private.")
+            case 101, 150: return String(localized: "The channel doesn't allow this video to play outside YouTube.")
+            default: return String(localized: "YouTube's player refused to start this video.")
             }
         case .loadFailed:
-            return "The player page couldn't load — check the network connection."
+            return String(localized: "The player page couldn't load — check the network connection.")
         case .noResponse:
-            return "The player page loaded but never started. This is a bug in the app, not in the video."
+            return String(localized: "The player page loaded but never started. This is a bug in the app, not in the video.")
         }
     }
 
     private static func detail(for issue: PlaybackIssue, videoId: String) -> String {
         switch issue {
         case .playerError(let code):
-            return "player error \(code) · video \(videoId)"
+            return String(localized: "player error \(code) · video \(videoId)")
         case .loadFailed(let message):
-            return "load failed: \(message) · video \(videoId)"
+            return String(localized: "load failed: \(message) · video \(videoId)")
         case .noResponse:
-            return "no handshake after 8s · video \(videoId)"
+            return String(localized: "no handshake after 8s · video \(videoId)")
         }
     }
 
@@ -186,7 +186,7 @@ struct PlayerDetailsView: View {
             parts.append(displayed.channelTitle)
         }
         if let views = displayed.viewCount {
-            parts.append("\(CountFormatter.abbreviated(views)) views")
+            parts.append(CountFormatter.views(views))
         }
         if let date = displayed.publishedAt {
             parts.append(RelativeDateFormatter.string(from: date))
@@ -203,7 +203,7 @@ struct PlayerDetailsView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     PlayerActionPill(
-                        title: displayed.likeCount.map { CountFormatter.abbreviated($0) } ?? "Like",
+                        title: displayed.likeCount.map { CountFormatter.abbreviated($0) } ?? String(localized: "Like"),
                         systemImage: viewModel.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup",
                         isActive: viewModel.isLiked,
                         activeTint: .red,
@@ -214,7 +214,7 @@ struct PlayerDetailsView: View {
                     }
 
                     PlayerActionPill(
-                        title: viewModel.isDisliked ? "Dislike" : "",
+                        title: viewModel.isDisliked ? String(localized: "Dislike") : "",
                         systemImage: viewModel.isDisliked ? "hand.thumbsdown.fill" : "hand.thumbsdown",
                         isActive: viewModel.isDisliked,
                         activeTint: .red,
@@ -226,7 +226,7 @@ struct PlayerDetailsView: View {
                     .accessibilityLabel("Dislike")
 
                     PlayerActionPill(
-                        title: "Favorite",
+                        title: String(localized: "Favorite"),
                         systemImage: library.isFavorite(displayed) ? "heart.fill" : "heart",
                         isActive: library.isFavorite(displayed),
                         activeTint: .pink
@@ -246,7 +246,7 @@ struct PlayerDetailsView: View {
                     )
 
                     PlayerActionPill(
-                        title: "Later",
+                        title: String(localized: "Later", comment: "Short button title that adds the video to Watch Later"),
                         systemImage: watchLater.contains(displayed) ? "clock.fill" : "clock",
                         isActive: watchLater.contains(displayed),
                         activeTint: .indigo,
@@ -260,7 +260,7 @@ struct PlayerDetailsView: View {
                     }
 
                     PlayerActionPill(
-                        title: "Playlist",
+                        title: String(localized: "Playlist", comment: "Short button title that adds the video to a playlist"),
                         systemImage: "text.badge.plus"
                     ) {
                         Haptics.light()
@@ -270,7 +270,7 @@ struct PlayerDetailsView: View {
                     if let url = displayed.watchURL {
                         ShareLink(item: url) {
                             PlayerPillFace(
-                                title: "Share",
+                                title: String(localized: "Share"),
                                 systemImage: "square.and.arrow.up"
                             )
                         }
@@ -316,7 +316,7 @@ struct PlayerDetailsView: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                     if let subs = viewModel.channel?.subscriberCount {
-                        Text("\(CountFormatter.abbreviated(subs)) subscribers")
+                        Text(CountFormatter.subscribers(subs))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else {
@@ -434,7 +434,7 @@ struct PlayerDetailsView: View {
                 } else if viewModel.isLoadingComments {
                     ProgressView().controlSize(.small)
                 } else {
-                    Text(viewModel.commentsError ?? "No comments yet.")
+                    Text(viewModel.commentsError ?? String(localized: "No comments yet."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -581,7 +581,7 @@ private struct PlayerDownloadPill: View {
         switch store.state(for: video.id) {
         case .none:
             PlayerActionPill(
-                title: "Download",
+                title: String(localized: "Download"),
                 systemImage: "arrow.down.circle"
             ) {
                 Haptics.medium()
@@ -590,7 +590,7 @@ private struct PlayerDownloadPill: View {
 
         case .ready:
             PlayerActionPill(
-                title: "Downloaded",
+                title: String(localized: "Downloaded"),
                 systemImage: "arrow.down.circle.fill",
                 isActive: true,
                 activeTint: .green
@@ -601,7 +601,7 @@ private struct PlayerDownloadPill: View {
 
         case .failed:
             PlayerActionPill(
-                title: "Retry",
+                title: String(localized: "Retry"),
                 systemImage: "exclamationmark.arrow.circlepath",
                 isActive: true,
                 activeTint: .orange
@@ -612,7 +612,7 @@ private struct PlayerDownloadPill: View {
 
         case .paused:
             PlayerActionPill(
-                title: "Paused",
+                title: String(localized: "Paused"),
                 systemImage: "pause.circle",
                 isActive: true,
                 activeTint: .yellow
@@ -636,8 +636,8 @@ private struct PlayerDownloadPill: View {
     }
 
     private var progressTitle: String {
-        guard let fraction = manager.progress[video.id], fraction > 0 else { return "Downloading" }
-        return "\(Int((fraction * 100).rounded()))%"
+        guard let fraction = manager.progress[video.id], fraction > 0 else { return String(localized: "Downloading") }
+        return fraction.formatted(.percent.precision(.fractionLength(0)))
     }
 }
 
@@ -752,7 +752,7 @@ struct CommentRowView: View {
                     Task { await viewModel.toggleCommentLike(comment) }
                 } label: {
                     Label(
-                        comment.likeCount > 0 ? CountFormatter.abbreviated(comment.likeCount) : "Like",
+                        comment.likeCount > 0 ? CountFormatter.abbreviated(comment.likeCount) : String(localized: "Like"),
                         systemImage: comment.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup"
                     )
                     .foregroundStyle(comment.isLiked ? Color.red : Color.secondary)
@@ -792,7 +792,7 @@ struct CommentRowView: View {
 
     private var replyButtonTitle: String {
         let count = max(comment.totalReplyCount, viewModel.repliesByParent[comment.id]?.count ?? 0)
-        return showsReplies ? "Hide replies" : "\(count) repl\(count == 1 ? "y" : "ies")"
+        return showsReplies ? String(localized: "Hide Replies") : String(localized: "\(count) replies")
     }
 
     @ViewBuilder

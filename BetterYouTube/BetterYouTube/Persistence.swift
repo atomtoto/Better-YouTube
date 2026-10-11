@@ -332,18 +332,18 @@ final class WatchLaterStore: ObservableObject {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
 
         guard let data = try? Data(contentsOf: url) else {
-            return TakeoutImport(failure: "Couldn't read that file.")
+            return TakeoutImport(failure: String(localized: "Couldn't read that file."))
         }
         // Takeout writes UTF-8; fall back to Latin-1 rather than refusing a file over one byte.
         guard let text = String(data: data, encoding: .utf8)
                 ?? String(data: data, encoding: .isoLatin1) else {
-            return TakeoutImport(failure: "Couldn't read that file as text.")
+            return TakeoutImport(failure: String(localized: "Couldn't read that file as text."))
         }
 
         let rows = TakeoutPlaylistCSV.rows(in: text)
         guard !rows.isEmpty else {
             return TakeoutImport(
-                failure: "No videos in that file. In the Takeout archive, look under “YouTube and YouTube Music” → “playlists” and pick the CSV for the playlist you want."
+                failure: String(localized: "No videos in that file. In the Takeout archive, look under “YouTube and YouTube Music” → “playlists” and pick the CSV for the playlist you want.")
             )
         }
 

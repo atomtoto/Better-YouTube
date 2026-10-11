@@ -17,14 +17,14 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .account: return "Account"
-        case .playback: return "Playback"
-        case .library: return "Library"
-        case .notifications: return "Notifications"
-        case .youTubeHome: return "YouTube Home"
-        case .downloads: return "Downloads"
-        case .api: return "API & Quota"
-        case .advanced: return "Advanced"
+        case .account: return String(localized: "Account")
+        case .playback: return String(localized: "Playback")
+        case .library: return String(localized: "Library")
+        case .notifications: return String(localized: "Notifications")
+        case .youTubeHome: return String(localized: "YouTube Home")
+        case .downloads: return String(localized: "Downloads")
+        case .api: return String(localized: "API & Quota")
+        case .advanced: return String(localized: "Advanced")
         }
     }
 

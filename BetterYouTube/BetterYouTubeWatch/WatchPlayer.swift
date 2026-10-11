@@ -32,7 +32,7 @@ final class WatchPlayer: ObservableObject {
 
     func play(_ video: WatchVideo) async {
         guard let url = WatchDownloads.shared.localURL(for: video) else {
-            errorMessage = "Télécharge cette vidéo sur la montre avant de l’écouter."
+            errorMessage = String(localized: "Download this video to the watch before listening to it.")
             return
         }
         do {

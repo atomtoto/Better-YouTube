@@ -136,10 +136,10 @@ struct DownloadsView: View {
     @ViewBuilder
     private var emptyState: some View {
         if settings.isConfigured {
-            EmptyStateView(
-                title: "No downloads yet",
+            ContentUnavailableView(
+                "No Downloads Yet",
                 systemImage: "arrow.down.circle",
-                message: "Hold any video and choose Download. It lands in the Downloads folder and plays from there wherever you find it again — including with no network."
+                description: Text("Hold any video and choose Download. It lands in the Downloads folder and plays from there wherever you find it again — including with no network.")
             )
         } else {
             ScrollView {
@@ -291,21 +291,20 @@ struct DownloadProgressRow: View {
     private var statusLine: String {
         switch record.state {
         case .queued:
-            return "Waiting…"
+            return String(localized: "Waiting…")
         case .resolving:
-            return "Finding the file…"
+            return String(localized: "Finding the file…")
         case .downloading:
-            let percent = Int((fraction * 100).rounded())
-            let size = record.totalBytes > 0
-                ? " of \(ByteCountFormatter.string(fromByteCount: record.totalBytes, countStyle: .file))"
-                : ""
-            return record.totalBytes > 0 ? "\(percent)%\(size)" : "Downloading…"
+            guard record.totalBytes > 0 else { return String(localized: "Downloading…") }
+            let percent = fraction.formatted(.percent.precision(.fractionLength(0)))
+            let size = ByteCountFormatter.string(fromByteCount: record.totalBytes, countStyle: .file)
+            return String(localized: "\(percent) of \(size)", comment: "Download progress: 45% of 120 MB")
         case .processing:
-            return "Finishing video…"
+            return String(localized: "Finishing video…")
         case .paused:
-            return "Paused"
+            return String(localized: "Paused")
         case .ready:
-            return "Downloaded"
+            return String(localized: "Downloaded")
         case .failed(let reason):
             return reason
         }

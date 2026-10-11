@@ -15,7 +15,7 @@ final class YouTubeWebCommentService {
     /// Toggles the page's actual rating; the Data API does not expose the viewer's comment rating.
     func toggleLike(commentID: String, videoID: String) async throws -> Bool {
         guard Self.isCommentID(commentID), YouTubeWebSession.videoId(in: Self.pageURL(videoID: videoID, commentID: commentID)) != nil else {
-            throw YouTubeFeedIssue.loadFailed("YouTube returned an invalid comment reference.")
+            throw YouTubeFeedIssue.loadFailed(String(localized: "YouTube returned an invalid comment reference."))
         }
 
         while busy { try await Task.sleep(for: .milliseconds(100)) }
@@ -35,7 +35,7 @@ final class YouTubeWebCommentService {
                     contentWorld: .page
                 )
                 guard let isLiked = result as? Bool else {
-                    throw YouTubeFeedIssue.loadFailed("YouTube did not confirm the comment rating.")
+                    throw YouTubeFeedIssue.loadFailed(String(localized: "YouTube did not confirm the comment rating."))
                 }
                 return isLiked
             } catch {

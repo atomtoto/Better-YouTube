@@ -1,0 +1,516 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Add a YouTube API key in the iPhone’s settings, then open the app on the watch." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoute une clé API YouTube dans les réglages de l’iPhone, puis ouvre l’app sur la montre."
+          }
+        }
+      }
+    },
+    "Available offline on the watch." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disponible hors ligne sur la montre."
+          }
+        }
+      }
+    },
+    "Better YouTube" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Better YouTube"
+          }
+        }
+      }
+    },
+    "Bring the iPhone closer to prepare the download." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rapproche l’iPhone pour préparer le téléchargement."
+          }
+        }
+      }
+    },
+    "Connect your Google account on the iPhone." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte ton compte Google sur l’iPhone."
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer"
+          }
+        }
+      }
+    },
+    "Download interrupted. Try again to resume." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargement interrompu. Réessaie pour reprendre."
+          }
+        }
+      }
+    },
+    "Download this video to the watch before listening to it." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Télécharge cette vidéo sur la montre avant de l’écouter."
+          }
+        }
+      }
+    },
+    "Download to Watch" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Télécharger sur la montre"
+          }
+        }
+      }
+    },
+    "Downloads" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargements"
+          }
+        }
+      }
+    },
+    "Favorites" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favoris"
+          }
+        }
+      }
+    },
+    "Google Account" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compte Google"
+          }
+        }
+      }
+    },
+    "History" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Historique"
+          }
+        }
+      }
+    },
+    "Home" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accueil"
+          }
+        }
+      }
+    },
+    "Library" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bibliothèque"
+          }
+        }
+      }
+    },
+    "Liked Videos" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vidéos aimées"
+          }
+        }
+      }
+    },
+    "Listen" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écouter"
+          }
+        }
+      }
+    },
+    "No saved videos." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune vidéo enregistrée."
+          }
+        }
+      }
+    },
+    "No synced downloads." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun téléchargement synchronisé."
+          }
+        }
+      }
+    },
+    "No synced playlists." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune playlist synchronisée."
+          }
+        }
+      }
+    },
+    "No synced subscriptions." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun abonnement synchronisé."
+          }
+        }
+      }
+    },
+    "No synced videos." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune vidéo synchronisée."
+          }
+        }
+      }
+    },
+    "Not enough space on the watch for this audio file." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espace insuffisant sur la montre pour ce fichier audio."
+          }
+        }
+      }
+    },
+    "Nothing Playing" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune lecture"
+          }
+        }
+      }
+    },
+    "Nothing available offline." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun contenu hors ligne."
+          }
+        }
+      }
+    },
+    "Now Playing" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture en cours"
+          }
+        }
+      }
+    },
+    "On This Device" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sur cet appareil"
+          }
+        }
+      }
+    },
+    "On the Watch" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sur la montre"
+          }
+        }
+      }
+    },
+    "On the iPhone" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sur l’iPhone"
+          }
+        }
+      }
+    },
+    "Open YouTube Home in the iPhone app to sync your feed." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre l’accueil YouTube dans l’app iPhone pour synchroniser ton flux."
+          }
+        }
+      }
+    },
+    "Pause" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        }
+      }
+    },
+    "Play" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire"
+          }
+        }
+      }
+    },
+    "Playback" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture"
+          }
+        }
+      }
+    },
+    "Playlists" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Playlists"
+          }
+        }
+      }
+    },
+    "Remove from Watch" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer de la montre"
+          }
+        }
+      }
+    },
+    "Search" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher"
+          }
+        }
+      }
+    },
+    "Set an API key in the iPhone app for Home and Search." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configure une clé API dans l’app iPhone pour l’accueil et la recherche."
+          }
+        }
+      }
+    },
+    "Skip Back" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reculer"
+          }
+        }
+      }
+    },
+    "Skip Forward" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avancer"
+          }
+        }
+      }
+    },
+    "Stop" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrêter"
+          }
+        }
+      }
+    },
+    "Subscriptions" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abonnements"
+          }
+        }
+      }
+    },
+    "Sync" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchroniser"
+          }
+        }
+      }
+    },
+    "The iPhone didn’t send a usable reply." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’iPhone n’a pas envoyé de réponse exploitable."
+          }
+        }
+      }
+    },
+    "The iPhone must be reachable to prepare or transfer this download." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’iPhone doit être joignable pour préparer ou transférer ce téléchargement."
+          }
+        }
+      }
+    },
+    "Transfer from iPhone" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transférer depuis l’iPhone"
+          }
+        }
+      }
+    },
+    "Transfer requested from the iPhone. It may take a few minutes." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transfert demandé à l’iPhone. Il peut prendre quelques minutes."
+          }
+        }
+      }
+    },
+    "Video" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vidéo"
+          }
+        }
+      }
+    },
+    "Video or channel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vidéo ou chaîne"
+          }
+        }
+      }
+    },
+    "Watch Later" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À regarder plus tard"
+          }
+        }
+      }
+    },
+    "YouTube answered with status %lld." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube a répondu avec le code %lld."
+          }
+        }
+      }
+    },
+    "YouTube’s response couldn’t be read." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La réponse de YouTube est illisible."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

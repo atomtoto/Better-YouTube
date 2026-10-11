@@ -23,17 +23,17 @@ enum YouTubeFeedIssue: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .notSignedIn:
-            return "Sign in to youtube.com from Settings to see your own home feed."
+            return String(localized: "Sign in to youtube.com from Settings to see your own home feed.")
         case .consentNeeded:
-            return "YouTube is asking for consent. Open the sign-in screen in Settings once more and accept it there."
+            return String(localized: "YouTube is asking for consent. Open the sign-in screen in Settings once more and accept it there.")
         case .nothingFound:
-            return "YouTube's home page came back without any videos. The session may have expired — sign in again from Settings."
+            return String(localized: "YouTube's home page came back without any videos. The session may have expired — sign in again from Settings.")
         case .loadFailed(let message):
             return message
         case .timedOut:
-            return "YouTube's page didn't finish loading."
+            return String(localized: "YouTube's page didn't finish loading.")
         case .busy:
-            return "Still reading the last page from YouTube. Try again in a moment."
+            return String(localized: "Still reading the last page from YouTube. Try again in a moment.")
         }
     }
 }
@@ -65,8 +65,8 @@ final class YouTubeWebSession: ObservableObject {
 
         var title: String {
             switch self {
-            case .nativeCards: return "Native cards"
-            case .youTubePage: return "YouTube's page"
+            case .nativeCards: return String(localized: "Native Cards")
+            case .youTubePage: return String(localized: "YouTube's Page")
             }
         }
     }
@@ -296,7 +296,7 @@ final class YouTubeFeedReader {
 
         if isNotifications, ids.isEmpty {
             if recognizedInbox { return [] }
-            throw YouTubeFeedIssue.loadFailed("YouTube's notification panel could not be read. Open youtube.com from Settings, check that the bell opens your notifications, then retry.")
+            throw YouTubeFeedIssue.loadFailed(String(localized: "YouTube's notification panel could not be read. Open youtube.com from Settings, check that the bell opens your notifications, then retry."))
         }
         guard !ids.isEmpty else { throw YouTubeFeedIssue.nothingFound }
         return Array(ids.prefix(Self.targetCount))
@@ -305,7 +305,7 @@ final class YouTubeFeedReader {
     /// Uses YouTube's own Home menu, so feedback reaches the signed-in YouTube account.
     func markNotInterested(videoID: String) async throws {
         guard videoID.count == 11, videoID.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_") }) else {
-            throw YouTubeFeedIssue.loadFailed("Invalid video reference.")
+            throw YouTubeFeedIssue.loadFailed(String(localized: "Invalid video reference."))
         }
         let session = YouTubeWebSession.shared
         await session.refresh()
@@ -334,7 +334,7 @@ final class YouTubeFeedReader {
                 contentWorld: .page
             )
             guard result as? Bool == true else {
-                throw YouTubeFeedIssue.loadFailed("YouTube did not confirm the feedback.")
+                throw YouTubeFeedIssue.loadFailed(String(localized: "YouTube did not confirm the feedback."))
             }
         } catch {
             if let message = (error as NSError).userInfo["WKJavaScriptExceptionMessage"] as? String {

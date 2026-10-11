@@ -1,41 +1,5 @@
 import SwiftUI
 
-/// Large artwork-forward card used in the home carousels.
-struct VideoCardView: View {
-    let video: Video
-    var width: CGFloat = Theme.Size.carouselCard
-
-    @EnvironmentObject private var downloads: DownloadStore
-    @ObservedObject private var positions = PlaybackPositionStore.shared
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ArtworkView(
-                url: downloads.artworkURL(for: video),
-                duration: video.duration,
-                cornerRadius: Theme.Radius.card,
-                progress: positions.watchedFraction(for: video.id)
-            )
-                .frame(width: width, height: width * 9 / 16)
-                .artworkShadow()
-                .downloadedBadge(video, downloads: downloads)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(video.title)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                Text(video.channelTitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            .frame(width: width, alignment: .leading)
-        }
-        .contentShape(Rectangle())
-    }
-}
-
 /// Full-width feed card: big artwork, then avatar + title + metadata, the way the YouTube app
 /// lays out its home feed — with Apple's type scale, corner radii and materials.
 struct FeedVideoCard: View {
@@ -128,7 +92,7 @@ struct FeedVideoCard: View {
     private var metadataLine: String {
         var parts: [String] = []
         if !video.channelTitle.isEmpty { parts.append(video.channelTitle) }
-        if let views = video.viewCount { parts.append("\(CountFormatter.abbreviated(views)) views") }
+        if let views = video.viewCount { parts.append(CountFormatter.views(views)) }
         if let date = video.publishedAt { parts.append(RelativeDateFormatter.string(from: date)) }
         return parts.joined(separator: " · ")
     }
@@ -180,57 +144,12 @@ struct VideoRowView: View {
     private var metadataLine: String {
         var parts: [String] = []
         if let views = video.viewCount {
-            parts.append("\(CountFormatter.abbreviated(views)) views")
+            parts.append(CountFormatter.views(views))
         }
         if let date = video.publishedAt {
             parts.append(RelativeDateFormatter.string(from: date))
         }
         return parts.joined(separator: " · ")
-    }
-}
-
-/// Full-bleed hero used at the top of Home, in the spirit of Apple Music's featured shelf.
-struct FeaturedVideoCard: View {
-    let video: Video
-
-    @EnvironmentObject private var downloads: DownloadStore
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ArtworkView(
-                url: downloads.artworkURL(for: video),
-                duration: video.duration,
-                cornerRadius: Theme.Radius.hero
-            )
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                .artworkShadow()
-                .overlay(alignment: .bottomLeading) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(video.channelTitle.uppercased())
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.white.opacity(0.8))
-                        Text(video.title)
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                    }
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        LinearGradient(
-                            colors: [.black.opacity(0), .black.opacity(0.75)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .clipShape(
-                        RoundedRectangle(cornerRadius: Theme.Radius.hero, style: .continuous)
-                    )
-                    .allowsHitTesting(false)
-                }
-        }
-        .contentShape(Rectangle())
     }
 }
 
@@ -259,9 +178,9 @@ struct ChannelRowView: View {
 
     private var subtitle: String {
         if let subs = channel.subscriberCount {
-            return "\(CountFormatter.abbreviated(subs)) subscribers"
+            return CountFormatter.subscribers(subs)
         }
-        return "Channel"
+        return String(localized: "Channel")
     }
 }
 
@@ -283,8 +202,7 @@ extension View {
 #Preview {
     ScrollView {
         VStack(spacing: 24) {
-            FeaturedVideoCard(video: .preview)
-            VideoCardView(video: .preview)
+            FeedVideoCard(video: .preview, onPlay: {})
             VideoRowView(video: .preview)
             ChannelRowView(channel: Channel(
                 id: "UC1",

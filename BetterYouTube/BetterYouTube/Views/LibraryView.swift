@@ -59,7 +59,7 @@ struct LibraryView: View {
                     )
                 }
             } header: {
-                Text(viewModel.account?.title ?? "YouTube Account")
+                Text(viewModel.account?.title ?? String(localized: "YouTube Account"))
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     if let message = viewModel.errorMessage { Text(message) }
@@ -185,7 +185,7 @@ struct LibraryView: View {
 private struct LibraryRow: View {
     let icon: String
     let tint: Color
-    let title: String
+    let title: LocalizedStringKey
     var count: Int?
 
     var body: some View {

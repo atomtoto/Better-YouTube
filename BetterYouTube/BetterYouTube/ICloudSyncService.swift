@@ -15,7 +15,8 @@ final class ICloudSyncService: ObservableObject {
     static let preferenceKeys = [MiniPlayerStyle.storageKey, FloatingMiniPlayerSize.storageKey]
 
     @Published private(set) var isEnabled: Bool
-    @Published private(set) var statusMessage = "Waiting for iCloud."
+    static let waitingMessage = String(localized: "Waiting for iCloud.")
+    @Published private(set) var statusMessage = ICloudSyncService.waitingMessage
     @Published private(set) var lastSyncDate: Date?
     @Published private(set) var isSyncing = false
 
@@ -70,7 +71,7 @@ final class ICloudSyncService: ObservableObject {
                 if cache.schemaVersion != 1 {
                     cacheIsWritable = false
                     isEnabled = false
-                    statusMessage = "Update the app to read this iCloud sync data."
+                    statusMessage = String(localized: "Update the app to read this iCloud sync data.")
                 }
             } catch {
                 // Preserve the damaged file for recovery. The library has its own durable
@@ -81,7 +82,7 @@ final class ICloudSyncService: ObservableObject {
                 defaults.set(false, forKey: Self.enabledKey)
                 library.prepareForNewCloudAccount()
                 playbackPositions.prepareForNewCloudAccount()
-                statusMessage = "The iCloud sync cache couldn't be read. Turn sync on to merge your local library again."
+                statusMessage = String(localized: "The iCloud sync cache couldn't be read. Turn sync on to merge your local library again.")
             }
         }
         lastSyncDate = cache.lastSyncDate
@@ -97,8 +98,8 @@ final class ICloudSyncService: ObservableObject {
                 Task { @MainActor in await self?.checkAccount() }
             }.store(in: &observations)
         reconcileLocalEntries()
-        if !isEnabled, cacheIsWritable, statusMessage == "Waiting for iCloud." {
-            statusMessage = "iCloud sync is off on this device."
+        if !isEnabled, cacheIsWritable, statusMessage == Self.waitingMessage {
+            statusMessage = String(localized: "iCloud sync is off on this device.")
         }
     }
 
@@ -115,7 +116,7 @@ final class ICloudSyncService: ObservableObject {
             engine = nil // Late delegate callbacks cannot mutate the local stores.
             activeOperations = 0
             isSyncing = false
-            statusMessage = "iCloud sync is off on this device."
+            statusMessage = String(localized: "iCloud sync is off on this device.")
             Task { await previous?.cancelOperations() }
         }
     }
@@ -125,7 +126,7 @@ final class ICloudSyncService: ObservableObject {
     func start() async {
         guard isEnabled, cacheIsWritable, engine == nil, !starting else { return }
         guard cloudKitAvailable() else {
-            statusMessage = "iCloud requires a signed build with the iCloud capability."
+            statusMessage = String(localized: "iCloud requires a signed build with the iCloud capability.")
             return
         }
         starting = true
@@ -138,7 +139,7 @@ final class ICloudSyncService: ObservableObject {
             let container = CKContainer(identifier: Self.containerIdentifier)
             guard try await container.accountStatus() == .available else {
                 guard revision == generation else { return }
-                statusMessage = "Sign in to iCloud in system settings to sync this library."
+                statusMessage = String(localized: "Sign in to iCloud in system settings to sync this library.")
                 return
             }
             let accountID = try await container.userRecordID().recordName
@@ -158,7 +159,7 @@ final class ICloudSyncService: ObservableObject {
             newEngine.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: Self.zoneID))])
             queueDirtyEntries(on: newEngine)
             persist()
-            statusMessage = "Waiting for iCloud changes."
+            statusMessage = String(localized: "Waiting for iCloud changes.")
         } catch {
             guard revision == generation else { return }
             show(error)
@@ -283,7 +284,7 @@ final class ICloudSyncService: ObservableObject {
             try JSONEncoder().encode(cache).write(to: fileURL, options: .atomic)
         } catch {
             operationFailed = true
-            statusMessage = "Couldn't save the iCloud upload queue. Your library is still stored locally."
+            statusMessage = String(localized: "Couldn't save the iCloud upload queue. Your library is still stored locally.")
         }
     }
 
@@ -292,15 +293,15 @@ final class ICloudSyncService: ObservableObject {
         if let cloudError = error as? CKError {
             switch cloudError.code {
             case .networkFailure, .networkUnavailable:
-                statusMessage = "Offline. Changes will sync when the connection returns."
+                statusMessage = String(localized: "Offline. Changes will sync when the connection returns.")
             case .notAuthenticated:
-                statusMessage = "Sign in to iCloud in system settings to sync this library."
+                statusMessage = String(localized: "Sign in to iCloud in system settings to sync this library.")
             case .quotaExceeded:
-                statusMessage = "iCloud storage is full. Free some space to continue syncing."
+                statusMessage = String(localized: "iCloud storage is full. Free some space to continue syncing.")
             default:
-                statusMessage = "iCloud sync couldn't finish: \(cloudError.localizedDescription)"
+                statusMessage = String(localized: "iCloud sync couldn't finish: \(cloudError.localizedDescription)")
             }
-        } else { statusMessage = "iCloud sync couldn't finish: \(error.localizedDescription)" }
+        } else { statusMessage = String(localized: "iCloud sync couldn't finish: \(error.localizedDescription)") }
     }
 
     private func checkAccount() async {
@@ -314,7 +315,7 @@ final class ICloudSyncService: ObservableObject {
                 // Preserve data and the original identity, but require an explicit opt-in
                 // after signing out. Never copy an old account's library automatically.
                 setEnabled(false)
-                statusMessage = "iCloud signed out. Your library is kept on this device."
+                statusMessage = String(localized: "iCloud signed out. Your library is kept on this device.")
                 return
             }
             let account = try await container.userRecordID().recordName
@@ -334,7 +335,7 @@ final class ICloudSyncService: ObservableObject {
         cache = Cache(accountID: accountID)
         lastSyncDate = nil
         persist()
-        statusMessage = "iCloud account changed. Turn sync on to merge this device's library with the new account."
+        statusMessage = String(localized: "iCloud account changed. Turn sync on to merge this device's library with the new account.")
     }
 
     private static func hasCloudKitEntitlement() -> Bool {
@@ -367,7 +368,7 @@ extension ICloudSyncService: CKSyncEngineDelegate {
                 if let previous = cache.accountID, previous != user.recordName { accountChanged(to: user.recordName) }
             case .signOut:
                 setEnabled(false)
-                statusMessage = "iCloud signed out. Your library is kept on this device."
+                statusMessage = String(localized: "iCloud signed out. Your library is kept on this device.")
             case .switchAccounts(_, let current): accountChanged(to: current.recordName)
             @unknown default: setEnabled(false)
             }
@@ -392,7 +393,7 @@ extension ICloudSyncService: CKSyncEngineDelegate {
             if changes.deletions.contains(where: { $0.zoneID == Self.zoneID }) {
                 // A deleted cloud zone must never be silently recreated from an old device.
                 accountChanged(to: cache.accountID)
-                statusMessage = "The iCloud library was removed. Turn sync on to upload your local library again."
+                statusMessage = String(localized: "The iCloud library was removed. Turn sync on to upload your local library again.")
             }
         case .sentRecordZoneChanges(let changes):
             for record in changes.savedRecords {
@@ -427,7 +428,7 @@ extension ICloudSyncService: CKSyncEngineDelegate {
             if activeOperations == 0 { operationFailed = false }
             activeOperations += 1
             isSyncing = true
-            statusMessage = "Syncing with iCloud…"
+            statusMessage = String(localized: "Syncing with iCloud…")
         case .didFetchRecordZoneChanges(let result):
             if let error = result.error { show(error) }
         case .didFetchChanges, .didSendChanges:
@@ -437,8 +438,8 @@ extension ICloudSyncService: CKSyncEngineDelegate {
                 if cache.dirty.isEmpty {
                     lastSyncDate = Date()
                     cache.lastSyncDate = lastSyncDate
-                    statusMessage = "Up to date with iCloud."
-                } else { statusMessage = "Changes are saved locally and waiting for iCloud." }
+                    statusMessage = String(localized: "Up to date with iCloud.")
+                } else { statusMessage = String(localized: "Changes are saved locally and waiting for iCloud.") }
                 persist()
             }
         default: break
@@ -467,7 +468,7 @@ extension ICloudSyncService: CKSyncEngineDelegate {
         guard isEnabled, cacheIsWritable, !resettingDevice, record.recordID.zoneID == Self.zoneID else { return }
         guard let incoming = Self.entry(from: record) else {
             operationFailed = true
-            statusMessage = "Update the app to read an unsupported iCloud record."
+            statusMessage = String(localized: "Update the app to read an unsupported iCloud record.")
             return
         }
         let key = incoming.key

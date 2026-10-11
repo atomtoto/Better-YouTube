@@ -58,7 +58,7 @@ private struct SettingsPaneRow: View {
 /// On a phone that is a push onto the current navigation stack. On a Mac, Settings is a window of
 /// its own, so `SettingsLink` opens that instead of pushing a settings screen into the Library.
 struct OpenSettingsButton: View {
-    var title = "Open Settings"
+    var title: LocalizedStringKey = "Open Settings"
 
     var body: some View {
         #if os(macOS)

@@ -3,7 +3,7 @@ import Foundation
 enum DownloadBackend: String, CaseIterable, Identifiable, Sendable {
     case local, server
     var id: String { rawValue }
-    var title: String { self == .local ? "On This Device" : "My Server" }
+    var title: String { self == .local ? String(localized: "On This Device") : String(localized: "My Server") }
 
     static func restored(saved: String?, endpoint: String) -> Self {
         saved.flatMap(Self.init(rawValue:))
@@ -169,21 +169,21 @@ enum DownloadError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return "Choose On This Device in Settings → Downloads, or configure your download server."
+            return String(localized: "Choose On This Device in Settings → Downloads, or configure your download server.")
         case .badEndpoint:
-            return "That download service address isn't a valid http or https URL."
+            return String(localized: "That download service address isn't a valid http or https URL.")
         case .service(let message):
             return message
         case .noMedia:
-            return "The download service replied, but there was no media link in its answer."
+            return String(localized: "The download service replied, but there was no media link in its answer.")
         case .http(let code):
-            return "The media server answered with status \(code)."
+            return String(localized: "The media server answered with status \(code).")
         case .transport(let message):
             return message
         case .overStorageLimit(let message):
             return message
         case .noSpace:
-            return "There isn't enough free space on this device for that video."
+            return String(localized: "There isn't enough free space on this device for that video.")
         }
     }
 }
@@ -385,7 +385,7 @@ actor DownloadResolver {
     /// download of a video with no sound.
     private static func splitStreamMessage(in json: [String: Any]) -> String? {
         guard let tunnels = json["tunnel"] as? [Any], tunnels.count > 1 else { return nil }
-        return "The download service sent the video and audio as separate streams, which this app can't join. Ask it for a single muxed file — on cobalt, a lower quality usually returns one."
+        return String(localized: "The download service sent the video and audio as separate streams, which this app can't join. Ask it for a single muxed file — on cobalt, a lower quality usually returns one.")
     }
 
     private static func byteCount(in json: [String: Any]) -> Int64? {
@@ -403,7 +403,7 @@ actor DownloadResolver {
         if let status = json["status"] as? String,
            ["error", "failed", "failure"].contains(status.lowercased()) {
             return text(fromError: json["error"]) ?? text(fromError: json["text"])
-                ?? "The download service reported an error."
+                ?? String(localized: "The download service reported an error.")
         }
         if let error = json["error"], let message = text(fromError: error) {
             return message

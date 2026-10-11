@@ -19,9 +19,9 @@ enum WatchCatalogueError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noKey: "Ajoute une clé API YouTube dans les réglages de l’iPhone, puis ouvre l’app sur la montre."
-        case .response(let status): "YouTube a répondu avec le code \(status)."
-        case .invalidResponse: "La réponse de YouTube est illisible."
+        case .noKey: String(localized: "Add a YouTube API key in the iPhone’s settings, then open the app on the watch.")
+        case .response(let status): String(localized: "YouTube answered with status \(status).")
+        case .invalidResponse: String(localized: "YouTube’s response couldn’t be read.")
         }
     }
 }

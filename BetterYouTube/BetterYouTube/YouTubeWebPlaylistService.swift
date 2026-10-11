@@ -29,7 +29,7 @@ final class YouTubeWebPlaylistService {
                 let result = try await self.call(Self.playlistsScript, arguments: [:], in: webView,
                                                  session: session, generation: generation)
                 guard let string = result as? String, let data = string.data(using: .utf8) else {
-                    throw YouTubeFeedIssue.loadFailed("YouTube returned an unreadable playlist library.")
+                    throw YouTubeFeedIssue.loadFailed(String(localized: "YouTube returned an unreadable playlist library."))
                 }
                 return try JSONDecoder().decode([Playlist].self, from: data)
             }
@@ -53,7 +53,7 @@ final class YouTubeWebPlaylistService {
                     generation: generation
                 )
                 guard let string = result as? String, let data = string.data(using: .utf8) else {
-                    throw YouTubeFeedIssue.loadFailed("YouTube returned an unreadable playlist.")
+                    throw YouTubeFeedIssue.loadFailed(String(localized: "YouTube returned an unreadable playlist."))
                 }
                 return try JSONDecoder().decode([PlaylistEntry].self, from: data)
             }

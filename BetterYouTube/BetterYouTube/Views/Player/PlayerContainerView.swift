@@ -19,8 +19,8 @@ enum MiniPlayerStyle: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .floatingVideo: return "Floating"
-        case .playbackBar: return "Playback Bar"
+        case .floatingVideo: return String(localized: "Floating")
+        case .playbackBar: return String(localized: "Playback Bar")
         }
     }
 }
@@ -34,9 +34,9 @@ enum FloatingMiniPlayerSize: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .compact: return "Compact"
-        case .standard: return "Standard"
-        case .large: return "Large"
+        case .compact: return String(localized: "Compact")
+        case .standard: return String(localized: "Standard")
+        case .large: return String(localized: "Large")
         }
     }
 }
