@@ -34,6 +34,13 @@ struct BetterYouTubeApp: App {
 
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        // Thumbnails and avatars load through the shared URL cache, whose default is a few
+        // megabytes — less than one screen of artwork, so scrolling back up fetched it all again.
+        // YouTube's image servers allow two hours of caching and revalidate cheaply after that.
+        URLCache.shared = URLCache(memoryCapacity: 64 * 1024 * 1024, diskCapacity: 300 * 1024 * 1024)
+    }
+
     var body: some Scene {
         WindowGroup {
             RootTabView()

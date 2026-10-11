@@ -62,9 +62,14 @@ struct ArtworkView: View {
     /// The share already watched, 0...1, or nil for a video not started or finished.
     var progress: Double? = nil
 
+    @Environment(\.displayScale) private var displayScale
+    /// The width it is drawn at, which decides the size of picture to fetch. Nothing is fetched
+    /// before layout has said.
+    @State private var width: CGFloat = 0
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            AsyncImage(url: url) { phase in
+            AsyncImage(url: width > 0 ? ImageSizing.video(url, pixelWidth: width * displayScale) : nil) { phase in
                 switch phase {
                 case .success(let image):
                     image.resizable().aspectRatio(contentMode: .fill)
@@ -109,6 +114,7 @@ struct ArtworkView: View {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
         )
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
     }
 
     private var placeholder: some View {
@@ -120,9 +126,10 @@ struct ArtworkView: View {
 struct AvatarView: View {
     let url: URL?
     var size: CGFloat = 44
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
-        AsyncImage(url: url) { phase in
+        AsyncImage(url: ImageSizing.avatar(url, pixelSize: size * displayScale)) { phase in
             if case .success(let image) = phase {
                 image.resizable().aspectRatio(contentMode: .fill)
             } else {

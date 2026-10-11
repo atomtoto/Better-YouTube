@@ -39,7 +39,8 @@ private struct WatchVideoRow: View {
             WatchVideoDetail(video: video)
         } label: {
             HStack(spacing: 8) {
-                AsyncImage(url: video.thumbnailURL) { image in
+                // A 48-point frame: the phone's videos arrive with the 1280-pixel one.
+                AsyncImage(url: ImageSizing.video(video.thumbnailURL, pixelWidth: 96)) { image in
                     image.resizable().scaledToFill()
                 } placeholder: {
                     Image(systemName: "play.rectangle.fill").foregroundStyle(.secondary)
@@ -268,7 +269,7 @@ struct WatchVideoDetail: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 10) {
-                AsyncImage(url: video.thumbnailURL) { image in
+                AsyncImage(url: ImageSizing.video(video.thumbnailURL, pixelWidth: 400)) { image in
                     image.resizable().scaledToFill()
                 } placeholder: {
                     Image(systemName: "play.rectangle.fill").font(.largeTitle).foregroundStyle(.secondary)
