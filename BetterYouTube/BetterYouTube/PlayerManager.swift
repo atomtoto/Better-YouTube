@@ -707,6 +707,13 @@ final class PlayerManager: ObservableObject {
     /// then the embed's own end screen, with YouTube's suggestions, stays up to choose from. In
     /// a car the queue always carries on, since picking the next one there means a screen.
     private func advanceAfterEnd() {
+        // A sleep timer set for the end of this video wins over autoplay.
+        if sleepTimer == .endOfVideo {
+            cancelSleepTimer()
+            setPlaying(false)
+            refreshNowPlaying()
+            return
+        }
         guard Self.autoplaysNext || isCarPlayConnected else {
             setPlaying(false)
             refreshNowPlaying()
@@ -726,7 +733,44 @@ final class PlayerManager: ObservableObject {
              carPlayVideo: carPlayPrefersVideo)
     }
 
+    // MARK: - Sleep timer
+
+    /// When playback stops by itself, for listening in bed: after a set time, or once the video
+    /// playing now ends instead of going on to the next.
+    enum SleepTimer: Equatable {
+        case at(Date)
+        case endOfVideo
+    }
+
+    @Published private(set) var sleepTimer: SleepTimer?
+    private var sleepTask: Task<Void, Never>?
+
+    func setSleepTimer(minutes: Int) {
+        sleepTask?.cancel()
+        sleepTimer = .at(.now.addingTimeInterval(TimeInterval(minutes * 60)))
+        sleepTask = Task { [weak self] in
+            // The continuous clock keeps counting while the device sleeps, which is the point.
+            try? await Task.sleep(for: .seconds(minutes * 60), clock: .continuous)
+            guard !Task.isCancelled, let self else { return }
+            self.cancelSleepTimer()
+            if self.isPlaying { self.pause() }
+        }
+    }
+
+    func setSleepTimerToEndOfVideo() {
+        sleepTask?.cancel()
+        sleepTask = nil
+        sleepTimer = .endOfVideo
+    }
+
+    func cancelSleepTimer() {
+        sleepTask?.cancel()
+        sleepTask = nil
+        sleepTimer = nil
+    }
+
     func close() {
+        cancelSleepTimer()
         savePlaybackPosition()
         audioStreamTask?.cancel()
         audioStreamTask = nil

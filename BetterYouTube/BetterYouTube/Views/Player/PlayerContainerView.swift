@@ -484,6 +484,9 @@ struct PlayerActions: View {
                 }
             }
         }
+        if player.currentVideo != nil {
+            SleepTimerMenu(player: player)
+        }
         if let url = player.currentVideo?.watchURL {
             ShareLink(item: url) {
                 Label("Share", systemImage: "square.and.arrow.up")
@@ -506,6 +509,48 @@ struct PlayerActions: View {
             player.close()
         } label: {
             Label("Stop Playback", systemImage: "xmark")
+        }
+    }
+}
+
+/// Stops playback after a while, or at the end of the video — for listening in bed.
+private struct SleepTimerMenu: View {
+    @ObservedObject var player: PlayerManager
+
+    private static let durations = [5, 10, 15, 30, 45, 60]
+
+    var body: some View {
+        Menu {
+            ForEach(Self.durations, id: \.self) { minutes in
+                Button {
+                    player.setSleepTimer(minutes: minutes)
+                } label: {
+                    Text(Duration.seconds(minutes * 60), format: .units(allowed: [.hours, .minutes], width: .wide))
+                }
+            }
+            Button("End of Video") {
+                player.setSleepTimerToEndOfVideo()
+            }
+            if player.sleepTimer != nil {
+                Divider()
+                Button("Turn Off Timer", role: .destructive) {
+                    player.cancelSleepTimer()
+                }
+            }
+        } label: {
+            Label {
+                // The menu is built as it opens, so this is the time left right then.
+                switch player.sleepTimer {
+                case .at(let date):
+                    Text("Sleep Timer: \(Duration.seconds(max(60, date.timeIntervalSinceNow.rounded(.up))).formatted(.units(allowed: [.hours, .minutes], width: .abbreviated))) left")
+                case .endOfVideo:
+                    Text("Sleep Timer: End of Video")
+                case nil:
+                    Text("Sleep Timer")
+                }
+            } icon: {
+                Image(systemName: player.sleepTimer == nil ? "moon.zzz" : "moon.zzz.fill")
+            }
         }
     }
 }
