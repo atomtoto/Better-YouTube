@@ -111,6 +111,7 @@
 		2C1B1382FF738E8CA53B27CC /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D5368E4D0F5D6C2667C40B1D /* Localizable.xcstrings */; };
 		BF293A73538AC97CEEE99DE0 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 9EF6CB3D2B1B2CD53781AB01 /* Localizable.xcstrings */; };
 		16A857B67504CE575139962F /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 23EB1F48CE0DABF67565B526 /* InfoPlist.xcstrings */; };
+		77F55D4865EBEFE08CB0FEE9 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5C9929D349433E568BAA48C /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -253,6 +254,7 @@
 		D5368E4D0F5D6C2667C40B1D /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		9EF6CB3D2B1B2CD53781AB01 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		23EB1F48CE0DABF67565B526 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
+		D5C9929D349433E568BAA48C /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -303,6 +305,7 @@
 		9CECDDFA5EF2AE0232F90708 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				D5C9929D349433E568BAA48C /* OnboardingView.swift */,
 				E53F5E3377E0D4B22DB8C3CF /* DownloadsView.swift */,
 				6389BFBA5B84E6680E8B48C2 /* ChannelView.swift */,
 				D10CA5200000000000000002 /* PlaylistPickerView.swift */,
@@ -617,6 +620,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				77F55D4865EBEFE08CB0FEE9 /* OnboardingView.swift in Sources */,
 				78FBE6B5F75CE97F8569508B /* RichText.swift in Sources */,
 				C1426382C0E887E2638C008D /* LoadMoreFooter.swift in Sources */,
 				2A4977A426ECF60C2F5E3D80 /* YouTubeLink.swift in Sources */,

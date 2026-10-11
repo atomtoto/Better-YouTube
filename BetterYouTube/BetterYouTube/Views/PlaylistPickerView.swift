@@ -71,6 +71,11 @@ struct PlaylistPickerView: View {
                 }
             }
             .interactiveDismissDisabled(mutatingID != nil)
+            // A tap starts the write; the result is what's felt — a tick when YouTube confirms
+            // it, an error buzz when it refuses.
+            .sensoryFeedback(.impact(weight: .light), trigger: mutatingID) { _, new in new != nil }
+            .sensoryFeedback(.success, trigger: statusMessage) { _, new in new != nil }
+            .sensoryFeedback(.error, trigger: errorMessage) { _, new in new != nil }
             .task(id: auth.isSignedIn) { await load() }
         }
         #if os(macOS)
@@ -257,7 +262,6 @@ struct PlaylistPickerView: View {
         mutatingID = "WL"
         statusMessage = nil
         errorMessage = nil
-        Haptics.light()
         defer { mutatingID = nil }
 
         let wasContained = watchLater.contains(video)
@@ -288,7 +292,6 @@ struct PlaylistPickerView: View {
         mutatingID = playlist.id
         statusMessage = nil
         errorMessage = nil
-        Haptics.light()
         defer { mutatingID = nil }
 
         let wasContained = containedPlaylistIDs.contains(playlist.id)

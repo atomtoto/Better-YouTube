@@ -17,6 +17,11 @@ struct PlayerDetailsView: View {
     @State private var watchLaterError: String?
     @State private var showsPlaylistPicker = false
     @State private var showsComments = false
+    // What the native haptics below are keyed to: each tap moves its counter once.
+    @State private var shareTaps = 0
+    @State private var channelTaps = 0
+    @State private var seeks = 0
+    @State private var commentPosts = 0
 
     init(video: Video) {
         self.video = video
@@ -42,6 +47,11 @@ struct PlayerDetailsView: View {
             #endif
         }
         .environment(\.openURL, linkAction)
+        .sensoryFeedback(.selection, trigger: seeks)
+        .sensoryFeedback(.impact(weight: .light), trigger: shareTaps)
+        .sensoryFeedback(.impact(weight: .light), trigger: channelTaps)
+        .sensoryFeedback(.impact(weight: .light), trigger: isDescriptionExpanded)
+        .sensoryFeedback(.impact(weight: .medium), trigger: commentPosts)
         .task { await viewModel.loadAll() }
         .sheet(isPresented: $showsPlaylistPicker) {
             PlaylistPickerView(video: displayed)
@@ -209,7 +219,6 @@ struct PlayerDetailsView: View {
                         activeTint: .red,
                         isBusy: viewModel.isRating
                     ) {
-                        Haptics.medium()
                         Task { await viewModel.toggleLike() }
                     }
 
@@ -220,7 +229,6 @@ struct PlayerDetailsView: View {
                         activeTint: .red,
                         isBusy: viewModel.isRating
                     ) {
-                        Haptics.medium()
                         Task { await viewModel.toggleDislike() }
                     }
                     .accessibilityLabel("Dislike")
@@ -229,13 +237,10 @@ struct PlayerDetailsView: View {
                         title: String(localized: "Favorite"),
                         systemImage: library.isFavorite(displayed) ? "heart.fill" : "heart",
                         isActive: library.isFavorite(displayed),
-                        activeTint: .pink
+                        activeTint: .pink,
+                        // Read once the tap has landed: firmer for adding, lighter for removing.
+                        feedback: .impact(weight: library.isFavorite(displayed) ? .medium : .light)
                     ) {
-                        if library.isFavorite(displayed) {
-                            Haptics.light()
-                        } else {
-                            Haptics.medium()
-                        }
                         library.toggleFavorite(displayed)
                     }
 
@@ -252,7 +257,6 @@ struct PlayerDetailsView: View {
                         activeTint: .indigo,
                         isBusy: watchLater.pendingVideoIDs.contains(displayed.id)
                     ) {
-                        Haptics.medium()
                         Task {
                             await watchLater.toggle(displayed)
                             watchLaterError = watchLater.errorMessage
@@ -261,23 +265,18 @@ struct PlayerDetailsView: View {
 
                     PlayerActionPill(
                         title: String(localized: "Playlist", comment: "Short button title that adds the video to a playlist"),
-                        systemImage: "text.badge.plus"
+                        systemImage: "text.badge.plus",
+                        feedback: .impact(weight: .light)
                     ) {
-                        Haptics.light()
                         showsPlaylistPicker = true
                     }
 
                     if let url = displayed.watchURL {
                         ShareLink(item: url) {
-                            PlayerPillFace(
-                                title: String(localized: "Share"),
-                                systemImage: "square.and.arrow.up"
-                            )
+                            PillLabel(title: String(localized: "Share"), systemImage: "square.and.arrow.up")
                         }
-                        .buttonStyle(PillButtonStyle())
-                        .simultaneousGesture(TapGesture().onEnded {
-                            Haptics.light()
-                        })
+                        .playerPillStyle(tint: nil)
+                        .simultaneousGesture(TapGesture().onEnded { shareTaps += 1 })
                     }
                 }
                 .padding(.vertical, 2)
@@ -296,7 +295,7 @@ struct PlayerDetailsView: View {
 
     private var channelRow: some View {
         Button {
-            Haptics.light()
+            channelTaps += 1
             // Leaving the player for a channel: shrink rather than stop, like the YouTube app.
             player.collapse()
             router.selectedTab = .home
@@ -332,8 +331,9 @@ struct PlayerDetailsView: View {
             }
             .padding(12)
             .cardBackground()
+            .contentShape(.rect)
         }
-        .buttonStyle(CardButtonStyle())
+        .buttonStyle(.plain)
     }
 
     /// Taps on a link in the description or a comment. A timestamp seeks this video, a YouTube
@@ -364,7 +364,7 @@ struct PlayerDetailsView: View {
     /// does everywhere else. The comments sheet steps aside so the jump can be seen.
     private func seek(to seconds: TimeInterval) {
         guard player.currentVideo?.id == video.id else { return }
-        Haptics.selection()
+        seeks += 1
         showsComments = false
         player.seek(to: seconds)
         if !player.isPlaying { player.resume() }
@@ -379,7 +379,6 @@ struct PlayerDetailsView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             Button(isDescriptionExpanded ? "Show Less" : "Show More") {
-                Haptics.light()
                 withAnimation(.easeInOut(duration: 0.2)) { isDescriptionExpanded.toggle() }
             }
             .font(.caption.weight(.semibold))
@@ -456,37 +455,13 @@ struct PlayerDetailsView: View {
 
             HStack(alignment: .center, spacing: 8) {
                 TextField("Add a comment", text: $newCommentText, axis: .vertical)
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.roundedBorder)
                     .lineLimit(1...4)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Color.appSecondaryBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .onSubmit { postComment() }
 
-                Button {
-                    Haptics.medium()
-                    postComment()
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(canPostComment ? Color.accentColor : Color.appSecondaryBackground)
-                            .frame(width: 38, height: 38)
-
-                        if viewModel.isPostingComment {
-                            ProgressView()
-                                .controlSize(.small)
-                                .tint(canPostComment ? .white : .secondary)
-                        } else {
-                            Image(systemName: "arrow.up")
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundStyle(canPostComment ? Color.white : Color.secondary.opacity(0.5))
-                        }
-                    }
-                }
-                .buttonStyle(PillButtonStyle())
-                .disabled(!canPostComment || viewModel.isPostingComment)
-                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: canPostComment)
-                .accessibilityLabel("Post comment")
+                SendButton(isSending: viewModel.isPostingComment, action: postComment)
+                    .disabled(!canPostComment || viewModel.isPostingComment)
+                    .accessibilityLabel("Post comment")
             }
 
             if let error = viewModel.commentActionError {
@@ -559,6 +534,7 @@ struct PlayerDetailsView: View {
 
     private func postComment() {
         guard canPostComment else { return }
+        commentPosts += 1
         let text = newCommentText
         Task {
             if await viewModel.addComment(text) {
@@ -577,156 +553,146 @@ private struct PlayerDownloadPill: View {
     @ObservedObject var store: DownloadStore
     @ObservedObject var manager: DownloadManager
 
+    // One pill whose face follows the state, rather than a different pill per state: a tap
+    // changes the state, and a pill replaced in the same update would lose its feedback.
     var body: some View {
-        switch store.state(for: video.id) {
-        case .none:
-            PlayerActionPill(
-                title: String(localized: "Download"),
-                systemImage: "arrow.down.circle"
-            ) {
-                Haptics.medium()
-                manager.download(video)
-            }
-
-        case .ready:
-            PlayerActionPill(
-                title: String(localized: "Downloaded"),
-                systemImage: "arrow.down.circle.fill",
-                isActive: true,
-                activeTint: .green
-            ) {
-                Haptics.light()
-                manager.remove(video.id)
-            }
-
-        case .failed:
-            PlayerActionPill(
-                title: String(localized: "Retry"),
-                systemImage: "exclamationmark.arrow.circlepath",
-                isActive: true,
-                activeTint: .orange
-            ) {
-                Haptics.medium()
-                manager.retry(video.id)
-            }
-
-        case .paused:
-            PlayerActionPill(
-                title: String(localized: "Paused"),
-                systemImage: "pause.circle",
-                isActive: true,
-                activeTint: .yellow
-            ) {
-                Haptics.medium()
-                manager.resume(video.id)
-            }
-
-        case .some:
-            PlayerActionPill(
-                title: progressTitle,
-                systemImage: "stop.circle",
-                isActive: true,
-                activeTint: .blue,
-                isBusy: false
-            ) {
-                Haptics.light()
-                manager.pause(video.id)
+        let state = store.state(for: video.id)
+        PlayerActionPill(
+            title: title(for: state),
+            systemImage: symbol(for: state),
+            isActive: state != nil,
+            activeTint: tint(for: state)
+        ) {
+            switch state {
+            case .none: manager.download(video)
+            case .ready: manager.remove(video.id)
+            case .failed: manager.retry(video.id)
+            case .paused: manager.resume(video.id)
+            case .some: manager.pause(video.id)
             }
         }
     }
 
-    private var progressTitle: String {
-        guard let fraction = manager.progress[video.id], fraction > 0 else { return String(localized: "Downloading") }
-        return fraction.formatted(.percent.precision(.fractionLength(0)))
+    private func title(for state: DownloadState?) -> String {
+        switch state {
+        case .none: return String(localized: "Download")
+        case .ready: return String(localized: "Downloaded")
+        case .failed: return String(localized: "Retry")
+        case .paused: return String(localized: "Paused")
+        case .some:
+            guard let fraction = manager.progress[video.id], fraction > 0 else { return String(localized: "Downloading") }
+            return fraction.formatted(.percent.precision(.fractionLength(0)))
+        }
+    }
+
+    private func symbol(for state: DownloadState?) -> String {
+        switch state {
+        case .none: return "arrow.down.circle"
+        case .ready: return "arrow.down.circle.fill"
+        case .failed: return "exclamationmark.arrow.circlepath"
+        case .paused: return "pause.circle"
+        case .some: return "stop.circle"
+        }
+    }
+
+    private func tint(for state: DownloadState?) -> Color {
+        switch state {
+        case .none, .ready: return .green
+        case .failed: return .orange
+        case .paused: return .yellow
+        case .some: return .blue
+        }
     }
 }
 
-/// Custom responsive button style giving iOS-like spring scaling and slight opacity change on press.
-struct PillButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
-            .opacity(configuration.isPressed ? 0.82 : 1.0)
-            .animation(.spring(response: 0.22, dampingFraction: 0.62), value: configuration.isPressed)
-    }
-}
-
-/// Responsive card button style for subtle press feedback.
-struct CardButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .opacity(configuration.isPressed ? 0.88 : 1.0)
-            .animation(.spring(response: 0.22, dampingFraction: 0.65), value: configuration.isPressed)
-    }
-}
-
-/// Visual face used by all player action pills including ShareLink to ensure strict geometric and design consistency.
-struct PlayerPillFace: View {
+/// What every pill in the player shows: its symbol — a spinner while a write is in flight, so a
+/// tap that has to reach YouTube and back still looks like it landed — and its title, if any.
+private struct PillLabel: View {
     let title: String
     let systemImage: String
-    var isActive: Bool = false
-    var activeTint: Color = .red
-    var isBusy: Bool = false
+    var isActive = false
+    var isBusy = false
 
     var body: some View {
-        HStack(spacing: 7) {
-            if isBusy {
-                ProgressView()
-                    .controlSize(.small)
+        Group {
+            if title.isEmpty {
+                icon
             } else {
-                Image(systemName: systemImage)
-                    .font(.subheadline.weight(.semibold))
-                    .symbolEffect(.bounce, value: isActive)
-            }
-
-            if !title.isEmpty {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                    .contentTransition(.numericText())
+                Label {
+                    Text(title)
+                        .lineLimit(1)
+                        .contentTransition(.numericText())
+                } icon: {
+                    icon
+                }
             }
         }
-        .foregroundStyle(isActive ? activeTint : Color.primary)
-        .padding(.horizontal, 15)
-        .frame(height: 38)
-        .background(
-            Capsule()
-                .fill(isActive ? activeTint.opacity(0.16) : Color.appSecondaryBackground)
-        )
-        .overlay(
-            Capsule()
-                .strokeBorder(
-                    isActive ? activeTint.opacity(0.35) : Color.primary.opacity(0.06),
-                    lineWidth: 0.8
-                )
-        )
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isActive)
+        .font(.subheadline.weight(.semibold))
+    }
+
+    @ViewBuilder
+    private var icon: some View {
+        if isBusy {
+            ProgressView().controlSize(.small)
+        } else {
+            Image(systemName: systemImage)
+                .symbolEffect(.bounce, value: isActive)
+        }
     }
 }
 
+private extension View {
+    /// The player's pills are the system's bordered capsule: neutral until their state is on,
+    /// then in that state's colour. Being the native button, they grow with the text size the
+    /// reader has chosen, where the hand-drawn ones were a fixed 38 points tall.
+    func playerPillStyle(tint: Color?) -> some View {
+        buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .tint(tint ?? .primary)
+    }
+}
+
+/// One of the player's actions, felt as well as seen.
 private struct PlayerActionPill: View {
     let title: String
     let systemImage: String
     var isActive: Bool = false
     var activeTint: Color = .red
-    /// Swaps the icon for a spinner while a write is in flight, so a tap that has to reach
-    /// YouTube and back still looks like it landed.
     var isBusy: Bool = false
+    var feedback: SensoryFeedback = .impact(weight: .medium)
+    let action: () -> Void
+    @State private var taps = 0
+
+    var body: some View {
+        Button {
+            taps += 1
+            action()
+        } label: {
+            PillLabel(title: title, systemImage: systemImage, isActive: isActive, isBusy: isBusy)
+        }
+        .playerPillStyle(tint: isActive ? activeTint : nil)
+        .disabled(isBusy)
+        .animation(.snappy, value: isActive)
+        .sensoryFeedback(feedback, trigger: taps)
+    }
+}
+
+/// The round send button beside a comment or reply field.
+private struct SendButton: View {
+    let isSending: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            PlayerPillFace(
-                title: title,
-                systemImage: systemImage,
-                isActive: isActive,
-                activeTint: activeTint,
-                isBusy: isBusy
-            )
+            if isSending {
+                ProgressView()
+            } else {
+                Image(systemName: "arrow.up")
+                    .fontWeight(.semibold)
+            }
         }
-        .buttonStyle(PillButtonStyle())
-        .disabled(isBusy)
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.circle)
     }
 }
 
@@ -737,6 +703,8 @@ struct CommentRowView: View {
     @State private var showsReplies = false
     @State private var showsReplyComposer = false
     @State private var replyText = ""
+    @State private var likeTaps = 0
+    @State private var replyPosts = 0
 
     private var canPostReply: Bool {
         !replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -748,7 +716,7 @@ struct CommentRowView: View {
 
             HStack(spacing: 16) {
                 Button {
-                    Haptics.light()
+                    likeTaps += 1
                     Task { await viewModel.toggleCommentLike(comment) }
                 } label: {
                     Label(
@@ -788,6 +756,8 @@ struct CommentRowView: View {
                     .padding(.leading, 42)
             }
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: likeTaps)
+        .sensoryFeedback(.impact(weight: .medium), trigger: replyPosts)
     }
 
     private var replyButtonTitle: String {
@@ -811,37 +781,14 @@ struct CommentRowView: View {
     private var replyComposer: some View {
         HStack(alignment: .center, spacing: 8) {
             TextField("Write a reply", text: $replyText, axis: .vertical)
-                .textFieldStyle(.plain)
+                .textFieldStyle(.roundedBorder)
                 .lineLimit(1...3)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.appSecondaryBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .onSubmit { postReply() }
 
-            Button {
-                Haptics.medium()
-                postReply()
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(canPostReply ? Color.accentColor : Color.appSecondaryBackground)
-                        .frame(width: 32, height: 32)
-
-                    if viewModel.sendingReplyTo.contains(comment.id) {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(canPostReply ? .white : .secondary)
-                    } else {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(canPostReply ? Color.white : Color.secondary.opacity(0.5))
-                    }
-                }
-            }
-            .buttonStyle(PillButtonStyle())
-            .disabled(!canPostReply || viewModel.sendingReplyTo.contains(comment.id))
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: canPostReply)
-            .accessibilityLabel("Post reply")
+            SendButton(isSending: viewModel.sendingReplyTo.contains(comment.id), action: postReply)
+                .controlSize(.small)
+                .disabled(!canPostReply || viewModel.sendingReplyTo.contains(comment.id))
+                .accessibilityLabel("Post reply")
         }
     }
 
@@ -865,6 +812,7 @@ struct CommentRowView: View {
 
     private func postReply() {
         guard canPostReply else { return }
+        replyPosts += 1
         let text = replyText
         Task {
             if await viewModel.reply(text, to: comment.id) {

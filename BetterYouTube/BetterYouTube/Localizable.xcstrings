@@ -1052,16 +1052,6 @@
         }
       }
     },
-    "Clear search" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Effacer la recherche"
-          }
-        }
-      }
-    },
     "Click here to add YouTube OAuth client ID" : {
       "localizations" : {
         "fr" : {
@@ -1522,6 +1512,16 @@
         }
       }
     },
+    "Downloaded videos play anywhere in the app, even with no network." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les vidéos téléchargées se lisent partout dans l’app, même sans réseau."
+          }
+        }
+      }
+    },
     "Downloaded videos play offline throughout the app." : {
       "localizations" : {
         "fr" : {
@@ -1678,6 +1678,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Favoris"
+          }
+        }
+      }
+    },
+    "Favorites, Watch Later, history and where you stopped follow you across your Apple devices." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes favoris, « À regarder plus tard », ton historique et l’endroit où tu t’es arrêté te suivent sur tous tes appareils Apple."
           }
         }
       }
@@ -3576,16 +3586,6 @@
         }
       }
     },
-    "Setup step %lld of 4" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Étape de configuration %lld sur 4"
-          }
-        }
-      }
-    },
     "Share" : {
       "localizations" : {
         "fr" : {
@@ -4917,6 +4917,16 @@
         }
       }
     },
+    "Watch offline" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regarder hors connexion"
+          }
+        }
+      }
+    },
     "Watched" : {
       "localizations" : {
         "fr" : {
@@ -5243,6 +5253,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ta bibliothèque YouTube"
+          }
+        }
+      }
+    },
+    "Your library everywhere" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta bibliothèque partout"
           }
         }
       }

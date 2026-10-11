@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Search with the field pinned to the bottom, within thumb reach. Opening the tab does exactly
-/// two things: raise the keyboard and show recent searches — nothing is fetched until you ask.
+/// Search, in the system's own search field: under the title on a phone, in the window's toolbar
+/// on a Mac. Opening the tab raises the keyboard and shows recent searches — nothing is fetched
+/// until you ask.
 struct SearchView: View {
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var recents: RecentSearchStore
@@ -32,14 +33,15 @@ struct SearchView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.appBackground)
-        // Tapping anywhere outside the field puts the keyboard away. Simultaneous so rows and
-        // buttons still receive their own taps.
-        .contentShape(Rectangle())
-        .simultaneousGesture(TapGesture().onEnded { isFieldFocused = false })
         .navigationTitle("Search")
-        .inlineNavigationBar()
-        // Bottom on a phone, top on a Mac — see `searchFieldInset`.
-        .searchFieldInset { searchField }
+        .searchable(text: $viewModel.query, placement: .pinned, prompt: "Search or paste a YouTube link")
+        .searchFocused($isFieldFocused)
+        .searchSuggestions { suggestions }
+        .onSubmit(of: .search, submit)
+        // Clearing the field — its own clear button, or Cancel — clears the results with it.
+        .onChange(of: viewModel.query) { _, query in
+            if query.isEmpty { viewModel.clear() }
+        }
         .navigationDestination(for: Channel.self) { ChannelView(channelId: $0.id, initialChannel: $0) }
         .navigationDestination(item: $linkedChannel) { channel in
             ChannelView(channelId: channel.id, initialChannel: channel.title.isEmpty ? nil : channel)
@@ -56,7 +58,11 @@ struct SearchView: View {
         } message: {
             Text(linkError ?? "")
         }
-        .onAppear { isFieldFocused = true }
+        .onAppear {
+            // Ready to type on arrival — unless there are results to come back to, which the
+            // keyboard would only cover.
+            if viewModel.results.isEmpty { isFieldFocused = true }
+        }
     }
 
     // MARK: Filters
@@ -102,71 +108,31 @@ struct SearchView: View {
         }
     }
 
-    // MARK: Bottom search field
+    // MARK: Suggestions
 
-    private var canSubmit: Bool {
-        !viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var searchField: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(isFieldFocused ? Color.accentColor : .secondary)
-                    .animation(.easeInOut(duration: 0.15), value: isFieldFocused)
-
-                TextField("Search or paste a YouTube link", text: $viewModel.query)
-                    .focused($isFieldFocused)
-                    .submitLabel(.search)
-                    .identifierField()
-                    .textFieldStyle(.plain)
-                    .onSubmit(submit)
-
-                if !viewModel.query.isEmpty {
+    /// What the field offers while you type: the link you pasted, ready to open, or the recent
+    /// searches that match.
+    @ViewBuilder
+    private var suggestions: some View {
+        if viewModel.link != nil {
+            Button(action: submit) {
+                Label("Open Link", systemImage: "arrow.up.forward.app")
+            }
+        } else {
+            let query = viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !query.isEmpty {
+                ForEach(recents.terms.filter {
+                    $0.localizedStandardContains(query) && $0.caseInsensitiveCompare(query) != .orderedSame
+                }.prefix(5), id: \.self) { term in
                     Button {
-                        viewModel.clear()
-                        isFieldFocused = true
+                        viewModel.search(term: term)
+                        isFieldFocused = false
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.subheadline)
-                            .foregroundStyle(.tertiary)
+                        Label(term, systemImage: "clock.arrow.circlepath")
                     }
-                    .buttonStyle(.plain)
-                    .transition(.opacity.combined(with: .scale(scale: 0.7)))
-                    .accessibilityLabel("Clear search")
                 }
             }
-            .padding(.horizontal, 14)
-            .frame(height: 40)
-            .background(Color.appSecondaryBackground, in: Capsule())
-            .overlay(
-                Capsule().strokeBorder(
-                    isFieldFocused ? Color.accentColor.opacity(0.4) : Color.clear,
-                    lineWidth: 1.5
-                )
-            )
-            .animation(.easeInOut(duration: 0.15), value: isFieldFocused)
-            .animation(.easeInOut(duration: 0.15), value: viewModel.query.isEmpty)
-
-            Button(action: submit) {
-                // A link is opened rather than searched for, and the button says which.
-                Image(systemName: viewModel.link == nil ? "arrow.right" : "arrow.up.forward")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(canSubmit ? Color.accentColor : Color.appTertiaryFill, in: Circle())
-                    .contentShape(Circle())
-                    .contentTransition(.symbolEffect(.replace))
-            }
-            .buttonStyle(.plain)
-            .disabled(!canSubmit)
-            .animation(.easeInOut(duration: 0.15), value: canSubmit)
-            .accessibilityLabel(viewModel.link == nil ? "Search" : "Open Link")
         }
-        .padding(.horizontal, Theme.Spacing.gutter)
-        .padding(.vertical, 10)
-        .background(.bar)
     }
 
     private func submit() {

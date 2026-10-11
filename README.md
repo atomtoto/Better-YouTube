@@ -542,7 +542,7 @@ Requirements: **macOS 26+**, Xcode 27+ for the full project.
 | Transport | The docked bar, the lock screen — and on an iPad, the same **Playback** menu and shortcuts | The bar, the **Playback** menu, ⌘P / ⌥⌘← / ⌥⌘→ / ⇧⌘N |
 | Settings | A tab; panes that push | Its own window, the same panes as a source list, ⌘, |
 | Refresh | Pull down | A Refresh button in the toolbar, ⌘R |
-| Search field | Pinned to the bottom, in thumb reach | Pinned to the top, where a Mac keeps one |
+| Search field | The system's, under the title, with recent searches as suggestions | In the window's toolbar, where a Mac keeps one |
 | YouTube's own pages | `m.youtube.com` | `www.youtube.com` — a window holds the desktop site |
 | Periodic new-upload check | `BGAppRefreshTask`, on iOS's schedule | The app's own two-hour timer; an open Mac app is running |
 | Downloaded files | The Files app, under "Better YouTube" | Downloads → **Show in Finder** |

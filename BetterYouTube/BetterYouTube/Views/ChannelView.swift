@@ -88,6 +88,13 @@ struct ChannelView: View {
         .task(id: auth.isSignedIn) {
             await viewModel.loadSubscription(isSignedIn: auth.isSignedIn)
         }
+        // Felt when YouTube confirms the change, not on the tap: subscribing is a round trip, and
+        // the first read of the state is no change at all.
+        .sensoryFeedback(trigger: viewModel.subscription) { old, new in
+            guard old != .unknown, new != .unknown else { return nil }
+            return .impact(weight: .medium)
+        }
+        .sensoryFeedback(.error, trigger: viewModel.subscriptionError) { _, new in new != nil }
         .confirmationDialog(
             channel.map { Text("Unsubscribe from \($0.title)?") } ?? Text("Unsubscribe from this channel?"),
             isPresented: $confirmsUnsubscribe,
@@ -116,7 +123,6 @@ struct ChannelView: View {
             EmptyView()
         case .notSubscribed:
             Button {
-                Haptics.medium()
                 Task { await viewModel.toggleSubscription() }
             } label: {
                 Text("Subscribe")

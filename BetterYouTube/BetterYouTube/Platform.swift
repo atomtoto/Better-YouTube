@@ -176,6 +176,21 @@ extension Color {
     }
 }
 
+// MARK: - Search
+
+extension SearchFieldPlacement {
+    /// A search field that is always on screen: under the navigation bar's title on a phone —
+    /// in the bar, where it doesn't contend with the docked player and the tab bar below — and
+    /// in the toolbar on a Mac, where every Mac app keeps one.
+    static var pinned: SearchFieldPlacement {
+        #if os(iOS)
+        .navigationBarDrawer(displayMode: .always)
+        #else
+        .toolbar
+        #endif
+    }
+}
+
 // MARK: - View modifiers that only one platform has
 
 extension View {
@@ -224,17 +239,6 @@ extension View {
         #endif
     }
 
-    /// Pins a search field where the hand is: within thumb reach at the bottom of a phone, and
-    /// at the top of a Mac window, which is where every Mac app keeps one.
-    @ViewBuilder
-    func searchFieldInset<Field: View>(@ViewBuilder _ field: () -> Field) -> some View {
-        #if os(macOS)
-        safeAreaInset(edge: .top, content: field)
-        #else
-        safeAreaInset(edge: .bottom, content: field)
-        #endif
-    }
-
     /// A field that filters a long list in place — subscriptions, history, a playlist. In the
     /// navigation bar's drawer on a phone, well clear of the docked player at the bottom of the
     /// screen; in the toolbar on a Mac, where a window keeps its search field.
@@ -266,45 +270,6 @@ extension View {
         ignoresSafeArea(.keyboard, edges: .bottom)
         #else
         self
-        #endif
-    }
-}
-
-// MARK: - Haptic Feedback
-
-enum Haptics {
-    @MainActor
-    static func light() {
-        #if os(iOS)
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        #endif
-    }
-
-    @MainActor
-    static func medium() {
-        #if os(iOS)
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        #endif
-    }
-
-    @MainActor
-    static func rigid() {
-        #if os(iOS)
-        UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
-        #endif
-    }
-
-    @MainActor
-    static func success() {
-        #if os(iOS)
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
-        #endif
-    }
-
-    @MainActor
-    static func selection() {
-        #if os(iOS)
-        UISelectionFeedbackGenerator().selectionChanged()
         #endif
     }
 }

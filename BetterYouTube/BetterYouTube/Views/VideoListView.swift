@@ -334,27 +334,19 @@ struct PlaylistHeaderView: View {
             if videoCount > 0 {
                 HStack(spacing: 12) {
                     Button(action: onPlay) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "play.fill")
-                                .foregroundStyle(.white)
-                            Text("Play")
-                                .foregroundStyle(.white)
-                        }
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
+                        Label("Play", systemImage: "play.fill")
+                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.red)
 
                     Button(action: onShuffle) {
                         Label("Shuffle", systemImage: "shuffle")
-                            .font(.headline)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 44)
                     }
                     .buttonStyle(.bordered)
                 }
+                .font(.headline)
+                .controlSize(.large)
                 .padding(.horizontal, Theme.Spacing.gutter)
                 .padding(.top, 4)
             }
