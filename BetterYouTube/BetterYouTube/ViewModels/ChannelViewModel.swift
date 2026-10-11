@@ -21,9 +21,18 @@ final class ChannelViewModel: ObservableObject {
     @Published private(set) var isChangingSubscription = false
     @Published var subscriptionError: String?
 
+    /// The channel's public playlists, read the first time they are shown.
+    @Published private(set) var playlists: [Playlist] = []
+    @Published private(set) var hasLoadedPlaylists = false
+    @Published private(set) var isLoadingPlaylists = false
+    @Published private(set) var playlistsError: String?
+
     private let channelId: String
     private let service: YouTubeAPIService
     private var nextPageToken: String?
+    private var playlistsPageToken: String?
+
+    var canLoadMorePlaylists: Bool { playlistsPageToken != nil }
 
     var canLoadMore: Bool { nextPageToken != nil }
 
@@ -64,6 +73,25 @@ final class ChannelViewModel: ObservableObject {
             loadMoreError = error.localizedDescription
         }
         isLoadingMore = false
+    }
+
+    // MARK: - Playlists
+
+    /// The first page of playlists, or the next one. 1 unit a page.
+    func loadPlaylists() async {
+        guard !isLoadingPlaylists, !hasLoadedPlaylists || playlistsPageToken != nil else { return }
+        isLoadingPlaylists = true
+        playlistsError = nil
+        do {
+            let page = try await service.playlists(ofChannel: channelId, pageToken: playlistsPageToken)
+            let known = Set(playlists.map(\.id))
+            playlists += page.items.filter { !known.contains($0.id) }
+            playlistsPageToken = page.nextPageToken
+            hasLoadedPlaylists = true
+        } catch {
+            playlistsError = error.localizedDescription
+        }
+        isLoadingPlaylists = false
     }
 
     // MARK: - Subscribing

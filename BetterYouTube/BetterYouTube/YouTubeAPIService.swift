@@ -635,6 +635,18 @@ actor YouTubeAPIService {
         return try await videos(inPlaylist: uploads, maxResults: maxResults, pageToken: pageToken)
     }
 
+    /// One page of the playlists a channel has made public, newest first. 1 unit.
+    func playlists(ofChannel channelId: String, maxResults: Int = 25, pageToken: String?) async throws -> Page<Playlist> {
+        var query = [
+            "part": "snippet,contentDetails",
+            "channelId": channelId,
+            "maxResults": "\(maxResults)"
+        ]
+        if let pageToken { query["pageToken"] = pageToken }
+        let response: YTListResponse<YTResourceItem> = try await request(path: "playlists", query: query)
+        return Page(items: response.items.map(Playlist.init(resource:)), nextPageToken: response.nextPageToken)
+    }
+
     // MARK: - Signed-in user's library (OAuth required)
 
     func myChannel() async throws -> Channel? {

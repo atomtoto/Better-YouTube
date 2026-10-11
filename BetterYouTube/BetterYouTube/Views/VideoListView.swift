@@ -189,6 +189,36 @@ struct PlaylistsView: View {
     }
 }
 
+/// A playlist as a card, the shape of a video's in a feed: its artwork, with how many videos it
+/// holds where a video shows its length, and its title.
+struct PlaylistCardView: View {
+    let playlist: Playlist
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ArtworkView(
+                url: playlist.thumbnailURL,
+                duration: playlist.itemCount.map { String(localized: "\($0) videos") },
+                cornerRadius: Theme.Radius.card
+            )
+            .aspectRatio(16.0 / 9.0, contentMode: .fit)
+            .artworkShadow()
+
+            Label {
+                Text(playlist.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            } icon: {
+                Image(systemName: "list.and.film")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .contentShape(.rect)
+    }
+}
+
 /// Videos inside a playlist, fetched via `playlistItems.list` (1 quota unit).
 struct PlaylistDetailView: View {
     @EnvironmentObject private var player: PlayerManager
@@ -213,15 +243,22 @@ struct PlaylistDetailView: View {
                         PlaylistHeaderView(
                             playlist: playlist,
                             videoCount: viewModel.videos.count,
+                            isPreparing: viewModel.isLoadingAll,
                             onPlay: {
-                                if let first = viewModel.videos.first {
-                                    player.play(first, upNext: viewModel.videos.after(first))
+                                Task {
+                                    await viewModel.loadAll()
+                                    if let first = viewModel.videos.first {
+                                        player.play(first, upNext: viewModel.videos.after(first))
+                                    }
                                 }
                             },
                             onShuffle: {
-                                let shuffled = viewModel.videos.shuffled()
-                                if let first = shuffled.first {
-                                    player.play(first, upNext: Array(shuffled.dropFirst()))
+                                Task {
+                                    await viewModel.loadAll()
+                                    let shuffled = viewModel.videos.shuffled()
+                                    if let first = shuffled.first {
+                                        player.play(first, upNext: Array(shuffled.dropFirst()))
+                                    }
                                 }
                             }
                         )
@@ -286,6 +323,8 @@ struct PlaylistDetailView: View {
 struct PlaylistHeaderView: View {
     let playlist: Playlist
     let videoCount: Int
+    /// True while the rest of the list is fetched before playing it.
+    var isPreparing = false
     let onPlay: () -> Void
     let onShuffle: () -> Void
     @State private var isDescriptionExpanded = false
@@ -344,6 +383,10 @@ struct PlaylistHeaderView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
+                }
+                .disabled(isPreparing)
+                .overlay {
+                    if isPreparing { ProgressView() }
                 }
                 .font(.headline)
                 .controlSize(.large)

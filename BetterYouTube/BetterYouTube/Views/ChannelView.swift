@@ -7,6 +7,12 @@ struct ChannelView: View {
     @EnvironmentObject private var notifications: NotificationService
     @StateObject private var viewModel: ChannelViewModel
     @State private var confirmsUnsubscribe = false
+    @State private var section = Section.videos
+
+    /// The two halves of a channel page, as on YouTube.
+    private enum Section: Hashable {
+        case videos, playlists
+    }
     private let initialChannel: Channel?
     private let channelId: String
 
@@ -34,32 +40,17 @@ struct ChannelView: View {
                         subscribeButton
                             .frame(maxWidth: .infinity)
 
-                        Text("Latest Videos")
-                            .font(.headline)
-                            .padding(.horizontal, Theme.Spacing.gutter)
-                        if viewModel.videos.isEmpty {
-                            if viewModel.isLoading {
-                                ProgressView()
-                            }
-                        } else {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 440), spacing: 18)], spacing: 24) {
-                                ForEach(viewModel.videos) { video in
-                                    FeedVideoCard(video: video, onPlay: {
-                                        player.play(video, upNext: viewModel.videos.after(video))
-                                    })
-                                    .videoContextMenu(video)
-                                }
-                            }
-                            .padding(.horizontal, Theme.Spacing.gutter)
+                        Picker("Show", selection: $section) {
+                            Text("Videos").tag(Section.videos)
+                            Text("Playlists").tag(Section.playlists)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .padding(.horizontal, Theme.Spacing.gutter)
 
-                            if viewModel.canLoadMore {
-                                LoadMoreFooter(
-                                    error: viewModel.loadMoreError,
-                                    trigger: viewModel.videos.count
-                                ) {
-                                    await viewModel.loadMore()
-                                }
-                            }
+                        switch section {
+                        case .videos: videos
+                        case .playlists: playlists
                         }
                     }
                 }
@@ -111,6 +102,90 @@ struct ChannelView: View {
             Button("OK", role: .cancel) { viewModel.subscriptionError = nil }
         } message: {
             Text(viewModel.subscriptionError ?? "")
+        }
+    }
+
+    /// The uploads, newest first.
+    @ViewBuilder
+    private var videos: some View {
+        if viewModel.videos.isEmpty {
+            if viewModel.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            }
+        } else {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 440), spacing: 18)], spacing: 24) {
+                ForEach(viewModel.videos) { video in
+                    FeedVideoCard(video: video, onPlay: {
+                        player.play(video, upNext: viewModel.videos.after(video))
+                    })
+                    .videoContextMenu(video)
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.gutter)
+
+            if viewModel.canLoadMore {
+                LoadMoreFooter(
+                    error: viewModel.loadMoreError,
+                    trigger: viewModel.videos.count
+                ) {
+                    await viewModel.loadMore()
+                }
+            }
+        }
+    }
+
+    /// The playlists the channel has made public — read the first time this half is shown, so a
+    /// visit for the latest video costs nothing more.
+    @ViewBuilder
+    private var playlists: some View {
+        if viewModel.playlists.isEmpty {
+            if let error = viewModel.playlistsError {
+                ContentUnavailableView {
+                    Label("Couldn't Load Playlists", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(error)
+                } actions: {
+                    Button("Try Again") {
+                        Task { await viewModel.loadPlaylists() }
+                    }
+                }
+            } else if viewModel.hasLoadedPlaylists {
+                ContentUnavailableView(
+                    "No Playlists",
+                    systemImage: "music.note.list",
+                    description: Text("This channel has no public playlists.")
+                )
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .task {
+                        // Its own task: switching back to Videos mid-request would cancel the
+                        // view's, and the cancelled request would come back as an error.
+                        await Task { await viewModel.loadPlaylists() }.value
+                    }
+            }
+        } else {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 440), spacing: 18)], spacing: 24) {
+                ForEach(viewModel.playlists) { playlist in
+                    NavigationLink {
+                        PlaylistDetailView(playlist: playlist)
+                    } label: {
+                        PlaylistCardView(playlist: playlist)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.gutter)
+
+            if viewModel.canLoadMorePlaylists {
+                LoadMoreFooter(
+                    error: viewModel.playlistsError,
+                    trigger: viewModel.playlists.count
+                ) {
+                    await viewModel.loadPlaylists()
+                }
+            }
         }
     }
 

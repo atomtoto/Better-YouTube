@@ -11,6 +11,12 @@ final class PlaylistViewModel: ObservableObject {
     @Published var errorMessage: String?
     /// Why the next page didn't arrive. Kept apart from `errorMessage`, which replaces the list.
     @Published private(set) var loadMoreError: String?
+    /// True while Play or Shuffle fetch the rest of the list first.
+    @Published private(set) var isLoadingAll = false
+
+    /// How many further pages Play and Shuffle fetch at most: with the first, a thousand videos,
+    /// for twenty quota units.
+    static let maxExtraPages = 19
 
     /// The Data API's handle on the next page; nil when the list is complete.
     private var nextPageToken: String?
@@ -65,6 +71,21 @@ final class PlaylistViewModel: ObservableObject {
             loadMoreError = error.localizedDescription
         }
         isLoadingMore = false
+    }
+
+    /// The rest of the list, for Play and Shuffle — which mean the whole playlist, not the part
+    /// that happens to have been scrolled through. Stops at the first failure: playing what is
+    /// there beats playing nothing.
+    func loadAll() async {
+        guard !isLoadingAll else { return }
+        isLoadingAll = true
+        defer { isLoadingAll = false }
+        for _ in 0..<Self.maxExtraPages {
+            // A page the list itself asked for may already be on its way; it is the next one.
+            while isLoadingMore { try? await Task.sleep(for: .milliseconds(50)) }
+            guard canLoadMore, loadMoreError == nil else { break }
+            await loadMore()
+        }
     }
 
     private func loadFirstPage() async throws {
