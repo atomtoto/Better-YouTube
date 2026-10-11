@@ -89,11 +89,15 @@ final class ICloudSyncService: ObservableObject {
         for key in Self.preferenceKeys { preferenceValues[key] = defaults.string(forKey: key) }
         library.onSyncChange = { [weak self] changes in self?.recordLocalChanges(changes) }
         playbackPositions.onSyncChange = { [weak self] changes in self?.recordLocalChanges(changes) }
+        // Both can be posted from any thread — CloudKit's from a queue of its own — and the
+        // closures below belong to the main actor, which Swift 6 checks when they run.
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification, object: defaults)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 Task { @MainActor in self?.capturePreferences() }
             }.store(in: &observations)
         NotificationCenter.default.publisher(for: .CKAccountChanged)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 Task { @MainActor in await self?.checkAccount() }
             }.store(in: &observations)

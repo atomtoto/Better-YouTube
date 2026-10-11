@@ -43,6 +43,8 @@ struct Page<Item> {
     let nextPageToken: String?
 }
 
+extension Page: Sendable where Item: Sendable {}
+
 /// The two orders YouTube offers for a video's comments.
 enum CommentOrder: String, CaseIterable, Identifiable {
     /// YouTube's own "Top comments".
@@ -103,6 +105,7 @@ struct SearchFilters: Equatable {
 }
 
 /// Stores the user-supplied YouTube Data API v3 key.
+@MainActor
 final class APIKeyStore: ObservableObject {
     static let shared = APIKeyStore()
 

@@ -28,7 +28,7 @@ struct Video: Identifiable, Codable, Equatable, Hashable, Sendable {
     }
 }
 
-struct Channel: Identifiable, Codable, Equatable, Hashable {
+struct Channel: Identifiable, Codable, Equatable, Hashable, Sendable {
     let id: String
     let title: String
     let description: String
@@ -42,12 +42,12 @@ struct Channel: Identifiable, Codable, Equatable, Hashable {
 /// The id here is the *playlist item's*, not the video's: it is the playlist's own handle on that
 /// row, and the only thing `playlistItems.delete` accepts. The same video in two playlists has two
 /// different item ids, which is why this can't just live on `Video`.
-struct PlaylistEntry: Identifiable, Codable, Equatable, Hashable {
+struct PlaylistEntry: Identifiable, Codable, Equatable, Hashable, Sendable {
     let id: String
     let video: Video
 }
 
-struct Playlist: Identifiable, Codable, Equatable, Hashable {
+struct Playlist: Identifiable, Codable, Equatable, Hashable, Sendable {
     let id: String
     let title: String
     let description: String
@@ -61,7 +61,7 @@ struct Playlist: Identifiable, Codable, Equatable, Hashable {
     }
 }
 
-struct VideoComment: Identifiable, Codable, Equatable, Hashable {
+struct VideoComment: Identifiable, Codable, Equatable, Hashable, Sendable {
     let id: String
     let authorName: String
     let authorAvatarURL: URL?
@@ -92,7 +92,7 @@ enum VideoRating: String, Codable, Equatable {
 }
 
 /// Search results can contain either a video or a channel.
-enum SearchResult: Identifiable, Hashable {
+enum SearchResult: Identifiable, Hashable, Sendable {
     case video(Video)
     case channel(Channel)
 
@@ -246,17 +246,13 @@ struct YTErrorResponse: Decodable {
 // MARK: - Mapping
 
 enum YTDateParser {
-    private static let fractional: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
-    }()
-
-    private static let plain = ISO8601DateFormatter()
+    // Format styles rather than formatters: values, safe to share between threads.
+    private static let fractional = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+    private static let plain = Date.ISO8601FormatStyle()
 
     static func parse(_ string: String?) -> Date? {
         guard let string else { return nil }
-        return fractional.date(from: string) ?? plain.date(from: string)
+        return (try? fractional.parse(string)) ?? (try? plain.parse(string))
     }
 }
 

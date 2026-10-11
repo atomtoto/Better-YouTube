@@ -81,7 +81,8 @@ final class LocalPlayback {
         }
     }
 
-    deinit {
+    // Isolated, so it runs on the main actor with the observers it removes.
+    isolated deinit {
         if let timeObserver { player.removeTimeObserver(timeObserver) }
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
     }

@@ -17,9 +17,9 @@ import Foundation
 /// So a screen holding state of its own keys itself on this counter and is rebuilt from the
 /// stores, which by the time it is bumped are empty. See `SettingsView` and `MacSettingsWindow`.
 ///
-/// Deliberately *not* `@MainActor`: a view holds this as a plain `@ObservedObject` default value,
-/// and an isolated singleton read from a nonisolated initializer is a Swift 6 error in waiting.
-/// Only `AppReset` writes to it, and `AppReset` is on the main actor.
+/// On the main actor, like the views that observe it and `AppReset`, the one thing that writes to
+/// it. Views are main-actor types, so holding it as an `@ObservedObject` default value is fine.
+@MainActor
 final class AppResetSignal: ObservableObject {
     static let shared = AppResetSignal()
 

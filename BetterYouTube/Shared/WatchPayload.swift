@@ -83,3 +83,23 @@ enum WatchMessage {
     static let byteCount = "byteCount"
     static let videos = "videos"
 }
+
+/// A WatchConnectivity message, reply or application context, carried from the session's own
+/// queue to the main actor.
+///
+/// They hold only property-list values — strings, numbers, data, dates, and arrays and
+/// dictionaries of those — which are immutable once built, so handing one across can't race. The
+/// compiler can't see that through `[String: Any]`; this says it on its behalf, in one place.
+struct WatchDictionary: @unchecked Sendable {
+    let value: [String: Any]
+
+    init(_ value: [String: Any]) {
+        self.value = value
+    }
+}
+
+/// The handler WatchConnectivity gives for answering a message. The framework documents it as
+/// callable from any thread, which its plain closure type can't say.
+struct WatchReply: @unchecked Sendable {
+    let send: ([String: Any]) -> Void
+}

@@ -403,6 +403,7 @@ struct PlayerDragState {
 
 /// The pull-down itself, built the same way wherever it is attached, so the drag starts wherever
 /// your thumb already is — the header or the video.
+@MainActor
 struct PlayerCollapseDrag {
     @Binding var state: PlayerDragState
     /// How far the video travels to reach the bar; the drag maps onto it point for point.

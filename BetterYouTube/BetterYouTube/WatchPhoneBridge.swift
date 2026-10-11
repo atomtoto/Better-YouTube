@@ -68,7 +68,9 @@ final class WatchPhoneBridge: NSObject {
             }
             self.publishSoon()
         }.store(in: &observations)
+        // Posted by whichever thread saved the cache; the closure is the main actor's.
         NotificationCenter.default.publisher(for: YouTubeHomeCache.didChange)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.publishSoon() }.store(in: &observations)
     }
 
@@ -303,7 +305,9 @@ extension WatchPhoneBridge: WCSessionDelegate {
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any],
                              replyHandler: @escaping ([String: Any]) -> Void) {
-        Task { @MainActor in replyHandler(await self.handle(message)) }
+        let message = WatchDictionary(message)
+        let reply = WatchReply(send: replyHandler)
+        Task { @MainActor in reply.send(await self.handle(message.value)) }
     }
 }
 #endif

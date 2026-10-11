@@ -7,10 +7,17 @@ import YouTubeKit
 actor LocalDownloadResolver {
     static let shared = LocalDownloadResolver()
 
+    /// What YouTube offers for a video, read on the device. YouTubeKit's extractor is a class that
+    /// isn't safe to share and does its own asynchronous work, so it is made, used and let go in
+    /// one call away from the actor; only the streams it finds — plain values — come back.
+    nonisolated private static func streams(for videoID: String) async throws -> [YouTubeKit.Stream] {
+        try await YouTube(videoID: videoID, methods: [.local]).streams
+    }
+
     /// Resolves one muxed H.264/AAC stream that AVPlayer can keep feeding while WebKit is
     /// suspended by iOS. This is prepared in the foreground and used only when the app leaves it.
     func resolvePlaybackURL(videoID: String, maxHeight: Int = 720) async throws -> URL {
-        let streams = try await YouTube(videoID: videoID, methods: [.local]).streams
+        let streams = try await Self.streams(for: videoID)
         try Task.checkCancellation()
         let candidates = streams.map { stream in
             LocalMediaCandidate(
@@ -40,7 +47,7 @@ actor LocalDownloadResolver {
 
     /// Audio playback needs neither a visible web view nor a full video download.
     func resolveAudioPlaybackURL(videoID: String) async throws -> URL {
-        let streams = try await YouTube(videoID: videoID, methods: [.local]).streams
+        let streams = try await Self.streams(for: videoID)
         try Task.checkCancellation()
         guard let audio = streams.filter({
             $0.includesAudioTrack && !$0.includesVideoTrack
@@ -56,7 +63,7 @@ actor LocalDownloadResolver {
         if wifiOnly { try await Self.requireUnmeteredConnection() }
         try Task.checkCancellation()
         do {
-            let streams = try await YouTube(videoID: videoID, methods: [.local]).streams
+            let streams = try await Self.streams(for: videoID)
             try Task.checkCancellation()
             let candidates = streams.map { stream in
                 LocalMediaCandidate(
@@ -188,11 +195,8 @@ enum DownloadMediaAssembler {
             throw DownloadError.service(String(localized: "Couldn't assemble the downloaded video."))
         }
         try Task.checkCancellation()
-        try await withTaskCancellationHandler {
-            try await export.export(to: output, as: .mp4)
-        } onCancel: {
-            export.cancelExport()
-        }
+        // The async export follows the task: cancelling the download cancels the export with it.
+        try await export.export(to: output, as: .mp4)
         try Task.checkCancellation()
         try await validate(output)
     }

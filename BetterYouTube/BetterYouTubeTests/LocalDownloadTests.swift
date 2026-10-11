@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import os
 import Network
 import Testing
 @testable import BetterYouTube
@@ -186,11 +187,15 @@ struct LocalDownloadQueueTests {
         defer { server.stop() }
         let store = makeStore()
         defer { try? FileManager.default.removeItem(at: store.paths.root) }
-        var attempts = 0
+        // The resolver is called from the download machinery, not the test, so the count is locked.
+        let attempts = OSAllocatedUnfairLock(initialState: 0)
         let manager = DownloadManager(store: store, configuration: .ephemeral) { _, _, _ in
-            attempts += 1
-            return ResolvedMedia(url: server.url(attempts == 1 ? "forbidden" : "video.mp4"), byteCount: nil,
-                                 audioURL: attempts == 1 ? nil : server.url("audio.m4a"))
+            let attempt = attempts.withLock { count in
+                count += 1
+                return count
+            }
+            return ResolvedMedia(url: server.url(attempt == 1 ? "forbidden" : "video.mp4"), byteCount: nil,
+                                 audioURL: attempt == 1 ? nil : server.url("audio.m4a"))
         }
         let video = testVideo()
         store.upsert(DownloadRecord(video: video, state: .paused, quality: .medium))
@@ -198,9 +203,9 @@ struct LocalDownloadQueueTests {
         try await waitUntil { isFailed(store.state(for: video.id)) }
         #expect(store.readyMediaURL(for: video.id) == nil)
         manager.retry(video.id)
-        try await waitUntil { store.isDownloaded(video.id) || attempts > 1 && isFailed(store.state(for: video.id)) }
+        try await waitUntil { store.isDownloaded(video.id) || attempts.withLock { $0 } > 1 && isFailed(store.state(for: video.id)) }
         #expect(store.isDownloaded(video.id))
-        #expect(attempts == 2)
+        #expect(attempts.withLock { $0 } == 2)
         manager.removeAll()
     }
 

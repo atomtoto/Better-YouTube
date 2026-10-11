@@ -138,12 +138,19 @@ final class NowPlaying {
                   let self,
                   self.artworkVideoId == video.id else { return }
 
-            let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            let artwork = Self.makeArtwork(image)
             self.artwork = artwork
             // Slot it into what is already published rather than rebuilding the lot: the
             // position in there is newer than anything this task knows.
             MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyArtwork] = artwork
         }
+    }
+
+    /// MediaPlayer asks for the picture from a queue of its own, so the closure that answers
+    /// can't belong to the main actor — Swift 6 checks, and a main-actor closure called there
+    /// stops the app. Made out here, nonisolated, it belongs to no one.
+    nonisolated private static func makeArtwork(_ image: PlatformImage) -> MPMediaItemArtwork {
+        MPMediaItemArtwork(boundsSize: image.size) { _ in image }
     }
 
     // MARK: - The lock screen's buttons

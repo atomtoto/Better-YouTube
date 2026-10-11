@@ -121,7 +121,9 @@ final class WebAuthPresenter: NSObject, ASWebAuthenticationPresentationContextPr
 
 /// `start()` can fail before the system calls its completion handler. If it later calls the
 /// handler too, a checked continuation must still be resumed only once.
-private final class WebAuthCompletion {
+/// Safe to call from any thread — its state is behind the lock — which is where the
+/// authentication session may call it from.
+private final class WebAuthCompletion: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<URL, Error>?
 
@@ -386,7 +388,9 @@ final class GoogleAuthService: ObservableObject {
         }
         return try await withCheckedThrowingContinuation { continuation in
             let completion = WebAuthCompletion(continuation)
-            let session = ASWebAuthenticationSession(url: url, callback: .customScheme(scheme)) { callbackURL, error in
+            // Sendable, so it carries no actor of its own: the session doesn't promise which thread
+            // it answers on, and a main-actor closure answered elsewhere stops the app under Swift 6.
+            let session = ASWebAuthenticationSession(url: url, callback: .customScheme(scheme)) { @Sendable callbackURL, error in
                 if let callbackURL {
                     completion.resume(.success(callbackURL))
                 } else if let error {

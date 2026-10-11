@@ -139,8 +139,8 @@ final class PlayerManager: ObservableObject {
     private var usesNativeCarPlayPlayback: Bool { isAudioOnly || isCarPlayVideoPlayback }
     private var audioStreamTask: Task<Void, Never>?
     private var audioShouldPlay = true
-    private let resolveAudio: (String) async throws -> URL
-    private let resolveVideo: (String) async throws -> URL
+    private let resolveAudio: @Sendable (String) async throws -> URL
+    private let resolveVideo: @Sendable (String) async throws -> URL
     private let downloadedMediaURL: @MainActor (String) -> URL?
 
     /// Made on first use rather than at launch. Creating it — and the web content process
@@ -252,9 +252,9 @@ final class PlayerManager: ObservableObject {
     private var backgroundStreamURL: URL?
     private var backgroundPlaybackRequested = false
 
-    init(resolveAudio: @escaping (String) async throws -> URL = {
+    init(resolveAudio: @escaping @Sendable (String) async throws -> URL = {
         try await LocalDownloadResolver.shared.resolveAudioPlaybackURL(videoID: $0)
-    }, resolveVideo: @escaping (String) async throws -> URL = {
+    }, resolveVideo: @escaping @Sendable (String) async throws -> URL = {
         try await LocalDownloadResolver.shared.resolvePlaybackURL(videoID: $0)
     }, downloadedMediaURL: @escaping @MainActor (String) -> URL? = {
         DownloadStore.shared.readyMediaURL(for: $0)
@@ -305,8 +305,8 @@ final class PlayerManager: ObservableObject {
         // Whatever opens or closes the system's full-screen window — a rotation, the embed's own
         // full-screen button, the Done button over the video — WebKit reports it here, so the
         // app's idea of the state never drifts from what is on screen.
-        fullScreenObserver = webView.observe(\.fullscreenState) { webView, _ in
-            let active = webView.fullscreenState == .inFullscreen
+        fullScreenObserver = webView.observe(\.fullscreenState, options: [.new]) { _, change in
+            let active = change.newValue == .inFullscreen
             Task { @MainActor in PlayerManager.shared.setSystemFullScreen(active) }
         }
 

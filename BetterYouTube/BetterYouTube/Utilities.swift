@@ -109,15 +109,13 @@ enum PlaybackTimeFormatter {
 }
 
 enum RelativeDateFormatter {
-    private static let formatter: RelativeDateTimeFormatter = {
-        let f = RelativeDateTimeFormatter()
-        f.unitsStyle = .short
-        return f
-    }()
+    /// "3 days ago", "2 mo. ago" — a format style, which unlike the formatter it replaces is a
+    /// value any thread can use.
+    private static let style = Date.RelativeFormatStyle(presentation: .numeric, unitsStyle: .abbreviated)
 
     static func string(from date: Date?) -> String {
         guard let date else { return "" }
-        return formatter.localizedString(for: date, relativeTo: Date())
+        return date.formatted(style)
     }
 }
 

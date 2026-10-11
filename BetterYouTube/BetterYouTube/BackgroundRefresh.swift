@@ -22,6 +22,14 @@ enum BackgroundRefresh {
 
     static let taskIdentifier = "com.atomtoto.BetterYouTube.refresh"
 
+    /// The system's refresh task, shared by the work and the expiration handler that may cut it
+    /// short. BackgroundTasks documents its task objects as safe to complete from any thread,
+    /// which their class can't declare.
+    private struct RefreshTask: @unchecked Sendable {
+        let task: BGAppRefreshTask
+        init(_ task: BGAppRefreshTask) { self.task = task }
+    }
+
     /// Must run before the app finishes launching.
     static func register() {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: nil) { task in
@@ -43,14 +51,15 @@ enum BackgroundRefresh {
         // Always queue the next one first: a task that isn't rescheduled never runs again.
         schedule()
 
+        let refresh = RefreshTask(task)
         let work = Task {
             await checkForNewVideos()
-            task.setTaskCompleted(success: true)
+            refresh.task.setTaskCompleted(success: true)
         }
 
-        task.expirationHandler = {
+        refresh.task.expirationHandler = {
             work.cancel()
-            task.setTaskCompleted(success: false)
+            refresh.task.setTaskCompleted(success: false)
         }
     }
 

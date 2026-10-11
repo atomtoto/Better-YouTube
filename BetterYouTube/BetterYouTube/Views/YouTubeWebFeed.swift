@@ -66,6 +66,7 @@ final class YouTubeWebNavigationModel: ObservableObject {
 }
 
 /// The web view behind both of the above.
+@MainActor
 private struct YouTubeWebPage {
     /// Whether a tap on a video should open the app's player instead of YouTube's.
     let interceptsVideoTaps: Bool
@@ -112,6 +113,7 @@ private struct YouTubeWebPage {
         Coordinator(interceptsVideoTaps: interceptsVideoTaps, navigation: navigation)
     }
 
+    @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         static let handler = "youTubeVideoTap"
         private let interceptsVideoTaps: Bool
@@ -220,7 +222,9 @@ private struct YouTubeWebPage {
         func webView(
             _ webView: WKWebView,
             decidePolicyFor navigationAction: WKNavigationAction,
-            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+            // Exactly the protocol's type: a handler typed any other way only *nearly* matches the
+            // optional requirement, and WebKit never calls the method at all.
+            decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
         ) {
             guard interceptsVideoTaps,
                   navigationAction.navigationType == .linkActivated,

@@ -59,10 +59,10 @@ final class WatchBridge: NSObject, ObservableObject {
         }
         var payload: [String: Any] = [WatchMessage.command: command]
         if let videoID { payload[WatchMessage.videoID] = videoID }
-        let reply: [String: Any] = try await withCheckedThrowingContinuation { continuation in
-            session.sendMessage(payload, replyHandler: { continuation.resume(returning: $0) },
+        let reply = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<WatchDictionary, Error>) in
+            session.sendMessage(payload, replyHandler: { continuation.resume(returning: WatchDictionary($0)) },
                                 errorHandler: { continuation.resume(throwing: $0) })
-        }
+        }.value
         if let error = reply[WatchMessage.error] as? String { throw WatchBridgeError.phone(error) }
         apply(reply)
         return reply
@@ -101,9 +101,10 @@ final class WatchBridge: NSObject, ObservableObject {
 
 extension WatchBridge: WCSessionDelegate {
     nonisolated func session(_ session: WCSession, activationDidCompleteWith state: WCSessionActivationState, error: Error?) {
+        let context = WatchDictionary(session.receivedApplicationContext)
         Task { @MainActor in
             self.updateReachability()
-            self.apply(session.receivedApplicationContext)
+            self.apply(context.value)
             if state == .activated { await self.refresh() }
         }
     }
@@ -113,11 +114,13 @@ extension WatchBridge: WCSessionDelegate {
     }
 
     nonisolated func session(_ session: WCSession, didReceiveApplicationContext context: [String: Any]) {
-        Task { @MainActor in self.apply(context) }
+        let context = WatchDictionary(context)
+        Task { @MainActor in self.apply(context.value) }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        Task { @MainActor in self.apply(message) }
+        let message = WatchDictionary(message)
+        Task { @MainActor in self.apply(message.value) }
     }
 
     nonisolated func session(_ session: WCSession, didReceive file: WCSessionFile) {

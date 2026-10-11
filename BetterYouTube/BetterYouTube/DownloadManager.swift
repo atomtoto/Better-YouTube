@@ -20,9 +20,9 @@ final class DownloadManager: ObservableObject {
     private let chunkSize: Int64
     private static let freeSpaceFloor: Int64 = 500_000_000
     private let store: DownloadStore
-    private let resolve: (Video, DownloadQuality, DownloadSourceSnapshot) async throws -> ResolvedMedia
+    private let resolve: @Sendable (Video, DownloadQuality, DownloadSourceSnapshot) async throws -> ResolvedMedia
     private var session: URLSession!
-    private let sessionDelegate = DownloadSessionDelegate()
+    private let sessionDelegate: DownloadSessionDelegate
     private var tasks: [String: URLSessionDownloadTask] = [:]
     private var work: [String: Task<Void, Never>] = [:]
     /// A removed/re-added video is a new attempt; late callbacks may never mutate it.
@@ -34,14 +34,15 @@ final class DownloadManager: ObservableObject {
         store: DownloadStore? = nil,
         configuration: URLSessionConfiguration = .background(withIdentifier: "com.atomtoto.BetterYouTube.downloads"),
         chunkSize: Int64 = 4 * 1024 * 1024,
-        resolve: @escaping (Video, DownloadQuality, DownloadSourceSnapshot) async throws -> ResolvedMedia = {
+        resolve: @escaping @Sendable (Video, DownloadQuality, DownloadSourceSnapshot) async throws -> ResolvedMedia = {
             try await DownloadResolver.shared.resolve(video: $0, quality: $1, source: $2)
         }
     ) {
         self.chunkSize = max(1, chunkSize)
-        self.store = store ?? .shared
+        let store = store ?? .shared
+        self.store = store
         self.resolve = resolve
-        sessionDelegate.staging = self.store.paths.staging
+        sessionDelegate = DownloadSessionDelegate(staging: store.paths.staging)
         #if os(iOS)
         configuration.sessionSendsLaunchEvents = true
         #endif
@@ -520,8 +521,15 @@ final class DownloadManager: ObservableObject {
 }
 
 private final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
-    weak var manager: DownloadManager?
-    var staging = DownloadStore.staging
+    /// Set on the main actor and only ever read in tasks that hop there, so that is where it lives.
+    @MainActor weak var manager: DownloadManager?
+    /// Where a finished file is moved before the manager takes it — on the session's own queue,
+    /// before the call returns and the system deletes it. Fixed before the session exists.
+    let staging: URL
+
+    init(staging: URL) {
+        self.staging = staging
+    }
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
                     didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
