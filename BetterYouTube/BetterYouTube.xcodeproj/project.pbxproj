@@ -117,6 +117,7 @@
 		2DE8358568326BE4E700B63D /* ImageSizingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69FD29141B3F67DB841FD010 /* ImageSizingTests.swift */; };
 		44109120DE7A299A5C07B29F /* Handoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA483609C61C308A58C97B35 /* Handoff.swift */; };
 		FE68AF15A52C825245B3A84F /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 477C1888D8D100965B317230 /* AppShortcuts.swift */; };
+		980C5CAF1B97C724C3356A83 /* YouTubeAPIServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C416EC977C1672C457D27E8 /* YouTubeAPIServiceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -264,6 +265,7 @@
 		69FD29141B3F67DB841FD010 /* ImageSizingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSizingTests.swift; sourceTree = "<group>"; };
 		DA483609C61C308A58C97B35 /* Handoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Handoff.swift; sourceTree = "<group>"; };
 		477C1888D8D100965B317230 /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
+		1C416EC977C1672C457D27E8 /* YouTubeAPIServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeAPIServiceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -369,6 +371,7 @@
 		BEEFGROUP000000000000000 /* BetterYouTubeTests */ = {
 			isa = PBXGroup;
 			children = (
+				1C416EC977C1672C457D27E8 /* YouTubeAPIServiceTests.swift */,
 				69FD29141B3F67DB841FD010 /* ImageSizingTests.swift */,
 				9F49DBA36AC99FC0D2E6D38F /* RichTextTests.swift */,
 				D9D475EEF80BD3FFE6C80DA0 /* YouTubeLinkTests.swift */,
@@ -612,6 +615,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				980C5CAF1B97C724C3356A83 /* YouTubeAPIServiceTests.swift in Sources */,
 				2DE8358568326BE4E700B63D /* ImageSizingTests.swift in Sources */,
 				6AB2DF9D5DBEE9E4F6D39714 /* RichTextTests.swift in Sources */,
 				3BEED17A6D38B073C2FC9C3B /* YouTubeLinkTests.swift in Sources */,

@@ -128,13 +128,40 @@ final class APIKeyStore: ObservableObject {
 actor YouTubeAPIService {
     static let shared = YouTubeAPIService()
 
+    /// What a request is made with: the signed-in account's access token, if there is one, and
+    /// the API key, which may be empty.
+    struct Credentials: Sendable {
+        var accessToken: String?
+        var apiKey: String
+    }
+
+    /// The account and key the app is set up with.
+    static let currentCredentials: @Sendable () async -> Credentials = {
+        let token = await GoogleAuthService.shared.accessToken()
+        let key = await MainActor.run { APIKeyStore.shared.apiKey }
+        return Credentials(accessToken: token, apiKey: key)
+    }
+
     private let baseURL = URL(string: "https://www.googleapis.com/youtube/v3/")!
     private let session: URLSession
     private let decoder = JSONDecoder()
     private var uploadsPlaylistCache: [String: String] = [:]
+    private let credentials: @Sendable () async -> Credentials
+    private let recordSpend: @Sendable (_ units: Int, _ endpoint: String) async -> Void
 
-    init(session: URLSession = .shared) {
+    /// The network, the credentials and the quota count are the shared ones unless handed in —
+    /// which is what lets the tests run every request against canned responses, without a key
+    /// of their own or a charge to the real day's count.
+    init(
+        session: URLSession = .shared,
+        credentials: @escaping @Sendable () async -> Credentials = YouTubeAPIService.currentCredentials,
+        recordSpend: @escaping @Sendable (_ units: Int, _ endpoint: String) async -> Void = { @MainActor units, endpoint in
+            QuotaTracker.shared.record(units: units, endpoint: endpoint)
+        }
+    ) {
         self.session = session
+        self.credentials = credentials
+        self.recordSpend = recordSpend
     }
 
     // MARK: - Request plumbing
@@ -222,11 +249,11 @@ actor YouTubeAPIService {
         query: [String: String],
         requiresAuth: Bool
     ) async throws -> URLRequest {
-        let token = await GoogleAuthService.shared.accessToken()
+        let credentials = await credentials()
+        let token = credentials.accessToken
         if requiresAuth && token == nil { throw APIError.notSignedIn }
 
-        let key = await MainActor.run { APIKeyStore.shared.apiKey }
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = credentials.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         if token == nil && key.isEmpty { throw APIError.missingCredentials }
 
         guard var components = URLComponents(
@@ -274,10 +301,7 @@ actor YouTubeAPIService {
         // without a caller having to remember to.
         let endpoint = urlRequest.url?.lastPathComponent ?? ""
         let method = urlRequest.httpMethod ?? "GET"
-        await QuotaTracker.shared.record(
-            units: QuotaTracker.cost(endpoint: endpoint, method: method),
-            endpoint: endpoint
-        )
+        await recordSpend(QuotaTracker.cost(endpoint: endpoint, method: method), endpoint)
 
         guard (200..<300).contains(http.statusCode) else {
             let failure = try? decoder.decode(YTErrorResponse.self, from: data)
