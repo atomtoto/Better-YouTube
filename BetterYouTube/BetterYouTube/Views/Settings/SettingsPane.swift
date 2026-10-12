@@ -64,6 +64,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 struct SettingsPaneView: View {
     let pane: SettingsPane
     @State private var showsYouTubeSignIn = false
+    @AppStorage(LaunchSectionPreference.storageKey) private var launchSection = LaunchSectionPreference.home
     #if os(iOS)
     @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
     #endif
@@ -90,8 +91,19 @@ struct SettingsPaneView: View {
                 APIKeySection()
                 QuotaSection()
             case .advanced:
+                Section {
+                    Picker("Open on", selection: $launchSection) {
+                        ForEach(LaunchSectionPreference.allCases) { section in
+                            Text(section.title).tag(section)
+                        }
+                    }
+                } header: {
+                    Text("Navigation")
+                } footer: {
+                    Text("Applies the next time Better YouTube opens.")
+                }
                 #if os(iOS)
-                Section("Navigation") {
+                Section {
                     Toggle("Show Settings in Tab Bar", isOn: $showsSettingsTab)
                 }
                 #endif

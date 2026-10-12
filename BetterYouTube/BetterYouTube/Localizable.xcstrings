@@ -802,6 +802,16 @@
         }
       }
     },
+    "Applies the next time Better YouTube opens." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S’applique à la prochaine ouverture de Better YouTube."
+          }
+        }
+      }
+    },
     "Automatically Import YouTube Notifications" : {
       "localizations" : {
         "fr" : {
@@ -3041,6 +3051,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ouvre un lien vers une vidéo, une chaîne ou une playlist YouTube dans Better YouTube."
+          }
+        }
+      }
+    },
+    "Open on" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir sur"
           }
         }
       }

@@ -10,7 +10,7 @@ final class AppRouter: ObservableObject {
         case home, search, library, settings
     }
 
-    @Published var selectedTab: Tab = .home
+    @Published var selectedTab: Tab = LaunchSectionPreference.stored.tab
     @Published var homePath = NavigationPath()
     /// Set by a notification tap; Home resolves it to a video and pushes it.
     @Published var pendingVideoId: String?

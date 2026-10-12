@@ -63,7 +63,7 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   locks, with title, artwork, scrubber and transport on the lock screen and in Control Centre
   (on a Mac: the media widget in Control Centre and the keyboard's play/pause key)
 - **Settings** — Google sign-in, API key, library counts, what is left of the day's API quota,
-  and a reset that puts the device back to a fresh install
+  whether the app opens on Home or Library, and a reset that puts the device back to a fresh install
 - **Apple Watch** — synced YouTube Home and library, direct search with the watch's network,
   audio downloads saved on the watch, and offline playback with background audio
 - **Apple CarPlay** — Favorites, Watch Later, History and Downloads, native Now Playing controls,
