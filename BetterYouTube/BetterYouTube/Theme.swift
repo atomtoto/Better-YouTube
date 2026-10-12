@@ -69,18 +69,23 @@ struct ArtworkView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            AsyncImage(url: width > 0 ? ImageSizing.video(url, pixelWidth: width * displayScale) : nil) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().aspectRatio(contentMode: .fill)
-                case .empty:
-                    placeholder.overlay(ProgressView().controlSize(.small))
-                default:
-                    placeholder.overlay(
-                        Image(systemName: "play.rectangle")
-                            .font(.title2)
-                            .foregroundStyle(.tertiary)
-                    )
+            // The frame decides the size, never the picture: a smaller thumbnail is 4:3 with black
+            // bands above and below, and filling the 16:9 frame from behind this crops them away
+            // rather than letting the picture grow the view to its own shape.
+            Color.clear.overlay {
+                AsyncImage(url: width > 0 ? ImageSizing.video(url, pixelWidth: width * displayScale) : nil) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    case .empty:
+                        placeholder.overlay(ProgressView().controlSize(.small))
+                    default:
+                        placeholder.overlay(
+                            Image(systemName: "play.rectangle")
+                                .font(.title2)
+                                .foregroundStyle(.tertiary)
+                        )
+                    }
                 }
             }
 
