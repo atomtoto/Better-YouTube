@@ -337,23 +337,6 @@ struct VideoMenuItems: View {
 
     @ViewBuilder
     var body: some View {
-        if let onNotInterested {
-            Button(action: onNotInterested) {
-                Label("Not Interested", systemImage: "hand.thumbsdown")
-            }
-        }
-
-        DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
-
-        Button {
-            library.toggleFavorite(video)
-        } label: {
-            Label(
-                library.isFavorite(video) ? "Remove from Favorites" : "Add to Favorites",
-                systemImage: library.isFavorite(video) ? "heart.slash" : "heart"
-            )
-        }
-
         Button {
             Task {
                 await watchLater.toggle(video)
@@ -371,9 +354,26 @@ struct VideoMenuItems: View {
             Label("Add to Playlist…", systemImage: "text.badge.plus")
         }
 
+        Button {
+            library.toggleFavorite(video)
+        } label: {
+            Label(
+                library.isFavorite(video) ? "Remove from Favorites" : "Add to Favorites",
+                systemImage: library.isFavorite(video) ? "heart.slash" : "heart"
+            )
+        }
+
+        DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
+
         if let url = video.watchURL {
             ShareLink(item: url) {
                 Label("Share", systemImage: "square.and.arrow.up")
+            }
+        }
+
+        if let onNotInterested {
+            Button(action: onNotInterested) {
+                Label("Not Interested", systemImage: "hand.thumbsdown")
             }
         }
     }

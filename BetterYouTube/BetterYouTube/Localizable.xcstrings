@@ -577,7 +577,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ajouter à « À regarder plus tard »"
+            "value" : "Ajouter à regarder plus tard"
           }
         }
       }
@@ -3641,7 +3641,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Retirer de « À regarder plus tard »"
+            "value" : "Retirer de regarder plus tard"
           }
         }
       }
