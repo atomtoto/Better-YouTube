@@ -468,6 +468,35 @@ struct PlayerActions: View {
                 )
             }
         }
+        if let video = player.currentVideo {
+            if let onAddToPlaylist {
+                Button(action: onAddToPlaylist) {
+                    Label("Add to Playlist…", systemImage: "text.badge.plus")
+                }
+            }
+            DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
+        }
+        if player.currentVideo != nil {
+            SleepTimerMenu(player: player)
+        }
+        if let url = player.currentVideo?.watchURL {
+            // The menu is built as it opens, so this is the moment on screen right then.
+            if let video = player.currentVideo, player.progress.currentTime >= 1,
+               let timedURL = YouTubeLink.video(id: video.id, start: player.progress.currentTime).webURL {
+                ShareLink(item: timedURL) {
+                    Label(
+                        "Share at \(PlaybackTimeFormatter.string(player.progress.currentTime))",
+                        systemImage: "square.and.arrow.up.badge.clock"
+                    )
+                }
+            }
+            ShareLink(item: url) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            Link(destination: url) {
+                Label("Open in YouTube", systemImage: "arrow.up.forward.app")
+            }
+        }
         // AVKit exposes its own PiP button for local iOS playback.
         #if os(iOS)
         if !player.isLocal {
@@ -480,35 +509,6 @@ struct PlayerActions: View {
             Label("Picture in Picture", systemImage: "pip.enter")
         }
         #endif
-        if let video = player.currentVideo {
-            DownloadMenuButton(video: video, store: downloads, manager: downloadManager)
-            if let onAddToPlaylist {
-                Button(action: onAddToPlaylist) {
-                    Label("Add to Playlist…", systemImage: "text.badge.plus")
-                }
-            }
-        }
-        if player.currentVideo != nil {
-            SleepTimerMenu(player: player)
-        }
-        if let url = player.currentVideo?.watchURL {
-            ShareLink(item: url) {
-                Label("Share", systemImage: "square.and.arrow.up")
-            }
-            // The menu is built as it opens, so this is the moment on screen right then.
-            if let video = player.currentVideo, player.progress.currentTime >= 1,
-               let timedURL = YouTubeLink.video(id: video.id, start: player.progress.currentTime).webURL {
-                ShareLink(item: timedURL) {
-                    Label(
-                        "Share at \(PlaybackTimeFormatter.string(player.progress.currentTime))",
-                        systemImage: "clock.arrow.circlepath"
-                    )
-                }
-            }
-            Link(destination: url) {
-                Label("Open in YouTube", systemImage: "arrow.up.forward.app")
-            }
-        }
         Button(role: .destructive) {
             player.close()
         } label: {
