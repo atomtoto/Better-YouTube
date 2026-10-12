@@ -15,11 +15,15 @@ struct ChannelView: View {
     }
     private let initialChannel: Channel?
     private let channelId: String
+    /// The signed-in account's own channel, opened from Library: nothing to subscribe to and
+    /// nothing to be notified about, so neither the button nor the bell is shown.
+    private let isOwnChannel: Bool
 
-    init(channelId: String, initialChannel: Channel? = nil) {
+    init(channelId: String, initialChannel: Channel? = nil, isOwnChannel: Bool = false) {
         _viewModel = StateObject(wrappedValue: ChannelViewModel(channelId: channelId))
         self.initialChannel = initialChannel
         self.channelId = channelId
+        self.isOwnChannel = isOwnChannel
     }
 
     private var channel: Channel? { viewModel.channel ?? initialChannel }
@@ -37,8 +41,10 @@ struct ChannelView: View {
                             ChannelHeaderView(channel: channel)
                         }
 
-                        subscribeButton
-                            .frame(maxWidth: .infinity)
+                        if !isOwnChannel {
+                            subscribeButton
+                                .frame(maxWidth: .infinity)
+                        }
 
                         Picker("Show", selection: $section) {
                             Text("Videos").tag(Section.videos)
@@ -60,23 +66,27 @@ struct ChannelView: View {
         .navigationTitle(channel?.title ?? String(localized: "Channel"))
         .inlineNavigationBar()
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    toggleNotifications()
-                } label: {
-                    Image(systemName: notificationStore.isOptedIn(channelId) ? "bell.fill" : "bell")
+            if !isOwnChannel {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        toggleNotifications()
+                    } label: {
+                        Image(systemName: notificationStore.isOptedIn(channelId) ? "bell.fill" : "bell")
+                    }
+                    .accessibilityLabel(
+                        notificationStore.isOptedIn(channelId)
+                            ? "Turn off notifications for this channel"
+                            : "Notify me about new videos from this channel"
+                    )
                 }
-                .accessibilityLabel(
-                    notificationStore.isOptedIn(channelId)
-                        ? "Turn off notifications for this channel"
-                        : "Notify me about new videos from this channel"
-                )
             }
         }
         .task {
             if viewModel.channel == nil { await viewModel.load() }
         }
         .task(id: auth.isSignedIn) {
+            // A unit saved: nobody subscribes to their own channel.
+            guard !isOwnChannel else { return }
             await viewModel.loadSubscription(isSignedIn: auth.isSignedIn)
         }
         // Felt when YouTube confirms the change, not on the tap: subscribing is a round trip, and
@@ -112,6 +122,13 @@ struct ChannelView: View {
             if viewModel.isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity)
+            } else if viewModel.errorMessage == nil {
+                // Most people's own channel, opened from Library, has never uploaded anything.
+                ContentUnavailableView(
+                    "No Videos",
+                    systemImage: "play.rectangle",
+                    description: Text("This channel hasn't uploaded any videos.")
+                )
             }
         } else {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 440), spacing: 18)], spacing: 24) {

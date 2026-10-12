@@ -16,6 +16,21 @@ struct LibraryView: View {
 
     var body: some View {
         List {
+            // The account's own channel, first, as Settings puts the Apple Account first. Only
+            // with a Google sign-in, and only once loaded: an account may have no channel at all.
+            if auth.isSignedIn, viewModel.account != nil || viewModel.isLoading {
+                Section {
+                    NavigationLink {
+                        if let account = viewModel.account {
+                            ChannelView(channelId: account.id, initialChannel: account, isOwnChannel: true)
+                        }
+                    } label: {
+                        OwnChannelRow(channel: viewModel.account)
+                    }
+                    .disabled(viewModel.account == nil)
+                }
+            }
+
             Section {
                 if auth.isSignedIn || webSession.isSignedIn {
                     if auth.isSignedIn {
@@ -59,7 +74,7 @@ struct LibraryView: View {
                     )
                 }
             } header: {
-                Text(viewModel.account?.title ?? String(localized: "YouTube Account"))
+                Text("YouTube Account")
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     if let message = viewModel.errorMessage { Text(message) }
@@ -223,4 +238,40 @@ private struct LibraryRow: View {
         .environmentObject(DownloadManager.shared)
         .environmentObject(DownloadSettings.shared)
         .environmentObject(PlayerManager.shared)
+}
+
+/// The signed-in account's channel at the top of Library: its avatar, its name and what it
+/// counts, as Settings shows the Apple Account. Shown loading until the channel arrives.
+private struct OwnChannelRow: View {
+    let channel: Channel?
+
+    var body: some View {
+        HStack(spacing: 14) {
+            AvatarView(url: channel?.thumbnailURL, size: 60)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(channel?.title ?? String(localized: "Your Channel"))
+                    .font(.title3.weight(.semibold))
+                    .lineLimit(1)
+                if channel == nil {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Text(detail)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Opens your channel")
+    }
+
+    /// "Your Channel · 1.2K subscribers" — kept to one short line, the count only when the
+    /// channel shows it.
+    private var detail: String {
+        guard let subscribers = channel?.subscriberCount else { return String(localized: "Your Channel") }
+        return String(localized: "Your Channel") + " · " + CountFormatter.subscribers(subscribers)
+    }
 }

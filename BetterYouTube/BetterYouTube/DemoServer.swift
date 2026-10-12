@@ -63,8 +63,9 @@ enum DemoServer {
 // MARK: - The demo's account
 
 extension DemoServer {
-    /// The account's own channel, shown at the top of Settings.
+    /// The account's own channel, shown at the top of Library and Settings.
     static var accountTitle: String { String(localized: "Demo Account") }
+    static let accountChannelID = "UCdemo-account"
 
     /// Every channel in the catalogue but the one-video curiosity.
     static func subscriptions(in catalog: DemoCatalog) -> [DemoCatalog.Channel] {
@@ -80,7 +81,10 @@ extension DemoServer {
     static func accountPlaylists(in catalog: DemoCatalog) -> [DemoCatalog.Playlist] {
         let space = Set(catalog.channels.filter { ["@NASA", "@CnesFrance"].contains($0.handle) }.map(\.id))
         let spaceVideos = catalog.videos.filter { space.contains($0.channelId) }.prefix(8).map(\.id)
-        let animation = catalog.videos.filter { $0.categoryId == "1" }.prefix(8).map(\.id)
+        // Big Buck Bunny, then the open movies — not YouTube's "Film & Animation" category,
+        // which also holds Blender's conference talks.
+        let films = ["aqz-KE-bpKQ"] + (catalog.playlists.first?.videoIds ?? [])
+        let animation = films.filter { catalog.video($0) != nil }.prefix(8)
         return [
             DemoCatalog.Playlist(id: "PLdemo-space", title: String(localized: "Space"),
                                  description: String(localized: "Launches, landings and the view from orbit."),
@@ -172,23 +176,23 @@ private struct Responder {
 
     func channels() -> (status: Int, body: Data) {
         if query["mine"] == "true" {
-            return all([0]) { _ in
-                [
-                    "id": "UCdemo-account",
-                    "snippet": ["title": DemoServer.accountTitle, "description": ""],
-                    "statistics": ["subscriberCount": "0", "videoCount": "0"],
-                ]
-            }
+            return all([0]) { _ in accountResource() }
         }
         if let handle = query["forHandle"] {
             return all([catalog.channel(handle: handle)].compactMap { $0 }, render: channelResource)
         }
-        return all(ids.compactMap { catalog.channel($0) }, render: channelResource)
+        // The account's own channel is asked for by id once it is opened from Library.
+        var items: [Any] = ids.compactMap { catalog.channel($0) }.map(channelResource)
+        if ids.contains(DemoServer.accountChannelID) { items.append(accountResource()) }
+        return all(items) { $0 }
     }
 
     func playlists() -> (status: Int, body: Data) {
         let mine = DemoServer.accountPlaylists(in: catalog)
         if query["mine"] == "true" {
+            return page(mine) { playlistResource($0, owner: DemoServer.accountTitle) }
+        }
+        if query["channelId"] == DemoServer.accountChannelID {
             return page(mine) { playlistResource($0, owner: DemoServer.accountTitle) }
         }
         if let channelId = query["channelId"] {
@@ -282,6 +286,16 @@ private struct Responder {
             ] as [String: Any],
             "statistics": ["viewCount": String(video.views)],
             "contentDetails": ["duration": video.duration],
+        ]
+    }
+
+    /// The demo account's channel: a name, its two playlists, and no uploads of its own.
+    private func accountResource() -> Any {
+        [
+            "id": DemoServer.accountChannelID,
+            "snippet": ["title": DemoServer.accountTitle, "description": ""],
+            "statistics": ["subscriberCount": "0", "videoCount": "0"],
+            "contentDetails": ["relatedPlaylists": ["uploads": "UU" + DemoServer.accountChannelID.dropFirst(2)]],
         ]
     }
 

@@ -2633,6 +2633,16 @@
         }
       }
     },
+    "No Videos" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune vidéo"
+          }
+        }
+      }
+    },
     "No comments yet." : {
       "localizations" : {
         "fr" : {
@@ -3041,6 +3051,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ouvre tous les commentaires"
+          }
+        }
+      }
+    },
+    "Opens your channel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre ta chaîne"
           }
         }
       }
@@ -4806,6 +4826,16 @@
         }
       }
     },
+    "This channel hasn't uploaded any videos." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette chaîne n’a mis en ligne aucune vidéo."
+          }
+        }
+      }
+    },
     "This clears the app's watch history on this device. Your YouTube account's history is unchanged." : {
       "localizations" : {
         "fr" : {
@@ -5623,6 +5653,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Le lecteur de YouTube a refusé de démarrer cette vidéo."
+          }
+        }
+      }
+    },
+    "Your Channel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta chaîne"
           }
         }
       }
