@@ -11,7 +11,7 @@ struct LibraryView: View {
     @ObservedObject private var positions = PlaybackPositionStore.shared
     @StateObject private var viewModel = LibraryViewModel()
     #if os(iOS)
-    @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = true
+    @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
     #endif
 
     var body: some View {

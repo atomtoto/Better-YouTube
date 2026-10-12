@@ -11,7 +11,7 @@ struct RootTabView: View {
     @AppStorage(OnboardingProgress.startedKey) private var hasStartedOnboarding = false
     @AppStorage(OnboardingProgress.completedKey) private var hasCompletedOnboarding = false
     #if os(iOS)
-    @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = true
+    @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
     #endif
 
     var body: some View {

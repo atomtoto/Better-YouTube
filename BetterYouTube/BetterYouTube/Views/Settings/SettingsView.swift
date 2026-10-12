@@ -4,35 +4,6 @@ enum SettingsTabPreference {
     static let storageKey = "show_settings_tab"
 }
 
-/// The section the app opens on. It is read once, at launch, so a change applies the next time
-/// the app starts rather than moving the screen under the person who just changed it.
-enum LaunchSectionPreference: String, CaseIterable, Identifiable {
-    case home, library
-
-    static let storageKey = "launch_section"
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .home: return String(localized: "Home")
-        case .library: return String(localized: "Library")
-        }
-    }
-
-    var tab: AppRouter.Tab {
-        switch self {
-        case .home: .home
-        case .library: .library
-        }
-    }
-
-    /// Whatever was saved, or Home when nothing was, or when the saved value no longer exists.
-    static var stored: LaunchSectionPreference {
-        UserDefaults.standard.string(forKey: storageKey).flatMap(LaunchSectionPreference.init(rawValue:)) ?? .home
-    }
-}
-
 /// Settings, as the phone and iPad show it: a list of panes, each pushing to its own screen.
 ///
 /// It used to be every section stacked into one form, which is a long scroll past six subjects to
