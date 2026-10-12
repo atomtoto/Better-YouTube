@@ -622,13 +622,19 @@ app read its own credentials back.
    (`com.atomtoto.BetterYouTube`, or your own). That client type covers macOS too — the same
    client ID works for both builds, and both use the reversed client ID as their callback scheme.
    Paste the client ID on the welcome screen or in Settings, then tap *Sign in with Google*.
-   - **Add yourself as a test user**, or sign-in fails with `Error 403: access_denied`. In
-     [Google Auth Platform → Audience](https://console.cloud.google.com/auth/audience), with publishing status **Testing**, only the accounts listed
-     under *Test users* may grant consent — add the Google account you sign in with. Alternatively
-     switch the app to **In production** (with the sensitive `youtube.force-ssl` scope you'll then see
-     an "unverified app" interstitial you can pass via *Advanced*).
-   - Note: while in Testing, Google expires refresh tokens after **7 days**, so you'll be asked to
-     sign in again about once a week. Publishing the app removes that limit.
+   - **Publish the app** (recommended): in [Google Auth Platform → Audience](https://console.cloud.google.com/auth/audience), click
+     *Publish app* to move the publishing status from **Testing** to **In production**. While in
+     Testing, Google expires refresh tokens after **7 days**, so you'd be asked to sign in again
+     about once a week; in production the sign-in lasts until you revoke it, change your password
+     or leave it unused for about six months. No Google verification is needed: the project is
+     yours and you're its only user, well under the 100-user cap for unverified apps. Because
+     `youtube.force-ssl` is a sensitive scope, Google shows a "Google hasn't verified this app"
+     screen at sign-in — pass it via *Advanced → Go to …*. Leave the consent screen's logo
+     empty: adding one makes Google require brand verification.
+   - **Or add yourself as a test user** and stay in Testing, accepting the weekly sign-in. With
+     publishing status **Testing**, only the accounts listed under *Test users* may grant consent,
+     so sign-in fails with `Error 403: access_denied` until you add the Google account you sign
+     in with.
    - **Tick the YouTube permission on the consent screen.** Google's consent screen has a tick box
      per sensitive scope, and leaving it unticked still issues a valid token — one that 403s on
      every request. The app checks what Google actually granted (the `scope` on the token
