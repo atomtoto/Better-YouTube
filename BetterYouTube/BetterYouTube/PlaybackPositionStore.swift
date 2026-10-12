@@ -19,9 +19,7 @@ struct PlaybackPosition: Codable, Equatable, Sendable {
 /// seconds while playing, and at once on pause, finish, seek or a sync.
 @MainActor
 final class PlaybackPositionStore: ObservableObject {
-    static let shared = PlaybackPositionStore(fileURL: FileManager.default
-        .urls(for: .documentDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("playback-positions.json"))
+    static let shared = PlaybackPositionStore(fileURL: DemoMode.storeFile("playback-positions.json"))
 
     typealias Position = PlaybackPosition
 
@@ -29,7 +27,7 @@ final class PlaybackPositionStore: ObservableObject {
         var syncEntries: [String: CloudSyncEntry]
     }
 
-    private let fileURL: URL
+    private var fileURL: URL
     private var positions: [String: Position] = [:]
     private(set) var syncEntries: [String: CloudSyncEntry] = [:]
     /// Installed by iCloud sync. Receiving a remote checkpoint never echoes it back.
@@ -42,6 +40,25 @@ final class PlaybackPositionStore: ObservableObject {
 
     init(fileURL: URL) {
         self.fileURL = fileURL
+        load()
+    }
+
+    /// Moves the positions onto another file — the demo's, or back to the real one — and reads
+    /// it. Positions not yet written are saved first, to the file they were made for.
+    func useFile(_ url: URL) {
+        guard url != fileURL else { return }
+        flush()
+        fileURL = url
+        positions = [:]
+        syncEntries = [:]
+        changedKeys = []
+        hasChanges = false
+        lastLocalMutation = .distantPast
+        load()
+        revision += 1
+    }
+
+    private func load() {
         guard let data = try? Data(contentsOf: fileURL) else { return }
         if let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data) {
             syncEntries = snapshot.syncEntries.filter { $0.key == $0.value.key && CloudPlaybackPosition.isValid($0.value) }

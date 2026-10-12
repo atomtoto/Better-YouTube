@@ -33,6 +33,7 @@ struct HomeView: View {
         }
         .background(Color.appBackground)
         .navigationTitle("Home")
+        .demoMenu()
         .toolbar {
             #if os(macOS)
             ToolbarItem(placement: .principal) {

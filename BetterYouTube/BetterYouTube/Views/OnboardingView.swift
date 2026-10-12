@@ -79,7 +79,7 @@ private struct WelcomeStep: View {
                     detail: "Downloaded videos play anywhere in the app, even with no network."
                 )
             } footer: {
-                Text("You can also choose an API key for public videos, or finish setup later in Settings.")
+                Text("You can also choose an API key for public videos, or try the app first with a demo catalogue — no account needed.")
             }
         } actions: {
             Button {
@@ -97,6 +97,14 @@ private struct WelcomeStep: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
+
+            // No account and no key: real videos from a catalogue built into the app.
+            Button("Try Without Signing In") {
+                DemoMode.shared.enter()
+                later()
+            }
+            .buttonStyle(.borderless)
+            .font(.subheadline.weight(.semibold))
         }
     }
 }

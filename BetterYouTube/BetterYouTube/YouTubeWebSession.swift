@@ -153,7 +153,9 @@ final class YouTubeWebSession: ObservableObject {
                 && Self.sessionCookies.contains(cookie.name)
         }
         if !signedIn, isSignedIn || !hasCheckedSession { invalidateFeed() }
-        isSignedIn = signedIn
+        // The demo stands in for every account, so the real session stays out of sight — its
+        // feed, Watch Later and comments — until the demo ends.
+        isSignedIn = signedIn && !DemoMode.isRunning
         hasCheckedSession = true
     }
 

@@ -6,9 +6,7 @@ import Combine
 /// real playlist through `WatchLaterStore`. Neither YouTube sign-in is copied through iCloud.
 @MainActor
 final class LibraryStore: ObservableObject {
-    static let shared = LibraryStore(fileURL: FileManager.default
-        .urls(for: .documentDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("library.json"))
+    static let shared = LibraryStore(fileURL: DemoMode.storeFile("library.json"))
 
     @Published private(set) var favorites: [Video] = []
     @Published private(set) var watchLater: [Video] = []
@@ -25,11 +23,24 @@ final class LibraryStore: ObservableObject {
         var syncEntries: [String: CloudSyncEntry]?
     }
 
-    private let fileURL: URL
+    private var fileURL: URL
     private var lastLocalMutation = Date.distantPast
 
     init(fileURL: URL) {
         self.fileURL = fileURL
+        load()
+    }
+
+    /// Moves the library onto another file — the demo's, or back to the real one — and reads it.
+    /// Nothing is lost from the one left behind: every change is saved as it is made.
+    func useFile(_ url: URL) {
+        guard url != fileURL else { return }
+        fileURL = url
+        favorites = []
+        watchLater = []
+        history = []
+        syncEntries = [:]
+        lastLocalMutation = .distantPast
         load()
     }
 
@@ -416,11 +427,19 @@ final class RecentSearchStore: ObservableObject {
 
     @Published private(set) var terms: [String] = []
 
-    private static let storageKey = "recent_searches"
+    /// The demo's searches are its own, and go with it.
+    static let demoStorageKey = "demo_recent_searches"
     private static let limit = 12
 
+    private var storageKey: String { DemoMode.isRunning ? Self.demoStorageKey : "recent_searches" }
+
     private init() {
-        terms = UserDefaults.standard.stringArray(forKey: Self.storageKey) ?? []
+        reload()
+    }
+
+    /// Reads the searches again — the real ones or the demo's, whichever is current.
+    func reload() {
+        terms = UserDefaults.standard.stringArray(forKey: storageKey) ?? []
     }
 
     func record(_ term: String) {
@@ -429,16 +448,16 @@ final class RecentSearchStore: ObservableObject {
         terms.removeAll { $0.caseInsensitiveCompare(trimmed) == .orderedSame }
         terms.insert(trimmed, at: 0)
         if terms.count > Self.limit { terms.removeLast(terms.count - Self.limit) }
-        UserDefaults.standard.set(terms, forKey: Self.storageKey)
+        UserDefaults.standard.set(terms, forKey: storageKey)
     }
 
     func remove(_ term: String) {
         terms.removeAll { $0 == term }
-        UserDefaults.standard.set(terms, forKey: Self.storageKey)
+        UserDefaults.standard.set(terms, forKey: storageKey)
     }
 
     func clear() {
         terms.removeAll()
-        UserDefaults.standard.set(terms, forKey: Self.storageKey)
+        UserDefaults.standard.set(terms, forKey: storageKey)
     }
 }

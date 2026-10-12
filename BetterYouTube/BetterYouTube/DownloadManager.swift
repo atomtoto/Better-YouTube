@@ -64,6 +64,7 @@ final class DownloadManager: ObservableObject {
             return
         }
         store.upsert(DownloadRecord(video: video, quality: DownloadSettings.shared.quality))
+        DemoMode.shared.noteDownload(video.id)
         Task { await store.cachePoster(for: video) }
         pump()
     }

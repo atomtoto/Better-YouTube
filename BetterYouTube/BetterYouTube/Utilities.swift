@@ -21,6 +21,21 @@ enum GoogleCloudSetupURL {
 /// start from, and a duration has neither.
 enum ISO8601DurationFormatter {
     static func humanReadable(_ iso: String) -> String {
+        let (hours, minutes, seconds) = components(iso)
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        }
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    /// The whole length in seconds — what filtering by length compares.
+    static func seconds(_ iso: String) -> Int? {
+        guard iso.hasPrefix("P") else { return nil }
+        let (hours, minutes, seconds) = components(iso)
+        return hours * 3600 + minutes * 60 + seconds
+    }
+
+    private static func components(_ iso: String) -> (hours: Int, minutes: Int, seconds: Int) {
         var days = 0, hours = 0, minutes = 0, seconds = 0
         var number = ""
         /// Set by the `T`, which is the only thing separating months from minutes.
@@ -57,11 +72,7 @@ enum ISO8601DurationFormatter {
             }
         }
 
-        hours += days * 24
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
-        }
-        return String(format: "%d:%02d", minutes, seconds)
+        return (hours + days * 24, minutes, seconds)
     }
 }
 

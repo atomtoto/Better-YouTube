@@ -2,13 +2,14 @@ import SwiftUI
 
 struct RootTabView: View {
     @ObservedObject private var reset = AppResetSignal.shared
+    @ObservedObject private var demo = DemoMode.shared
     @EnvironmentObject private var apiKeyStore: APIKeyStore
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var notificationStore: NotificationStore
     @EnvironmentObject private var player: PlayerManager
-    /// Search's state, held here because on a phone the field belongs to the tab view rather than
-    /// to the Search screen — and so a search survives switching sections on a Mac.
+    /// Search's state, held here so links and Siri can run a search, leaving the search tab can put
+    /// its field away, and a search survives switching sections on a Mac.
     @StateObject private var search = SearchViewModel()
     @State private var showsOnboarding = false
     @AppStorage(OnboardingProgress.startedKey) private var hasStartedOnboarding = false
@@ -19,11 +20,16 @@ struct RootTabView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            #if os(macOS)
-            sidebarSections
-            #else
-            tabs
-            #endif
+            Group {
+                #if os(macOS)
+                sidebarSections
+                #else
+                tabs
+                #endif
+            }
+            // Every screen starts over when a demo begins or ends: what they hold in memory
+            // belongs to the library and account being swapped out.
+            .id(demo.isActive)
             // Lives above every tab so playback survives navigation and tab switches. It keeps
             // its place when the keyboard comes up — in Search, that means the keyboard covers
             // it rather than shoving it up the screen.
@@ -46,6 +52,18 @@ struct RootTabView: View {
         .handsOffPlayback(player)
         .onAppear {
             presentOnboardingIfNeeded()
+        }
+        .onChange(of: router.selectedTab) { _, tab in
+            if tab != .search { search.isPresented = false }
+        }
+        .onChange(of: demo.isActive) { _, active in
+            search.clear()
+            router.homePath = NavigationPath()
+            if active { showsOnboarding = false }
+        }
+        // Ending a demo with nothing set up brings the welcome back.
+        .onChange(of: hasCompletedOnboarding) { _, completed in
+            if !completed { presentOnboardingIfNeeded() }
         }
         .onChange(of: reset.generation) { _, _ in
             hasStartedOnboarding = true
@@ -143,9 +161,7 @@ struct RootTabView: View {
                 }
             }
         }
-        // The search tab's field — on the tab view, which is what lets the system lift the tab
-        // out of the bar and turn it into the field along the bottom.
-        .searchField(search)
+        // Lifts the search tab out of the bar and turns it into the field along the bottom.
         .tabViewSearchActivation(.searchTabSelection)
         // Shrink the floating tab bar as you scroll down, the way Apple's own apps do — it
         // comes back at the top of the scroll, not on the first flick upwards. The player bar

@@ -4,6 +4,7 @@ import SwiftUI
 struct AccountSection: View {
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var watchLater: WatchLaterStore
+    @ObservedObject private var demo = DemoMode.shared
 
     @State private var isSigningIn = false
     @State private var authError: String?
@@ -11,6 +12,14 @@ struct AccountSection: View {
     @State private var account: Channel?
 
     var body: some View {
+        if demo.isActive {
+            DemoSection()
+        } else {
+            accountSection
+        }
+    }
+
+    private var accountSection: some View {
         Section {
             if auth.isSignedIn {
                 signedIn

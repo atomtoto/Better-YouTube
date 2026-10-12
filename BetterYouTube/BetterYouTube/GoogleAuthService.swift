@@ -185,14 +185,23 @@ final class GoogleAuthService: ObservableObject {
     /// Keep the presentation provider alive until the authentication session ends.
     private var presenter: WebAuthPresenter?
     private var tokens: OAuthTokens? {
-        didSet { isSignedIn = tokens != nil }
+        didSet { isSignedIn = tokens != nil || DemoMode.isRunning }
     }
+
+    /// A real sign-in, as opposed to the demo's account, which only stands in for one.
+    var hasRealSignIn: Bool { tokens != nil }
 
     private init() {
         self.clientId = UserDefaults.standard.string(forKey: Self.clientIdKey) ?? ""
         self.tokens = KeychainStore.load()
-        self.isSignedIn = tokens != nil
+        self.isSignedIn = tokens != nil || DemoMode.isRunning
         discardTokensGrantedForAnotherScope()
+    }
+
+    /// The demo shows an account of its own, so while one runs the app is signed in as far as
+    /// any screen can tell. The real tokens stay in the keychain, unused, until it ends.
+    func demoModeChanged() {
+        isSignedIn = tokens != nil || DemoMode.isRunning
     }
 
     /// A refresh token carries the scope it was granted with; asking for more later doesn't widen
@@ -309,7 +318,7 @@ final class GoogleAuthService: ObservableObject {
         lastSignOutReason = reason
         // Set outright rather than leaning on the observer: this also runs from `init`, where
         // property observers stay quiet.
-        isSignedIn = false
+        isSignedIn = DemoMode.isRunning
     }
 
     /// Called when Google refuses a request for lack of scope. The stored token can't be widened,

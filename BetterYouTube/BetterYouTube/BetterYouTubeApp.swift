@@ -39,6 +39,8 @@ struct BetterYouTubeApp: App {
         // megabytes — less than one screen of artwork, so scrolling back up fetched it all again.
         // YouTube's image servers allow two hours of caching and revalidate cheaply after that.
         URLCache.shared = URLCache(memoryCapacity: 64 * 1024 * 1024, diskCapacity: 300 * 1024 * 1024)
+        // Answers the Data API from the demo's catalogue while a demo runs; declines otherwise.
+        URLProtocol.registerClass(DemoURLProtocol.self)
     }
 
     var body: some Scene {

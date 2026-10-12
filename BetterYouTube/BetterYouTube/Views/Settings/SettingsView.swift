@@ -16,9 +16,13 @@ struct SettingsView: View {
     /// the list on the counter is what makes that a guarantee rather than a happy consequence of
     /// which pane the Reset button happens to sit in. See `AppResetSignal`.
     @ObservedObject private var reset = AppResetSignal.shared
+    @ObservedObject private var demo = DemoMode.shared
 
     var body: some View {
         List {
+            if demo.isActive {
+                DemoSection()
+            }
             ForEach(SettingsPane.allCases) { pane in
                 NavigationLink {
                     SettingsPaneView(pane: pane)

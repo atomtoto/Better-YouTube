@@ -50,6 +50,9 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   Share Sheet* turned on is how Safari or the YouTube app send a link here
 - **Handoff** — pause on the iPhone and the Mac offers to carry on from the same second, and the
   other way round; a device without the app opens the video's page at that moment instead
+- **Demo mode** — try everything without an account or a key: real videos from a built-in
+  catalogue, a read-only demo account, and a library of its own that is deleted when you leave; see
+  [Demo mode](#demo-mode)
 - **Languages** — English and French, on every platform; see [Localization](#localization)
 - **iCloud Sync** — favorites, the app's Watch Later, watch history, playback positions, and mini player style and
   size shared between iPhone, iPad and Mac using the same Apple Account; see [iCloud Sync](#icloud-sync)
@@ -65,6 +68,29 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   audio downloads saved on the watch, and offline playback with background audio
 - **Apple CarPlay** — Favorites, Watch Later, History and Downloads, native Now Playing controls,
   an Up Next list, saved positions, and parked video in compatible cars with iOS 27
+
+## Demo mode
+
+*Try Without Signing In* on the welcome screen — or a `betteryoutube://demo` link, which is what a
+tester or App Review can be handed — opens the app on a catalogue of real, public videos: Blender's
+open movies, NASA, CNES, NoCopyrightSounds, MIT OpenCourseWare and the first video ever uploaded.
+They play for real, through the same embed as always; it needs no key.
+
+Every screen works, because the app itself is unchanged: while a demo runs, its requests to the
+Data API are answered on the device by `DemoServer`, from `DemoCatalog.json`, in the API's own
+JSON. Home's two feeds, search with its filters and suggestions, channels and their playlists,
+playlists, Library and the notifications inbox all fill from it, and nothing reaches Google — not a
+request, not a unit of quota.
+
+The demo has an account to show — subscriptions, two playlists, liked videos — but it is read-only:
+liking, subscribing, commenting or editing a playlist says it needs a Google sign-in, and comments
+aren't part of the catalogue. Favorites, Watch Later, history, playback positions and downloads all
+work, in a library of the demo's own: the real one is put aside untouched, iCloud sync and the
+watch are paused, and quitting the demo — from Settings, or the *Demo* menu on Home and Library —
+deletes everything it kept, the videos downloaded meanwhile included.
+
+`scripts/build-demo-catalog.py` rebuilds the catalogue from the videos' public pages; the numbers
+in it are a snapshot of the day it ran.
 
 ## Running with Apple CarPlay
 
@@ -662,6 +688,10 @@ BetterYouTube/
     YouTubeLink.swift            Reads every shape of YouTube link, and the app's own scheme
     AppShortcuts.swift           Shortcuts, Siri and Spotlight actions, and their phrases
     Handoff.swift                The playing video, offered to your other devices
+    DemoMode.swift               The demo: starting, ending, and the library it keeps apart
+    DemoServer.swift             The Data API as the demo plays it, answered on the device
+    DemoCatalog.swift            The demo's videos, channels and playlists, and searching them
+    DemoCatalog.json             The catalogue itself, built by scripts/build-demo-catalog.py
     RichText.swift               Tappable timestamps and links in descriptions and comments
     Localizable.xcstrings        The app's strings, in English and French
     InfoPlist.xcstrings          Info.plist strings, in English and French
@@ -674,6 +704,7 @@ BetterYouTube/
   BetterYouTubeWatch/             Watch screens, API browsing, file downloads and audio playback
   BetterYouTubeTests/            Unit tests, and the API client against canned responses
 scripts/check-localizations.py   Fails when a string has no French translation
+scripts/build-demo-catalog.py    Rebuilds the demo's catalogue from the videos' public pages
 ```
 
 ## Continuous integration

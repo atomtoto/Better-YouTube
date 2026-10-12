@@ -76,7 +76,8 @@ final class WatchPhoneBridge: NSObject {
 
     private var pendingPublish: Task<Void, Never>?
 
-    private func publishSoon() {
+    /// Also called when a demo ends, to send the real library again.
+    func publishSoon() {
         pendingPublish?.cancel()
         pendingPublish = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(250))
@@ -129,7 +130,9 @@ final class WatchPhoneBridge: NSObject {
     }
 
     private func publish() {
-        guard session.activationState == .activated,
+        // The watch keeps the real library; a demo's would only have to be taken back.
+        guard !DemoMode.isRunning,
+              session.activationState == .activated,
               session.isWatchAppInstalled,
               let data = encodedSnapshot() else { return }
         var context: [String: Any] = [WatchMessage.snapshot: data,

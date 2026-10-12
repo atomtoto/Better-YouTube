@@ -47,9 +47,7 @@ enum NotificationMode: String, Codable, CaseIterable, Identifiable {
 /// Notification preferences, the seen-video ledger used to detect new uploads, and the inbox.
 @MainActor
 final class NotificationStore: ObservableObject {
-    static let shared = NotificationStore(fileURL: FileManager.default
-        .urls(for: .documentDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("notifications.json"))
+    static let shared = NotificationStore(fileURL: DemoMode.storeFile("notifications.json"))
 
     @Published var mode: NotificationMode { didSet { persist() } }
     @Published private(set) var channelOptIns: Set<String> = []
@@ -103,23 +101,53 @@ final class NotificationStore: ObservableObject {
         var knownChannels: Set<String>?
     }
 
-    private let fileURL: URL
+    private var fileURL: URL
 
     /// Internal rather than private so tests can point a store at a file of their own.
     init(fileURL: URL) {
         self.fileURL = fileURL
         self.mode = .off
+        load()
+    }
 
-        if let data = try? Data(contentsOf: fileURL),
-           let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data) {
-            self.mode = snapshot.mode
-            self.channelOptIns = snapshot.channelOptIns
-            self.items = snapshot.items
-            self.seenOrder = snapshot.seenVideoIds
-            self.seenVideoIds = Set(snapshot.seenVideoIds)
-            self.hasBootstrapped = snapshot.hasBootstrapped
-            self.knownChannels = snapshot.knownChannels ?? []
+    /// Moves the inbox and its ledger onto another file — the demo's, or back to the real one —
+    /// and reads it. The one left behind is already saved: every change is written as it happens.
+    func useFile(_ url: URL) {
+        guard url != fileURL else { return }
+        fileURL = url
+        channelOptIns = []
+        items = []
+        seenOrder = []
+        seenVideoIds = []
+        hasBootstrapped = false
+        knownChannels = []
+        lastYouTubeImport = nil
+        lastYouTubeImportDate = nil
+        load()
+    }
+
+    private func load() {
+        guard let data = try? Data(contentsOf: fileURL),
+              let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data) else {
+            if mode != .off { mode = .off }
+            return
         }
+        channelOptIns = snapshot.channelOptIns
+        items = snapshot.items
+        seenOrder = snapshot.seenVideoIds
+        seenVideoIds = Set(snapshot.seenVideoIds)
+        hasBootstrapped = snapshot.hasBootstrapped
+        knownChannels = snapshot.knownChannels ?? []
+        // Last: its observer saves, and by now everything it saves is what was read.
+        if mode != snapshot.mode { mode = snapshot.mode }
+    }
+
+    /// The demo's inbox: a few of its catalogue's latest uploads, as if they had just come in.
+    func furnishForDemo(_ videos: [Video]) {
+        items = videos.map { NotificationItem(video: $0, date: $0.publishedAt ?? Date()) }
+        markSeen(videos.map(\.id))
+        hasBootstrapped = true
+        persist()
     }
 
     // MARK: Checking for new uploads
@@ -348,6 +376,8 @@ final class NotificationStore: ObservableObject {
             knownChannels: knownChannels
         )
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        try? FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
         try? data.write(to: fileURL, options: .atomic)
     }
 }

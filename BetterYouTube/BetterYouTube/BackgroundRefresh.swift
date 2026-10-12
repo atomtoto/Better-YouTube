@@ -101,6 +101,8 @@ enum BackgroundRefresh {
     /// — coming back to the app, the system's background refresh, the Mac's timer — respects it,
     /// because each check costs about a quota unit per channel.
     static func checkForNewVideos(force: Bool = false) async {
+        // The demo's channels are a snapshot: nothing new comes of them, and its inbox is filled.
+        guard !DemoMode.isRunning else { return }
         let (mode, isSignedIn, hasKey, isDue) = await MainActor.run {
             (NotificationStore.shared.mode, GoogleAuthService.shared.isSignedIn,
              APIKeyStore.shared.hasKey, NotificationStore.shared.isUploadCheckDue)

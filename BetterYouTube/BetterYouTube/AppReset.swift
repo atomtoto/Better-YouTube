@@ -33,6 +33,8 @@ enum AppReset {
     /// Everything: both sign-ins, the API key, the on-device library, the Downloads folder,
     /// notifications, the quota tally and the search history.
     static func eraseEverything() async {
+        // The demo first, so what is erased below is the real library rather than the demo's.
+        await DemoMode.shared.exit()
         await ICloudSyncService.shared.resetForDevice()
         // Stop playback first — it holds the audio session and a video that's about to have no
         // history entry to belong to.

@@ -105,6 +105,33 @@ final class ICloudSyncService: ObservableObject {
         if !isEnabled, cacheIsWritable, statusMessage == Self.waitingMessage {
             statusMessage = String(localized: "iCloud sync is off on this device.")
         }
+        if isSuspended { statusMessage = Self.pausedMessage }
+    }
+
+    /// Set while a demo runs. Its library is not this device's: none of it may reach iCloud, and
+    /// nothing from iCloud may land in it. The on/off choice in Settings is left as it was.
+    private(set) var isSuspended = DemoMode.isRunning
+
+    func suspendForDemo() {
+        guard !isSuspended else { return }
+        isSuspended = true
+        let previous = engine
+        engine = nil // Late delegate callbacks cannot mutate the demo's stores.
+        activeOperations = 0
+        isSyncing = false
+        statusMessage = Self.pausedMessage
+        Task { await previous?.cancelOperations() }
+    }
+
+    func resumeAfterDemo() {
+        guard isSuspended else { return }
+        isSuspended = false
+        statusMessage = isEnabled ? Self.waitingMessage : String(localized: "iCloud sync is off on this device.")
+        if isEnabled { Task { await start() } }
+    }
+
+    private static var pausedMessage: String {
+        String(localized: "iCloud sync is paused during the demo. Your library is kept as it was.")
     }
 
     func setEnabled(_ enabled: Bool) {
@@ -128,7 +155,7 @@ final class ICloudSyncService: ObservableObject {
     /// Called at launch and whenever the app becomes active. It also recovers after sign-in or
     /// a temporary account/network failure; CKSyncEngine handles automatic background retries.
     func start() async {
-        guard isEnabled, cacheIsWritable, engine == nil, !starting else { return }
+        guard !isSuspended, isEnabled, cacheIsWritable, engine == nil, !starting else { return }
         guard cloudKitAvailable() else {
             statusMessage = String(localized: "iCloud requires a signed build with the iCloud capability.")
             return
@@ -203,7 +230,7 @@ final class ICloudSyncService: ObservableObject {
     }
 
     private func recordLocalChanges(_ changes: [CloudSyncEntry]) {
-        guard cacheIsWritable, !resettingDevice else { return }
+        guard cacheIsWritable, !resettingDevice, !isSuspended else { return }
         for entry in changes {
             guard cache.entries[entry.key].map({ entry.isNewer(than: $0) }) ?? true else { continue }
             cache.entries[entry.key] = entry
@@ -238,7 +265,7 @@ final class ICloudSyncService: ObservableObject {
     }
 
     private func capturePreferences() {
-        guard !applyingPreferences, cacheIsWritable, !resettingDevice else { return }
+        guard !applyingPreferences, cacheIsWritable, !resettingDevice, !isSuspended else { return }
         for key in Self.preferenceKeys {
             let value = defaults.string(forKey: key)
             guard value != preferenceValues[key] else { continue }

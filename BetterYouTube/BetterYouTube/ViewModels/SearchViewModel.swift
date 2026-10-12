@@ -3,6 +3,9 @@ import Foundation
 @MainActor
 final class SearchViewModel: ObservableObject {
     @Published var query: String = ""
+    /// Whether the search field is up. Leaving the search tab by a link — a channel opening in
+    /// Home, say — puts it away, or it would stay open over the screen arrived at.
+    @Published var isPresented = false
     @Published private(set) var results: [SearchResult] = []
     @Published private(set) var isSearching = false
     @Published private(set) var hasSearched = false
@@ -188,6 +191,11 @@ final class SearchViewModel: ObservableObject {
         let enabled = UserDefaults.standard.object(forKey: Self.remoteSuggestionsKey) as? Bool ?? true
         guard enabled, !trimmed.isEmpty, YouTubeLink(string: trimmed) == nil else {
             remoteSuggestions = []
+            return
+        }
+        // The demo can only find what its catalogue holds, so it suggests from there.
+        if DemoMode.isRunning {
+            remoteSuggestions = DemoCatalog.shared.suggestions(for: trimmed)
             return
         }
         suggestionTask = Task {

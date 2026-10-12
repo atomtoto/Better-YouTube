@@ -752,6 +752,16 @@
         }
       }
     },
+    "Animated Films" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Films d’animation"
+          }
+        }
+      }
+    },
     "Any Length" : {
       "localizations" : {
         "fr" : {
@@ -1098,6 +1108,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Commentaires"
+          }
+        }
+      }
+    },
+    "Comments aren't part of the demo. Sign in with Google or add an API key to read them." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les commentaires ne font pas partie de la démo. Connecte-toi avec Google ou ajoute une clé API pour les lire."
           }
         }
       }
@@ -1458,6 +1478,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Supprimer"
+          }
+        }
+      }
+    },
+    "Demo" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Démo"
+          }
+        }
+      }
+    },
+    "Demo Account" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compte démo"
+          }
+        }
+      }
+    },
+    "Demo Mode" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode démo"
           }
         }
       }
@@ -2223,6 +2273,16 @@
         }
       }
     },
+    "Launches, landings and the view from orbit." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lancements, atterrissages et vues depuis l’orbite."
+          }
+        }
+      }
+    },
     "Library" : {
       "localizations" : {
         "fr" : {
@@ -2649,6 +2709,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pas intéressé"
+          }
+        }
+      }
+    },
+    "Not available in the demo. Sign in with Google to like videos, subscribe, comment and edit playlists." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indisponible dans la démo. Connecte-toi avec Google pour aimer des vidéos, t’abonner, commenter et modifier tes playlists."
           }
         }
       }
@@ -3286,6 +3356,26 @@
         }
       }
     },
+    "Quit Demo" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quitter la démo"
+          }
+        }
+      }
+    },
+    "Quitting deletes the demo's library, searches and downloads. Your own library, sign-ins and iCloud sync carry on as they were." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quitter supprime la bibliothèque, les recherches et les téléchargements de la démo. Ta propre bibliothèque, tes connexions et la synchro iCloud reprennent comme avant."
+          }
+        }
+      }
+    },
     "Quota spent" : {
       "localizations" : {
         "fr" : {
@@ -3302,6 +3392,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Note"
+          }
+        }
+      }
+    },
+    "Real videos — nothing leaves this device." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De vraies vidéos — rien ne quitte l’appareil."
           }
         }
       }
@@ -3786,6 +3886,16 @@
         }
       }
     },
+    "Short films to watch tonight." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Des courts-métrages à regarder ce soir."
+          }
+        }
+      }
+    },
     "Show" : {
       "localizations" : {
         "fr" : {
@@ -4102,6 +4212,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Trier les commentaires"
+          }
+        }
+      }
+    },
+    "Space" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espace"
           }
         }
       }
@@ -4836,6 +4956,16 @@
         }
       }
     },
+    "Try Without Signing In" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essayer sans se connecter"
+          }
+        }
+      }
+    },
     "Try a different search term." : {
       "localizations" : {
         "fr" : {
@@ -5227,12 +5357,12 @@
         }
       }
     },
-    "You can also choose an API key for public videos, or finish setup later in Settings." : {
+    "You can also choose an API key for public videos, or try the app first with a demo catalogue — no account needed." : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tu peux aussi choisir une clé API pour les vidéos publiques, ou terminer la configuration plus tard dans les Réglages."
+            "value" : "Tu peux aussi choisir une clé API pour les vidéos publiques, ou essayer d’abord l’app avec un catalogue de démo — sans compte."
           }
         }
       }
@@ -5253,6 +5383,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tu verras ici les nouvelles vidéos des chaînes que tu suis."
+          }
+        }
+      }
+    },
+    "You're trying Better YouTube with a catalogue of real videos. Liking, subscribing and commenting need a Google sign-in." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu essaies Better YouTube avec un catalogue de vraies vidéos. Aimer, t’abonner et commenter demandent une connexion Google."
           }
         }
       }
@@ -5633,6 +5773,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "La synchro iCloud est désactivée sur cet appareil."
+          }
+        }
+      }
+    },
+    "iCloud sync is paused during the demo. Your library is kept as it was." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La synchro iCloud est en pause pendant la démo. Ta bibliothèque est conservée telle quelle."
           }
         }
       }

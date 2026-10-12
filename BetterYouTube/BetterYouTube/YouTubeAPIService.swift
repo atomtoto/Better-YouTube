@@ -140,6 +140,9 @@ actor YouTubeAPIService {
 
     /// The account and key the app is set up with.
     static let currentCredentials: @Sendable () async -> Credentials = {
+        // The demo's requests are answered on the device, by `DemoServer`; they only need a
+        // token to go out at all, and no real one is ever spent on them.
+        if DemoMode.isRunning { return Credentials(accessToken: DemoServer.accessToken, apiKey: "") }
         let token = await GoogleAuthService.shared.accessToken()
         let key = await MainActor.run { APIKeyStore.shared.apiKey }
         return Credentials(accessToken: token, apiKey: key)
@@ -159,6 +162,8 @@ actor YouTubeAPIService {
         session: URLSession = .shared,
         credentials: @escaping @Sendable () async -> Credentials = YouTubeAPIService.currentCredentials,
         recordSpend: @escaping @Sendable (_ units: Int, _ endpoint: String) async -> Void = { @MainActor units, endpoint in
+            // Nothing the demo asks reaches Google, so none of it is the day's to count.
+            guard !DemoMode.isRunning else { return }
             QuotaTracker.shared.record(units: units, endpoint: endpoint)
         }
     ) {

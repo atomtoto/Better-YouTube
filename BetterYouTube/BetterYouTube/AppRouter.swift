@@ -42,6 +42,12 @@ final class AppRouter: ObservableObject {
     /// recognise, so the caller can leave other schemes alone.
     @discardableResult
     func open(_ url: URL) -> Bool {
+        // betteryoutube://demo — straight into the demo, for a tester or App Review to be handed.
+        if url.scheme?.lowercased() == YouTubeLink.appScheme, url.host()?.lowercased() == "demo" {
+            DemoMode.shared.enter()
+            selectedTab = .home
+            return true
+        }
         if url.scheme?.lowercased() == YouTubeLink.appScheme, url.host()?.lowercased() == "search",
            let term = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                .queryItems?.first(where: { $0.name == "q" })?.value,

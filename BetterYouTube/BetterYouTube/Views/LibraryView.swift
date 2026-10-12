@@ -128,6 +128,7 @@ struct LibraryView: View {
         .groupedListStyle()
         .minimizesPlayerBarOnScroll()
         .navigationTitle("Library")
+        .demoMenu()
         .refreshable { await reload() }
         .toolbar {
             #if os(macOS)

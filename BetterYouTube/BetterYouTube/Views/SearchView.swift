@@ -6,7 +6,8 @@ import SwiftUI
 struct SearchView: View {
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var recents: RecentSearchStore
-    /// Owned by the root view, which on a phone holds the field itself — see `searchField(_:)`.
+    /// Owned by the root view, which runs searches from links and Siri and puts the field away
+    /// when a link leaves the search tab.
     @ObservedObject var viewModel: SearchViewModel
     @FocusState private var isFieldFocused: Bool
 
@@ -32,10 +33,7 @@ struct SearchView: View {
         .background(Color.appBackground)
         .searchFocused($isFieldFocused)
         .navigationTitle("Search")
-        #if os(macOS)
-        // On a Mac the field is Search's own, in its toolbar. On a phone the tab view holds it.
         .searchField(viewModel)
-        #endif
         // A search on its way — submitted, a suggestion or a recent search tapped, a filter
         // changed — puts the keyboard away, so the results it brings are not hidden behind it.
         .onChange(of: viewModel.isSearching) { _, searching in
@@ -239,9 +237,10 @@ struct SearchView: View {
 // MARK: - The field
 
 extension View {
-    /// Search's field, what it suggests and what its Search key does — applied where the field
-    /// lives: on the tab view on a phone, whose search tab turns into it along the bottom, and on
-    /// Search itself on a Mac, whose toolbar holds it.
+    /// Search's field, what it suggests and what its Search key does. On the Search screen itself:
+    /// a phone's search tab turns into it along the bottom, and a Mac keeps it in the toolbar. On
+    /// the tab view instead, the field spread to every tab, and stayed open over Home when a link
+    /// moved there mid-search.
     func searchField(_ viewModel: SearchViewModel) -> some View {
         modifier(SearchField(viewModel: viewModel))
     }
@@ -253,7 +252,8 @@ private struct SearchField: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .searchable(text: $viewModel.query, placement: .searchTab, prompt: "Search or paste a YouTube link")
+            .searchable(text: $viewModel.query, isPresented: $viewModel.isPresented, placement: .searchTab,
+                        prompt: "Search or paste a YouTube link")
             .searchSuggestions { suggestions }
             .onSubmit(of: .search) { viewModel.submitOrOpen() }
             .onChange(of: viewModel.query) { _, query in viewModel.queryChanged(query) }
