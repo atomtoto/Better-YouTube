@@ -89,7 +89,8 @@ struct ICloudSyncServiceTests {
         #expect(service.isEnabled)
         #expect(!service.isSyncing)
         #expect(service.lastSyncDate == nil)
-        #expect(service.statusMessage.contains("signed build"))
+        #expect(!service.isAvailable)
+        #expect(service.statusMessage == ICloudSyncService.unavailableMessage)
         #expect(fixture.library.syncEntries == entries)
         #expect(try Data(contentsOf: fixture.libraryURL) == libraryData)
         let cache = try fixture.cache()
@@ -146,10 +147,12 @@ struct ICloudSyncServiceTests {
             entitlementChecks += 1
             return false
         })
+        // Settings' status line is decided at launch; the reset itself must not ask again.
+        let checksAtLaunch = entitlementChecks
 
         await service.resetForDevice()
 
-        #expect(entitlementChecks == 0)
+        #expect(entitlementChecks == checksAtLaunch)
         #expect(!service.isEnabled)
         #expect(!service.isSyncing)
         #expect(service.lastSyncDate == nil)

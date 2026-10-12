@@ -10,3 +10,7 @@ DerivedData/
 # macOS
 .DS_Store
 *.ipa
+
+# Local signing settings — see BetterYouTube/Config/Signing.xcconfig
+BetterYouTube/Config/Local.xcconfig
+BetterYouTube/Config/Detected.xcconfig

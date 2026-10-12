@@ -52,6 +52,10 @@
 	<string>Better YouTube connects to the download service you configured, when it runs on this network.</string>
 
 	<!-- Shared with Info.plist: `betteryoutube://downloads?…` setup links. -->
+	<!-- The CloudKit container in the entitlements, for the code to ask for: it follows the
+	     bundle identifier, which Config/Signing.xcconfig lets each developer choose. -->
+	<key>BYCloudKitContainer</key>
+	<string>iCloud.$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>com.atomtoto.BetterYouTube.watching</string>

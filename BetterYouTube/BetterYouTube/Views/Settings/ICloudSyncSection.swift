@@ -6,10 +6,12 @@ struct ICloudSyncSection: View {
 
     var body: some View {
         Section {
+            // Off and greyed out in a build signed without iCloud; the line below says why.
             Toggle("iCloud Sync", isOn: Binding(
-                get: { sync.isEnabled },
+                get: { sync.isAvailable && sync.isEnabled },
                 set: { sync.setEnabled($0) }
             ))
+            .disabled(!sync.isAvailable)
 
             HStack(spacing: 8) {
                 if sync.isSyncing {
@@ -29,7 +31,7 @@ struct ICloudSyncSection: View {
             Button("Sync Now") {
                 Task { await sync.syncNow() }
             }
-            .disabled(!sync.isEnabled || sync.isSyncing)
+            .disabled(!sync.isAvailable || !sync.isEnabled || sync.isSyncing)
         } header: {
             Text("iCloud")
         } footer: {

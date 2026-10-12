@@ -282,6 +282,7 @@
 		06CCE6151B261D4875A42DB9 /* DemoModeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoModeViews.swift; sourceTree = "<group>"; };
 		D3DB23BA5130156FD0F2D863 /* DemoCatalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = DemoCatalog.json; sourceTree = "<group>"; };
 		99FE3AD4DF636A0C41D429AA /* DemoModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoModeTests.swift; sourceTree = "<group>"; };
+		5C0F1A6E2B3D4C5E6F708192 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Signing.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -321,6 +322,7 @@
 		8D3FC6DB5D0827F168A73277 = {
 			isa = PBXGroup;
 			children = (
+				5C0F1A6E2B3D4C5E6F708192 /* Signing.xcconfig */,
 				BEEFGROUP000000000000000 /* BetterYouTubeTests */,
 				0137AF6FC606487BAC0F087D /* BetterYouTubeWatch */,
 				4075A15D594544B789EC3AC7 /* Shared */,
@@ -787,12 +789,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = BetterYouTube;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "BetterYouTube/BetterYouTube-iOS.entitlements";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "BetterYouTube/BetterYouTube-macOS.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "$(BY_IOS_ENTITLEMENTS)";
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "$(BY_MAC_ENTITLEMENTS)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = RVBY9CDKL4;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -806,7 +807,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.atomtoto.BetterYouTube;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BY_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -822,12 +823,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = BetterYouTube;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "BetterYouTube/BetterYouTube-iOS.entitlements";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "BetterYouTube/BetterYouTube-macOS.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "$(BY_IOS_ENTITLEMENTS)";
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "$(BY_MAC_ENTITLEMENTS)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = RVBY9CDKL4;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -841,7 +841,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.atomtoto.BetterYouTube;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BY_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -854,6 +854,7 @@
 		};
 		B10504F0F8A7477709D957A8 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5C0F1A6E2B3D4C5E6F708192 /* Signing.xcconfig */;
 			buildSettings = {
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -925,7 +926,6 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = RVBY9CDKL4;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -935,7 +935,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.atomtoto.BetterYouTubeTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BY_BUNDLE_ID)Tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -952,7 +952,6 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = RVBY9CDKL4;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -962,7 +961,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.atomtoto.BetterYouTubeTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BY_BUNDLE_ID)Tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -975,6 +974,7 @@
 		};
 		C3AE5995881CE35FD5CAB2D0 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5C0F1A6E2B3D4C5E6F708192 /* Signing.xcconfig */;
 			buildSettings = {
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1039,12 +1039,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = BetterYouTube;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = RVBY9CDKL4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BetterYouTubeWatch/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.atomtoto.BetterYouTube.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BY_BUNDLE_ID).watchkitapp";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1061,12 +1060,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = BetterYouTube;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = RVBY9CDKL4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BetterYouTubeWatch/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.atomtoto.BetterYouTube.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BY_BUNDLE_ID).watchkitapp";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;

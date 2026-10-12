@@ -1,0 +1,37 @@
+// Signing settings shared by every target.
+//
+// The project builds with any Apple account, a free one ("Personal Team") included: without
+// iCloud and without CarPlay. What the account allows is added on top:
+//   - iCloud and push notifications: on by themselves when the team is a paid one
+//     (scripts/detect-signing.sh, run by both schemes before every build);
+//   - CarPlay: turned on by hand (BY_CARPLAY = YES), because Apple has to grant the CarPlay
+//     audio and video entitlements to the team first.
+// To override any of it — team, bundle identifier, capabilities — copy Local.xcconfig.example to
+// Local.xcconfig, which git ignores.
+
+// The app's bundle identifier; the watch app and the tests derive theirs from it. The iCloud
+// container follows it too: iCloud.<bundle identifier>.
+BY_BUNDLE_ID = com.atomtoto.BetterYouTube
+
+// iCloud sync and push notifications. Overwritten by the generated file below.
+BY_ICLOUD = NO
+#include? "Detected.xcconfig"
+
+// CarPlay audio and video (iOS only). Implies a paid team.
+BY_CARPLAY = NO
+
+#include? "Local.xcconfig"
+
+// The entitlements, chosen as BY_ICLOUD_BY_CARPLAY.
+// iOS: BetterYouTube-iOS.entitlements (iCloud, push and CarPlay), BetterYouTube-iOS-iCloud
+// (iCloud and push) and BetterYouTube-iOS-PersonalTeam (nothing a free team can't sign).
+BY_IOS_SUFFIX_NO_NO = -PersonalTeam
+BY_IOS_SUFFIX_NO_YES =
+BY_IOS_SUFFIX_YES_NO = -iCloud
+BY_IOS_SUFFIX_YES_YES =
+BY_IOS_ENTITLEMENTS = BetterYouTube/BetterYouTube-iOS$(BY_IOS_SUFFIX_$(BY_ICLOUD)_$(BY_CARPLAY)).entitlements
+
+// Mac: iCloud and push only; the App Sandbox is there with any team.
+BY_MAC_SUFFIX_NO = -PersonalTeam
+BY_MAC_SUFFIX_YES =
+BY_MAC_ENTITLEMENTS = BetterYouTube/BetterYouTube-macOS$(BY_MAC_SUFFIX_$(BY_ICLOUD)).entitlements

@@ -228,20 +228,42 @@ intact. Enabling sync again can restore the saved cloud library.
 
 ### Signing and container setup
 
-1. Select a team with iCloud support in the app target's **Signing & Capabilities**. Add or verify
-   **iCloud → CloudKit** and choose **`iCloud.com.atomtoto.BetterYouTube`** for both iOS and macOS.
-   If you use your own container, change the identifier in `ICloudSyncService.swift` and both
-   entitlement files together. Xcode must associate that container with your app ID and generate
-   provisioning profiles containing the iCloud entitlements. See Apple's
+The project builds with **any Apple account, a free one included** ("Personal Team"), with no
+Apple Developer Program membership: copy `BetterYouTube/Config/Local.xcconfig.example` to
+`Local.xcconfig` (git ignores it), put your Team ID in it and press Run. What the account can sign
+decides what the build gets:
+
+| Team | iCloud sync and push | CarPlay | iOS entitlements |
+| --- | --- | --- | --- |
+| Free (Personal Team) | no | no | `BetterYouTube-iOS-PersonalTeam.entitlements` |
+| Paid | yes | no | `BetterYouTube-iOS-iCloud.entitlements` |
+| Paid, with the CarPlay entitlements granted | yes | yes | `BetterYouTube-iOS.entitlements` |
+
+Before every build, both schemes run `scripts/detect-signing.sh`, which asks Xcode whether the team
+is a free one and writes the answer to `Config/Detected.xcconfig`; `Config/Signing.xcconfig` picks
+the entitlements from it. Moving to a paid team turns iCloud on with no other change. CarPlay
+can't be detected — Apple grants its audio and video entitlements on request — so it is turned on
+with `BY_CARPLAY = YES` in `Local.xcconfig`; the detection can be overridden there too with
+`BY_ICLOUD = YES` or `NO`. A free account can't use a bundle identifier another account holds:
+set `BY_BUNDLE_ID` to one of your own, and register it with your Google OAuth client. The watch
+app, the tests and the iCloud container (`iCloud.<bundle identifier>`) follow it. Builds signed by
+a free team expire after seven days.
+
+The app finds out at launch what its build was signed with — the Mac from its own entitlements,
+an iPhone from its embedded provisioning profile — and in a build without iCloud, Settings says so
+and keeps sync off, rather than offering a switch that does nothing.
+
+With a paid team:
+
+1. Xcode registers the container `iCloud.<bundle identifier>` with your app ID on the first signed
+   build. See Apple's
    [CloudKit setup guide](https://developer.apple.com/documentation/cloudkit/enabling-cloudkit-in-your-app).
-2. Keep **Push Notifications** enabled for both platforms and **Background Modes → Remote
-   notifications** enabled on iOS. The entitlement files use the development APNs environment
-   for local development; verify the final signed archive uses the environment required by its
-   distribution profile. Preserve the Mac's App Sandbox entitlements.
+2. Push notifications and **Background Modes → Remote notifications** are already set. The
+   entitlement files use the development APNs environment for local development; verify the final
+   signed archive uses the environment required by its distribution profile. Preserve the Mac's
+   App Sandbox entitlements, which every variant keeps.
 3. Run a signed build with an Apple Account signed into iCloud. CI builds and offline test hosts
    do not validate live iCloud synchronization; tests and previews skip live engine initialization.
-   The Mac also checks its runtime CloudKit entitlement before starting the engine and reports
-   missing entitlements in Settings. Use correctly provisioned builds for device validation.
 
 The service uses `CKSyncEngine` with a custom zone named **`BetterYouTubeLibrary`** in the user's
 private CloudKit database. The record type is **`LibraryEntry`** with **`schemaVersion`** (Int64,
@@ -616,7 +638,9 @@ app read its own credentials back.
 ## Getting started
 
 1. Open `BetterYouTube/BetterYouTube.xcodeproj` in Xcode 27+ and run on an iOS 26+ simulator or
-   device, or pick *My Mac* for the macOS 26+ build.
+   device, or pick *My Mac* for the macOS 26+ build. To run on a device, put your Team ID in
+   `BetterYouTube/Config/Local.xcconfig` first — a free Apple account works; see
+   [Signing and container setup](#signing-and-container-setup).
 2. **Google sign-in** (recommended): in the Google Cloud Console, [enable the YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com)
    and [create an OAuth 2.0 client ID](https://console.cloud.google.com/auth/clients) of type **iOS** with the app's bundle identifier
    (`com.atomtoto.BetterYouTube`, or your own). That client type covers macOS too — the same
@@ -680,6 +704,7 @@ render.yaml                      One-click deploy of the resolver below
 resolver/                        A yt-dlp resolver: server.py, Dockerfile, compose, tests
 BetterYouTube/
   BetterYouTube.xcodeproj/       Xcode project (iOS/macOS app and watchOS app target)
+  Config/                        Signing.xcconfig, and the git-ignored Local and Detected ones
   Shared/                       Payloads shared by iPhone and Watch, and thumbnail sizing
   BetterYouTube/
     BetterYouTubeApp.swift       App entry point, both app delegates, the Mac's menu bar
@@ -723,6 +748,7 @@ BetterYouTube/
   BetterYouTubeWatch/             Watch screens, API browsing, file downloads and audio playback
   BetterYouTubeTests/            Unit tests, and the API client against canned responses
 scripts/check-localizations.py   Fails when a string has no French translation
+scripts/detect-signing.sh        Detects a free or paid signing team before each build
 scripts/build-demo-catalog.py    Rebuilds the demo's catalogue from the videos' public pages
 ```
 

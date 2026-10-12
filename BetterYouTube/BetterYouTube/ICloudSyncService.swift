@@ -8,7 +8,10 @@ import Security
 @MainActor
 final class ICloudSyncService: ObservableObject {
     static let shared = ICloudSyncService()
-    static let containerIdentifier = "iCloud.com.atomtoto.BetterYouTube"
+    /// The container the entitlements name. It follows the bundle identifier, which each
+    /// developer may choose (see Config/Signing.xcconfig), so it is read from the Info.plist.
+    static let containerIdentifier = Bundle.main.object(forInfoDictionaryKey: "BYCloudKitContainer") as? String
+        ?? "iCloud.com.atomtoto.BetterYouTube"
     static let zoneID = CKRecordZone.ID(zoneName: "BetterYouTubeLibrary")
     static let recordType = "LibraryEntry"
     static let enabledKey = "icloud_sync_enabled"
@@ -53,7 +56,19 @@ final class ICloudSyncService: ObservableObject {
         let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         self.init(library: .shared, playbackPositions: .shared, defaults: .standard,
                   fileURL: folder.appendingPathComponent("BetterYouTube/icloud-sync.json"),
-                  cloudKitAvailable: Self.hasCloudKitEntitlement)
+                  cloudKitAvailable: { Self.isEntitledForCloudKit })
+    }
+
+    /// Read once: on a phone it means reading the provisioning profile off disk.
+    private static let isEntitledForCloudKit = hasCloudKitEntitlement()
+
+    /// Whether this build may use iCloud at all. One signed by a free Apple developer account
+    /// can't — Config/Signing.xcconfig leaves iCloud out for those — and Settings says so rather
+    /// than offering a switch that does nothing.
+    var isAvailable: Bool { cloudKitAvailable() }
+
+    static var unavailableMessage: String {
+        String(localized: "iCloud isn't available in this build: it was signed without iCloud, as a free Apple developer account requires. Your library stays on this device.")
     }
 
     /// Dependencies make the offline/reset path testable without an Apple account or entitlement.
@@ -102,8 +117,12 @@ final class ICloudSyncService: ObservableObject {
                 Task { @MainActor in await self?.checkAccount() }
             }.store(in: &observations)
         reconcileLocalEntries()
-        if !isEnabled, cacheIsWritable, statusMessage == Self.waitingMessage {
-            statusMessage = String(localized: "iCloud sync is off on this device.")
+        if cacheIsWritable, statusMessage == Self.waitingMessage {
+            if !cloudKitAvailable() {
+                statusMessage = Self.unavailableMessage
+            } else if !isEnabled {
+                statusMessage = String(localized: "iCloud sync is off on this device.")
+            }
         }
         if isSuspended { statusMessage = Self.pausedMessage }
     }
@@ -126,7 +145,8 @@ final class ICloudSyncService: ObservableObject {
     func resumeAfterDemo() {
         guard isSuspended else { return }
         isSuspended = false
-        statusMessage = isEnabled ? Self.waitingMessage : String(localized: "iCloud sync is off on this device.")
+        statusMessage = !cloudKitAvailable() ? Self.unavailableMessage
+            : isEnabled ? Self.waitingMessage : String(localized: "iCloud sync is off on this device.")
         if isEnabled { Task { await start() } }
     }
 
@@ -157,7 +177,7 @@ final class ICloudSyncService: ObservableObject {
     func start() async {
         guard !isSuspended, isEnabled, cacheIsWritable, engine == nil, !starting else { return }
         guard cloudKitAvailable() else {
-            statusMessage = String(localized: "iCloud requires a signed build with the iCloud capability.")
+            statusMessage = Self.unavailableMessage
             return
         }
         starting = true

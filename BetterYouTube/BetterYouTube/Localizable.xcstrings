@@ -802,22 +802,22 @@
         }
       }
     },
-    "As you type, what is in the search field is sent to YouTube's suggestion service, which costs no quota. Turned off, the field suggests only your recent searches." : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pendant la saisie, le contenu du champ de recherche est envoyé au service de suggestions de YouTube, qui ne consomme pas de quota. Désactivé, le champ ne propose que tes recherches récentes."
-          }
-        }
-      }
-    },
     "Applies the next time Better YouTube opens." : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "S’applique à la prochaine ouverture de Better YouTube."
+          }
+        }
+      }
+    },
+    "As you type, what is in the search field is sent to YouTube's suggestion service, which costs no quota. Turned off, the field suggests only your recent searches." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pendant la saisie, le contenu du champ de recherche est envoyé au service de suggestions de YouTube, qui ne consomme pas de quota. Désactivé, le champ ne propose que tes recherches récentes."
           }
         }
       }
@@ -1862,22 +1862,22 @@
         }
       }
     },
-    "Fill in Branding" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remplir la page Branding"
-          }
-        }
-      }
-    },
     "Fill Window" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Remplir la fenêtre"
+          }
+        }
+      }
+    },
+    "Fill in Branding" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remplir la page Branding"
           }
         }
       }
@@ -3075,6 +3075,16 @@
         }
       }
     },
+    "Open on" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir sur"
+          }
+        }
+      }
+    },
     "Opens Better YouTube's search on the words you give." : {
       "localizations" : {
         "fr" : {
@@ -3091,16 +3101,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ouvre un lien vers une vidéo, une chaîne ou une playlist YouTube dans Better YouTube."
-          }
-        }
-      }
-    },
-    "Open on" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ouvrir sur"
           }
         }
       }
@@ -5867,12 +5867,12 @@
         }
       }
     },
-    "iCloud requires a signed build with the iCloud capability." : {
+    "iCloud isn't available in this build: it was signed without iCloud, as a free Apple developer account requires. Your library stays on this device." : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iCloud nécessite une version signée avec la fonctionnalité iCloud."
+            "value" : "iCloud n’est pas disponible dans cette version : elle a été signée sans iCloud, comme l’impose un compte développeur Apple gratuit. Ta bibliothèque reste sur cet appareil."
           }
         }
       }

@@ -1,0 +1,15 @@
+// Copy this file to Local.xcconfig (git ignores it) and adapt it.
+
+// Your signing team: Xcode → Settings → Accounts, or developer.apple.com → Membership details →
+// Team ID.
+DEVELOPMENT_TEAM = XXXXXXXXXX
+
+// A free account can't use a bundle identifier another account already holds: choose one of
+// your own. Then register the same one with your Google OAuth client.
+// BY_BUNDLE_ID = com.example.betteryoutube
+
+// CarPlay: only once Apple has granted the CarPlay audio and video entitlements to your team.
+// BY_CARPLAY = YES
+
+// iCloud is detected by itself; force it only if the detection gets it wrong (YES or NO).
+// BY_ICLOUD = NO

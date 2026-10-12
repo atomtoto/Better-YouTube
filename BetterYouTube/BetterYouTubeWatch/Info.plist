@@ -23,7 +23,7 @@
     <key>WKApplication</key>
     <true/>
     <key>WKCompanionAppBundleIdentifier</key>
-    <string>com.atomtoto.BetterYouTube</string>
+    <string>$(BY_BUNDLE_ID)</string>
     <key>UIBackgroundModes</key>
     <array>
         <string>audio</string>
