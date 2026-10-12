@@ -5,8 +5,40 @@ import Foundation
 enum GoogleCloudSetupURL {
     static let youtubeDataAPI = URL(string: "https://console.cloud.google.com/apis/library/youtube.googleapis.com")!
     static let oauthClients = URL(string: "https://console.cloud.google.com/auth/clients")!
+    static let oauthBranding = URL(string: "https://console.cloud.google.com/auth/branding")!
     static let oauthAudience = URL(string: "https://console.cloud.google.com/auth/audience")!
     static let apiCredentials = URL(string: "https://console.cloud.google.com/apis/credentials")!
+}
+
+/// The project's own pages, served by GitHub Pages from `docs/`. Google won't publish an OAuth
+/// consent screen without a home page, privacy policy and terms on an authorized domain, and
+/// these do for anyone's Cloud project — publishing is what stops the weekly sign-in.
+enum BrandingValue: CaseIterable, Identifiable {
+    /// The home page's section listing these values, for Settings, which doesn't show them.
+    static let setupInstructions = URL(string: "https://atomtoto.github.io/Better-YouTube/#google-cloud")!
+
+    case homePage, privacyPolicy, termsOfService, authorizedDomain
+
+    var id: Self { self }
+
+    /// The field's name as Google's Branding page labels it.
+    var field: LocalizedStringResource {
+        switch self {
+        case .homePage: "Application home page"
+        case .privacyPolicy: "Application privacy policy link"
+        case .termsOfService: "Application terms of service link"
+        case .authorizedDomain: "Authorized domain"
+        }
+    }
+
+    var value: String {
+        switch self {
+        case .homePage: "https://atomtoto.github.io/Better-YouTube/"
+        case .privacyPolicy: "https://atomtoto.github.io/Better-YouTube/privacy.html"
+        case .termsOfService: "https://atomtoto.github.io/Better-YouTube/terms.html"
+        case .authorizedDomain: "atomtoto.github.io"
+        }
+    }
 }
 
 /// Converts ISO 8601 durations returned by the YouTube API (e.g. "PT1H2M3S") into "1:02:03".

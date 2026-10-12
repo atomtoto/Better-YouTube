@@ -532,16 +532,6 @@
         }
       }
     },
-    "Add a test user (if Testing)" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajouter un utilisateur test (en mode Test)"
-          }
-        }
-      }
-    },
     "Add items in Better YouTube on your iPhone." : {
       "localizations" : {
         "fr" : {
@@ -598,16 +588,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ajoute ton identifiant client OAuth Google dans les Réglages avant de te connecter."
-          }
-        }
-      }
-    },
-    "Add yourself as a test user" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajoute-toi comme utilisateur test"
           }
         }
       }
@@ -792,6 +772,36 @@
         }
       }
     },
+    "Application home page" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Page d’accueil de l’application"
+          }
+        }
+      }
+    },
+    "Application privacy policy link" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lien vers les règles de confidentialité de l’application"
+          }
+        }
+      }
+    },
+    "Application terms of service link" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lien vers les conditions d’utilisation de l’application"
+          }
+        }
+      }
+    },
     "As you type, what is in the search field is sent to YouTube's suggestion service, which costs no quota. Turned off, the field suggests only your recent searches." : {
       "localizations" : {
         "fr" : {
@@ -808,6 +818,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "S’applique à la prochaine ouverture de Better YouTube."
+          }
+        }
+      }
+    },
+    "Authorized domain" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Domaine autorisé"
           }
         }
       }
@@ -878,6 +898,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Better YouTube vérifie les chaînes dont tu reçois les notifications et te prévient localement — l’API Data n’offre aucun canal push pour les comptes personnels, donc la livraison suit le calendrier d’actualisation en arrière-plan d’iOS et le moment où tu ouvres l’app. Active la cloche depuis la page d’une chaîne pour choisir des chaînes une par une."
+          }
+        }
+      }
+    },
+    "Branding" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Branding"
           }
         }
       }
@@ -1832,6 +1862,16 @@
         }
       }
     },
+    "Fill in Branding" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remplir la page Branding"
+          }
+        }
+      }
+    },
     "Fill Window" : {
       "localizations" : {
         "fr" : {
@@ -2012,12 +2052,12 @@
         }
       }
     },
-    "Google refused the consent screen (access_denied). While the OAuth consent screen is in Testing, only accounts listed as test users can sign in — add your Google account under Google Auth Platform → Audience → Test users, or publish the app." : {
+    "Google refused the consent screen (access_denied). While the OAuth consent screen is in Testing, only accounts listed as test users can sign in. Publish it under Google Auth Platform → Audience, after filling in Branding with the values linked from Settings → YouTube Account, or add your Google account under Test users." : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google a refusé l’écran de consentement (access_denied). Tant que l’écran de consentement OAuth est en mode Test, seuls les comptes listés comme utilisateurs test peuvent se connecter — ajoute ton compte Google sous Google Auth Platform → Audience → Utilisateurs test, ou publie l’app."
+            "value" : "Google a refusé l’écran de consentement (access_denied). Tant que l’écran de consentement OAuth est en mode Test, seuls les comptes listés comme utilisateurs test peuvent se connecter. Publie-le sous Google Auth Platform → Audience, après avoir rempli Branding avec les valeurs indiquées dans Réglages → Compte YouTube, ou ajoute ton compte Google sous Utilisateurs test."
           }
         }
       }
@@ -2082,12 +2122,22 @@
         }
       }
     },
-    "Google stopped accepting the saved sign-in. While the OAuth consent screen is in Testing, refresh tokens expire after seven days — publishing the app under Google Auth Platform → Audience removes that limit. Sign in again to carry on." : {
+    "Google stopped accepting the saved sign-in. While the OAuth consent screen is in Testing, refresh tokens expire after seven days. Publish it under Google Auth Platform → Audience, after filling in Branding with the values linked from Settings → YouTube Account, and this stops. Sign in again to carry on." : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google n’accepte plus la connexion enregistrée. Tant que l’écran de consentement OAuth est en mode Test, les jetons d’actualisation expirent après sept jours — publier l’app sous Google Auth Platform → Audience supprime cette limite. Reconnecte-toi pour continuer."
+            "value" : "Google n’accepte plus la connexion enregistrée. Tant que l’écran de consentement OAuth est en mode Test, les jetons d’actualisation expirent après sept jours. Publie-le sous Google Auth Platform → Audience, après avoir rempli Branding avec les valeurs indiquées dans Réglages → Compte YouTube, et ça s’arrêtera. Reconnecte-toi pour continuer."
+          }
+        }
+      }
+    },
+    "Google won't publish the app without these. At sign-in it then shows \"Google hasn't verified this app\": choose Advanced, then Go to the app." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google ne publie pas l’app sans elles. À la connexion, il affiche ensuite « Google n’a pas validé cette application » : choisis Paramètres avancés, puis Accéder à l’app."
           }
         }
       }
@@ -2533,16 +2583,6 @@
         }
       }
     },
-    "Needed while the OAuth consent screen is in Testing." : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nécessaire tant que l’écran de consentement OAuth est en mode Test."
-          }
-        }
-      }
-    },
     "New Video" : {
       "localizations" : {
         "fr" : {
@@ -2865,12 +2905,12 @@
         }
       }
     },
-    "OAuth is recommended for browsing and account features; an API key is optional. While the consent screen is in Testing, only accounts added under Test users can sign in. Watch Later uses the separate youtube.com session. The app's watch history can sync through iCloud; it is separate from your YouTube account's history.\n\nOn the consent screen, tick the YouTube permission before Continue: left unticked, Google issues a sign-in that can't do anything and the app has to throw it away.\n\nPasskeys don't work in the sign-in sheet — the system only offers them in Safari itself. Sign in to Google in Safari first, with your passkey, and this sheet borrows that session and won't ask for anything at all." : {
+    "OAuth is recommended for browsing and account features; an API key is optional. Publish the consent screen, or Google signs you out every seven days: the app's website lists the values its Branding page needs. Leave the logo empty. Watch Later uses the separate youtube.com session. The app's watch history can sync through iCloud; it is separate from your YouTube account's history.\n\nOn the consent screen, tick the YouTube permission before Continue: left unticked, Google issues a sign-in that can't do anything and the app has to throw it away.\n\nPasskeys don't work in the sign-in sheet — the system only offers them in Safari itself. Sign in to Google in Safari first, with your passkey, and this sheet borrows that session and won't ask for anything at all." : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "OAuth est recommandé pour la navigation et les fonctions du compte ; une clé API est facultative. Tant que l’écran de consentement est en mode Test, seuls les comptes ajoutés sous Utilisateurs test peuvent se connecter. « À regarder plus tard » utilise la session youtube.com distincte. L’historique de visionnage de l’app peut se synchroniser via iCloud ; il est distinct de l’historique de ton compte YouTube.\n\nSur l’écran de consentement, coche l’autorisation YouTube avant de continuer : sans elle, Google délivre une connexion qui ne peut rien faire et que l’app doit jeter.\n\nLes clés d’identification ne fonctionnent pas dans la fenêtre de connexion — le système ne les propose que dans Safari. Connecte-toi d’abord à Google dans Safari avec ta clé d’identification, et cette fenêtre reprendra cette session sans rien te demander."
+            "value" : "OAuth est recommandé pour la navigation et les fonctions du compte ; une clé API est facultative. Publie l’écran de consentement, sinon Google te déconnecte tous les sept jours : le site web de l’app indique les valeurs à saisir dans sa page Branding. Laisse le logo vide. « À regarder plus tard » utilise la session youtube.com distincte. L’historique de visionnage de l’app peut se synchroniser via iCloud ; il est distinct de l’historique de ton compte YouTube.\n\nSur l’écran de consentement, coche l’autorisation YouTube avant de continuer : sans elle, Google délivre une connexion qui ne peut rien faire et que l’app doit jeter.\n\nLes clés d’identification ne fonctionnent pas dans la fenêtre de connexion — le système ne les propose que dans Safari. Connecte-toi d’abord à Google dans Safari avec ta clé d’identification, et cette fenêtre reprendra cette session sans rien te demander."
           }
         }
       }
@@ -3085,6 +3125,16 @@
         }
       }
     },
+    "Otherwise Google signs you out every seven days." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sinon Google te déconnecte tous les sept jours."
+          }
+        }
+      }
+    },
     "Over 20 Minutes" : {
       "localizations" : {
         "fr" : {
@@ -3101,6 +3151,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Colle-le dans le champ Bundle ID du client OAuth."
+          }
+        }
+      }
+    },
+    "Paste the values below. Leave the logo empty." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colle les valeurs ci-dessous. Laisse le logo vide."
           }
         }
       }
@@ -3362,6 +3422,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Prépare Google Cloud"
+          }
+        }
+      }
+    },
+    "Publish the app" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publier l’app"
           }
         }
       }
@@ -5213,6 +5283,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Utiliser ce service de téléchargement ?"
+          }
+        }
+      }
+    },
+    "Values for the Branding page" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valeurs pour la page Branding"
           }
         }
       }

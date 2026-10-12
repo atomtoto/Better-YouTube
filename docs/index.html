@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Better YouTube</title>
+<meta name="description" content="An unofficial YouTube client for iPhone, iPad, Mac and Apple Watch.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<h1>Better YouTube</h1>
+<p class="lead">An unofficial, open-source YouTube client for iPhone, iPad, Mac and Apple Watch,
+built with SwiftUI to feel like a native Apple app.</p>
+
+<p>Better YouTube browses YouTube through the official
+<a href="https://developers.google.com/youtube/v3">YouTube Data API</a> and plays videos in
+YouTube's embedded player. Sign in with your Google account to see your subscriptions,
+playlists and liked videos, like videos, comment and manage your own playlists.</p>
+
+<p>There is no Better YouTube server and no account to create. Each person runs the app with
+their own Google Cloud project and OAuth client ID, so the app talks to Google directly from
+your device.</p>
+
+<ul>
+<li><a href="https://github.com/atomtoto/Better-YouTube">Source code and setup instructions</a></li>
+<li><a href="privacy.html">Privacy Policy</a></li>
+<li><a href="terms.html">Terms of Use</a></li>
+</ul>
+
+<h2 id="google-cloud">Setting up your Google Cloud project</h2>
+<p>Google expires sign-ins every seven days while an OAuth consent screen is in
+<em>Testing</em>. To sign in once and stay signed in, publish yours. Google first asks for
+these values on the
+<a href="https://console.cloud.google.com/auth/branding">Branding</a> page:</p>
+
+<dl>
+<dt>Application home page</dt>
+<dd><code>https://atomtoto.github.io/Better-YouTube/</code></dd>
+<dt>Application privacy policy link</dt>
+<dd><code>https://atomtoto.github.io/Better-YouTube/privacy.html</code></dd>
+<dt>Application terms of service link</dt>
+<dd><code>https://atomtoto.github.io/Better-YouTube/terms.html</code></dd>
+<dt>Authorized domain</dt>
+<dd><code>atomtoto.github.io</code></dd>
+</dl>
+
+<p>Leave the logo empty: uploading one makes Google require a review before the app can be
+published. Then choose <strong>Publish app</strong> on the
+<a href="https://console.cloud.google.com/auth/audience">Audience</a> page. No verification is
+needed for your own project; at sign-in, Google shows a “Google hasn't verified this app”
+screen that you pass with <em>Advanced → Go to …</em>.</p>
+
+<footer>Better YouTube is not affiliated with, endorsed by or sponsored by Google or YouTube.
+YouTube is a trademark of Google LLC.</footer>
+</main>
+</body>
+</html>

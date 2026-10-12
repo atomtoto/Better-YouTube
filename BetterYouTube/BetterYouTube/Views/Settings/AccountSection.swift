@@ -33,8 +33,9 @@ struct AccountSection: View {
         } footer: {
             Text("""
             OAuth is recommended for browsing and account features; an API key is optional. \
-            While the consent screen is in Testing, only accounts added under Test users can sign \
-            in. Watch Later uses the separate youtube.com session. The app's watch history can \
+            Publish the consent screen, or Google signs you out every seven days: the app's website \
+            lists the values its Branding page needs. Leave the logo empty. Watch Later uses \
+            the separate youtube.com session. The app's watch history can \
             sync through iCloud; it is separate from your YouTube account's history.
 
             On the consent screen, tick the YouTube permission before Continue: left unticked, \
@@ -145,8 +146,14 @@ struct AccountSection: View {
         Link(destination: GoogleCloudSetupURL.oauthClients) {
             ExternalLinkLabel("Create or find an OAuth client ID")
         }
+        Link(destination: GoogleCloudSetupURL.oauthBranding) {
+            ExternalLinkLabel("Fill in Branding")
+        }
+        Link(destination: BrandingValue.setupInstructions) {
+            ExternalLinkLabel("Values for the Branding page")
+        }
         Link(destination: GoogleCloudSetupURL.oauthAudience) {
-            ExternalLinkLabel("Add a test user (if Testing)")
+            ExternalLinkLabel("Publish the app")
         }
         Text("Choose an iOS client (also used on macOS) with this app's bundle ID: \(Bundle.main.bundleIdentifier ?? "com.atomtoto.BetterYouTube")")
             .font(.footnote)

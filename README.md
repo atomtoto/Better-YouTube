@@ -622,15 +622,27 @@ app read its own credentials back.
    (`com.atomtoto.BetterYouTube`, or your own). That client type covers macOS too — the same
    client ID works for both builds, and both use the reversed client ID as their callback scheme.
    Paste the client ID on the welcome screen or in Settings, then tap *Sign in with Google*.
-   - **Publish the app** (recommended): in [Google Auth Platform → Audience](https://console.cloud.google.com/auth/audience), click
-     *Publish app* to move the publishing status from **Testing** to **In production**. While in
-     Testing, Google expires refresh tokens after **7 days**, so you'd be asked to sign in again
-     about once a week; in production the sign-in lasts until you revoke it, change your password
-     or leave it unused for about six months. No Google verification is needed: the project is
-     yours and you're its only user, well under the 100-user cap for unverified apps. Because
-     `youtube.force-ssl` is a sensitive scope, Google shows a "Google hasn't verified this app"
-     screen at sign-in — pass it via *Advanced → Go to …*. Leave the consent screen's logo
-     empty: adding one makes Google require brand verification.
+   - **Publish the app** (recommended). While the publishing status is **Testing**, Google
+     expires refresh tokens after **7 days**, so you'd be asked to sign in again about once a
+     week; in production the sign-in lasts until you revoke it, change your password or leave it
+     unused for about six months. Google won't enable *Publish app* until the
+     [Branding](https://console.cloud.google.com/auth/branding) page carries a home page, a privacy policy and terms of service, all on an
+     authorized domain. The project's own pages, served by GitHub Pages from `docs/`, work for
+     anyone's Cloud project:
+
+     | Branding field | Value |
+     | --- | --- |
+     | Application home page | `https://atomtoto.github.io/Better-YouTube/` |
+     | Application privacy policy link | `https://atomtoto.github.io/Better-YouTube/privacy.html` |
+     | Application terms of service link | `https://atomtoto.github.io/Better-YouTube/terms.html` |
+     | Authorized domains | `atomtoto.github.io` |
+
+     Leave the logo empty: uploading one makes Google require a review before publishing. Save,
+     then click *Publish app* in [Google Auth Platform → Audience](https://console.cloud.google.com/auth/audience). No Google
+     verification is needed: the project is yours and you're its only user, well under the
+     100-user cap for unverified apps, and proving you own the domain only matters for
+     verification. Because `youtube.force-ssl` is a sensitive scope, Google shows a "Google
+     hasn't verified this app" screen at sign-in — pass it via *Advanced → Go to …*.
    - **Or add yourself as a test user** and stay in Testing, accepting the weekly sign-in. With
      publishing status **Testing**, only the accounts listed under *Test users* may grant consent,
      so sign-in fails with `Error 403: access_denied` until you add the Google account you sign
@@ -663,6 +675,7 @@ app read its own credentials back.
 ## Project structure
 
 ```
+docs/                            Home page, privacy policy and terms (GitHub Pages), for Google's Branding page
 render.yaml                      One-click deploy of the resolver below
 resolver/                        A yt-dlp resolver: server.py, Dockerfile, compose, tests
 BetterYouTube/

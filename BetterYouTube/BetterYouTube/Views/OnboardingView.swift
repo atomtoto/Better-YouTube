@@ -113,7 +113,6 @@ private struct WelcomeStep: View {
 private struct CloudStep: View {
     @Binding var path: [OnboardingView.Step]
     let later: () -> Void
-    @State private var copiedBundleID = false
 
     private var bundleID: String {
         Bundle.main.bundleIdentifier ?? "com.atomtoto.BetterYouTube"
@@ -141,8 +140,14 @@ private struct CloudStep: View {
                 )
                 SetupLink(
                     number: 3,
-                    title: "Add yourself as a test user",
-                    detail: "Needed while the OAuth consent screen is in Testing.",
+                    title: "Fill in Branding",
+                    detail: "Paste the values below. Leave the logo empty.",
+                    url: GoogleCloudSetupURL.oauthBranding
+                )
+                SetupLink(
+                    number: 4,
+                    title: "Publish the app",
+                    detail: "Otherwise Google signs you out every seven days.",
                     url: GoogleCloudSetupURL.oauthAudience
                 )
             } footer: {
@@ -150,28 +155,24 @@ private struct CloudStep: View {
             }
 
             Section {
-                HStack {
-                    Text(bundleID)
-                        .font(.callout.monospaced())
-                        .textSelection(.enabled)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Spacer(minLength: 12)
-                    Button(
-                        copiedBundleID ? "Copied" : "Copy",
-                        systemImage: copiedBundleID ? "checkmark" : "doc.on.doc"
-                    ) {
-                        Platform.copyToPasteboard(bundleID)
-                        copiedBundleID = true
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .contentTransition(.symbolEffect(.replace))
-                }
+                CopyableValueRow(value: bundleID)
             } header: {
                 Text("Use this bundle ID")
             } footer: {
                 Text("Paste it into the OAuth client's Bundle ID field.")
+            }
+
+            Section {
+                ForEach(BrandingValue.allCases) { item in
+                    CopyableValueRow(label: item.field, value: item.value)
+                }
+            } header: {
+                Text("Branding")
+            } footer: {
+                Text("""
+                Google won't publish the app without these. At sign-in it then shows "Google \
+                hasn't verified this app": choose Advanced, then Go to the app.
+                """)
             }
         } actions: {
             Button {
@@ -182,7 +183,39 @@ private struct CloudStep: View {
             }
             .buttonStyle(.borderedProminent)
         }
-        .sensoryFeedback(.success, trigger: copiedBundleID) { _, copied in copied }
+    }
+}
+
+/// A value to paste into Google Cloud, with a button that copies it.
+private struct CopyableValueRow: View {
+    var label: LocalizedStringResource?
+    let value: String
+    @State private var copied = false
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 3) {
+                if let label {
+                    Text(label)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Text(value)
+                    .font(.callout.monospaced())
+                    .textSelection(.enabled)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+            }
+            Spacer(minLength: 12)
+            Button(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc") {
+                Platform.copyToPasteboard(value)
+                copied = true
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .contentTransition(.symbolEffect(.replace))
+        }
+        .sensoryFeedback(.success, trigger: copied) { _, copied in copied }
     }
 }
 
