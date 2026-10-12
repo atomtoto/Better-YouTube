@@ -379,11 +379,33 @@ final class ICloudSyncService: ObservableObject {
               let services = SecTaskCopyValueForEntitlement(task, "com.apple.developer.icloud-services" as CFString, nil) as? [String]
         else { return false }
         return services.contains("CloudKit")
-        #else
-        // Device installations require provisioning; Xcode supplies the simulator entitlements.
+        #elseif targetEnvironment(simulator)
+        // Xcode signs the entitlements straight into a simulator build; there is no profile to read.
         return true
+        #else
+        // A build installed from Xcode carries its provisioning profile, which lists what it may
+        // use — and a free personal team can't provision iCloud. Creating a CloudKit container
+        // without it stops the app at launch, so sync stays off instead. App Store and TestFlight
+        // builds carry no profile, and are always provisioned.
+        guard let entitlements = provisionedEntitlements() else { return true }
+        return (entitlements["com.apple.developer.icloud-services"] as? [String])?.contains("CloudKit") ?? false
         #endif
     }
+
+    #if os(iOS) && !targetEnvironment(simulator)
+    /// The entitlements in the app's `embedded.mobileprovision`: a signed envelope around a
+    /// property list, which is read out from between its markers.
+    private static func provisionedEntitlements() -> [String: Any]? {
+        guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+              let data = try? Data(contentsOf: url),
+              let start = data.range(of: Data("<?xml".utf8)),
+              let end = data.range(of: Data("</plist>".utf8), in: start.lowerBound..<data.endIndex),
+              let profile = try? PropertyListSerialization.propertyList(
+                from: data[start.lowerBound..<end.upperBound], format: nil) as? [String: Any]
+        else { return nil }
+        return profile["Entitlements"] as? [String: Any] ?? [:]
+    }
+    #endif
 }
 
 extension ICloudSyncService: CKSyncEngineDelegate {
