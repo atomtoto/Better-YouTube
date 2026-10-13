@@ -339,11 +339,11 @@ struct VideoMenuItems: View {
     @ViewBuilder
     var body: some View {
         Button {
-            player.addToQueue(video)
+            player.playAfterCurrent(video)
         } label: {
-            Label("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward")
+            Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
         }
-        .disabled(player.isQueued(video))
+        .disabled(player.playsNext(video))
 
         Button {
             Task {

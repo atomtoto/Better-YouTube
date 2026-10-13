@@ -722,21 +722,28 @@ final class PlayerManager: ObservableObject {
         playNext()
     }
 
-    /// Puts a video at the end of what plays next. With nothing playing there is no queue to
-    /// join, so the video simply starts.
-    func addToQueue(_ video: Video) {
-        guard currentVideo != nil else {
+    /// Puts a video first in what plays next, right after the one playing now — moving it up if
+    /// it was already further down the queue. With nothing playing there is no queue to join,
+    /// so the video simply starts — as it does once the current one has ended, since "after
+    /// the one playing now" is then right away.
+    func playAfterCurrent(_ video: Video) {
+        guard let currentVideo else {
             play(video)
             return
         }
-        guard !isQueued(video) else { return }
-        upNext.append(video)
+        guard currentVideo.id != video.id else { return }
+        if playbackDidEnd {
+            play(video, upNext: upNext)
+            return
+        }
+        upNext.removeAll { $0.id == video.id }
+        upNext.insert(video, at: 0)
         refreshNowPlaying()
     }
 
-    /// Whether the video is playing now or already waiting in the queue.
-    func isQueued(_ video: Video) -> Bool {
-        currentVideo?.id == video.id || upNext.contains { $0.id == video.id }
+    /// Whether the video already plays next: it is playing now, or first in the queue.
+    func playsNext(_ video: Video) -> Bool {
+        currentVideo?.id == video.id || upNext.first?.id == video.id
     }
 
     func playNext() {

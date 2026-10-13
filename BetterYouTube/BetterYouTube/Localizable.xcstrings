@@ -572,16 +572,6 @@
         }
       }
     },
-    "Add to Queue" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajouter dans la file d’attente"
-          }
-        }
-      }
-    },
     "Add to Watch Later" : {
       "localizations" : {
         "fr" : {
@@ -3271,6 +3261,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lire une liste de la bibliothèque"
+          }
+        }
+      }
+    },
+    "Play Next" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire ensuite"
           }
         }
       }
