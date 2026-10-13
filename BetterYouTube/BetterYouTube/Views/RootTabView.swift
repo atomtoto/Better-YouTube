@@ -179,9 +179,9 @@ struct RootTabView: View {
         // above it follows the same rule, see `minimizesPlayerBarOnScroll`.
         .tabBarMinimizeBehavior(.onScrollDown)
         // Touching the shrunk tab bar brings it back without any scroll, which the player bar
-        // has no other way to hear about. Simultaneous, so the tab bar still gets the touch.
-        .simultaneousGesture(SpatialTapGesture(coordinateSpace: .global).onEnded { tap in
-            if tap.location.y >= tabBarTop { player.tabBarWasTouched() }
+        // has no other way to hear about. See `PassiveTap` for why it isn't a SwiftUI gesture.
+        .gesture(PassiveTap { location in
+            if location.y >= tabBarTop { player.tabBarWasTouched() }
         })
     }
 
@@ -236,6 +236,45 @@ struct RootTabView: View {
 
 #endif
 }
+
+#if os(iOS)
+/// A tap anywhere, heard without taking the touch from whatever it lands on.
+///
+/// A SwiftUI tap gesture cancels the touches under it once it recognizes, and in a `List` or a
+/// `Form` that cancelled the row's selection: with one across the whole tab view, no row in
+/// Library or Settings could be opened, nor long-pressed. A UIKit recognizer can be told to
+/// leave the touch alone, and to recognize alongside every other gesture.
+private struct PassiveTap: UIGestureRecognizerRepresentable {
+    /// Where the tap landed, in the window's coordinates.
+    let action: (CGPoint) -> Void
+
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIGestureRecognizer(context: Context) -> UITapGestureRecognizer {
+        let recognizer = UITapGestureRecognizer()
+        recognizer.cancelsTouchesInView = false
+        recognizer.delaysTouchesEnded = false
+        recognizer.delegate = context.coordinator
+        return recognizer
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: UITapGestureRecognizer, context: Context) {
+        guard recognizer.state == .ended else { return }
+        action(context.converter.location(in: .global))
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+    }
+}
+#endif
 
 enum OnboardingProgress {
     static let startedKey = "onboarding_started"
