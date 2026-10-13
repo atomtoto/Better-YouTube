@@ -902,6 +902,16 @@
         }
       }
     },
+    "Better YouTube reaches YouTube through your own Google Cloud project: it's free, and set up once. Choose the same project on each linked page." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Better YouTube accède à YouTube via ton propre projet Google Cloud : c’est gratuit et ça se configure une seule fois. Choisis le même projet sur chaque page liée."
+          }
+        }
+      }
+    },
     "Branding" : {
       "localizations" : {
         "fr" : {
@@ -918,6 +928,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ajoute ton accueil YouTube"
+          }
+        }
+      }
+    },
+    "Bundle ID" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Identifiant de bundle"
           }
         }
       }
@@ -1022,22 +1042,22 @@
         }
       }
     },
-    "Choose an iOS client (also used on macOS) with this app's bundle ID: %@" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choisis un client iOS (utilisé aussi sur macOS) avec l’identifiant de bundle de cette app : %@"
-          }
-        }
-      }
-    },
     "Choose the destination. Custom playlists use the Google account connected in Settings." : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Choisis la destination. Les playlists personnalisées utilisent le compte Google connecté dans les Réglages."
+          }
+        }
+      }
+    },
+    "Choose the iOS application type, including on a Mac, with the bundle ID below." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis le type d’application iOS, même sur Mac, avec l’identifiant de bundle ci-dessous."
           }
         }
       }
@@ -1122,12 +1142,12 @@
         }
       }
     },
-    "Click here to add YouTube OAuth client ID" : {
+    "Client ID looks right." : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Touche ici pour ajouter l’identifiant client OAuth YouTube"
+            "value" : "L’identifiant client semble correct."
           }
         }
       }
@@ -1498,16 +1518,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Créer ou trouver une clé API"
-          }
-        }
-      }
-    },
-    "Create or find an OAuth client ID" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Créer ou trouver un identifiant client OAuth"
           }
         }
       }
@@ -2042,22 +2052,32 @@
         }
       }
     },
-    "Google Cloud setup · select your project on each page" : {
+    "Google Cloud Project" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Configuration Google Cloud · sélectionne ton projet sur chaque page"
+            "value" : "Projet Google Cloud"
           }
         }
       }
     },
-    "Google refused the consent screen (access_denied). While the OAuth consent screen is in Testing, only accounts listed as test users can sign in. Publish it under Google Auth Platform → Audience, after filling in Branding with the values linked from Settings → YouTube Account, or add your Google account under Test users." : {
+    "Google account" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google a refusé l’écran de consentement (access_denied). Tant que l’écran de consentement OAuth est en mode Test, seuls les comptes listés comme utilisateurs test peuvent se connecter. Publie-le sous Google Auth Platform → Audience, après avoir rempli Branding avec les valeurs indiquées dans Réglages → Compte YouTube, ou ajoute ton compte Google sous Utilisateurs test."
+            "value" : "Compte Google"
+          }
+        }
+      }
+    },
+    "Google refused the consent screen (access_denied). While the OAuth consent screen is in Testing, only accounts listed as test users can sign in. Publish it under Google Auth Platform → Audience, after filling in Branding with the values linked from Settings → Account, or add your Google account under Test users." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google a refusé l’écran de consentement (access_denied). Tant que l’écran de consentement OAuth est en mode Test, seuls les comptes listés comme utilisateurs test peuvent se connecter. Publie-le sous Google Auth Platform → Audience, après avoir rempli Branding avec les valeurs indiquées dans Réglages → Compte, ou ajoute ton compte Google sous Utilisateurs test."
           }
         }
       }
@@ -2122,12 +2142,12 @@
         }
       }
     },
-    "Google stopped accepting the saved sign-in. While the OAuth consent screen is in Testing, refresh tokens expire after seven days. Publish it under Google Auth Platform → Audience, after filling in Branding with the values linked from Settings → YouTube Account, and this stops. Sign in again to carry on." : {
+    "Google stopped accepting the saved sign-in. While the OAuth consent screen is in Testing, refresh tokens expire after seven days. Publish it under Google Auth Platform → Audience, after filling in Branding with the values linked from Settings → Account, and this stops. Sign in again to carry on." : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Google n’accepte plus la connexion enregistrée. Tant que l’écran de consentement OAuth est en mode Test, les jetons d’actualisation expirent après sept jours. Publie-le sous Google Auth Platform → Audience, après avoir rempli Branding avec les valeurs indiquées dans Réglages → Compte YouTube, et ça s’arrêtera. Reconnecte-toi pour continuer."
+            "value" : "Google n’accepte plus la connexion enregistrée. Tant que l’écran de consentement OAuth est en mode Test, les jetons d’actualisation expirent après sept jours. Publie-le sous Google Auth Platform → Audience, après avoir rempli Branding avec les valeurs indiquées dans Réglages → Compte, et ça s’arrêtera. Reconnecte-toi pour continuer."
           }
         }
       }
@@ -2198,6 +2218,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "J’ai mon identifiant client OAuth"
+          }
+        }
+      }
+    },
+    "If Google signs you out every seven days, the app is still in Testing in your Cloud project: publish it (step 4)." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si Google te déconnecte tous les sept jours, l’app est encore en mode Test dans ton projet Cloud : publie-la (étape 4)."
           }
         }
       }
@@ -2773,6 +2803,16 @@
         }
       }
     },
+    "Not Signed In" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non connecté"
+          }
+        }
+      }
+    },
     "Not available in the demo. Sign in with Google to like videos, subscribe, comment and edit playlists." : {
       "localizations" : {
         "fr" : {
@@ -2885,32 +2925,12 @@
         }
       }
     },
-    "OAuth ID" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ID OAuth"
-          }
-        }
-      }
-    },
     "OAuth client ID" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Identifiant client OAuth"
-          }
-        }
-      }
-    },
-    "OAuth is recommended for browsing and account features; an API key is optional. Publish the consent screen, or Google signs you out every seven days: the app's website lists the values its Branding page needs. Leave the logo empty. Watch Later uses the separate youtube.com session. The app's watch history can sync through iCloud; it is separate from your YouTube account's history.\n\nOn the consent screen, tick the YouTube permission before Continue: left unticked, Google issues a sign-in that can't do anything and the app has to throw it away.\n\nPasskeys don't work in the sign-in sheet — the system only offers them in Safari itself. Sign in to Google in Safari first, with your passkey, and this sheet borrows that session and won't ask for anything at all." : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OAuth est recommandé pour la navigation et les fonctions du compte ; une clé API est facultative. Publie l’écran de consentement, sinon Google te déconnecte tous les sept jours : le site web de l’app indique les valeurs à saisir dans sa page Branding. Laisse le logo vide. « À regarder plus tard » utilise la session youtube.com distincte. L’historique de visionnage de l’app peut se synchroniser via iCloud ; il est distinct de l’historique de ton compte YouTube.\n\nSur l’écran de consentement, coche l’autorisation YouTube avant de continuer : sans elle, Google délivre une connexion qui ne peut rien faire et que l’app doit jeter.\n\nLes clés d’identification ne fonctionnent pas dans la fenêtre de connexion — le système ne les propose que dans Safari. Connecte-toi d’abord à Google dans Safari avec ta clé d’identification, et cette fenêtre reprendra cette session sans rien te demander."
           }
         }
       }
@@ -2965,6 +2985,16 @@
         }
       }
     },
+    "On Google's consent screen, tick the YouTube permission before Continue. To use a passkey, sign in to Google in Safari first: this sheet reuses that session." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sur l’écran de consentement de Google, coche l’autorisation YouTube avant de continuer. Pour utiliser une clé d’identification, connecte-toi d’abord à Google dans Safari : cette fenêtre reprendra cette session."
+          }
+        }
+      }
+    },
     "On This Device" : {
       "localizations" : {
         "fr" : {
@@ -2991,6 +3021,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Le téléchargement sur l’appareil n’a pas pu résoudre cette vidéo. %@ Tu peux réessayer, mettre l’app à jour ou choisir ton serveur dans Réglages → Téléchargements."
+          }
+        }
+      }
+    },
+    "Once, in a few minutes." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une seule fois, en quelques minutes."
           }
         }
       }
@@ -3191,6 +3231,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Colle ton identifiant client"
+          }
+        }
+      }
+    },
+    "Paste your client ID above first." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colle d’abord ton identifiant client ci-dessus."
           }
         }
       }
@@ -4186,6 +4236,16 @@
         }
       }
     },
+    "Sign in with Google for your subscriptions, playlists and likes." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi avec Google pour retrouver tes abonnements, tes playlists et tes « J’aime »."
+          }
+        }
+      }
+    },
     "Sign in with Google from Settings to browse your subscriptions, playlists and liked videos. Connect to youtube.com for YouTube's Watch Later. The app's favorites, Watch Later and watch history can sync across your Apple devices with iCloud Sync in Settings." : {
       "localizations" : {
         "fr" : {
@@ -4242,6 +4302,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Connecte-toi avec Google pour être prévenu quand les chaînes que tu suis publient une vidéo."
+          }
+        }
+      }
+    },
+    "Sign out of Google?" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se déconnecter de Google ?"
           }
         }
       }
@@ -4386,6 +4456,36 @@
         }
       }
     },
+    "Step 1 · Google Cloud" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Étape 1 · Google Cloud"
+          }
+        }
+      }
+    },
+    "Step 2 · OAuth Client ID" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Étape 2 · Identifiant client OAuth"
+          }
+        }
+      }
+    },
+    "Step 3 · Sign In" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Étape 3 · Connexion"
+          }
+        }
+      }
+    },
     "Still reading the last page from YouTube. Try again in a moment." : {
       "localizations" : {
         "fr" : {
@@ -4466,12 +4566,12 @@
         }
       }
     },
-    "Subscriptions, playlists and likes are available in Library." : {
+    "Subscriptions, playlists and likes are in Library. Your YouTube Home feed and YouTube's Watch Later use a separate youtube.com sign-in, under YouTube Home." : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les abonnements, les playlists et les « J’aime » sont disponibles dans la Bibliothèque."
+            "value" : "Les abonnements, les playlists et les « J’aime » sont dans la Bibliothèque. Ton fil Accueil YouTube et le « À regarder plus tard » de YouTube passent par une connexion youtube.com distincte, dans Accueil YouTube."
           }
         }
       }
@@ -5317,12 +5417,12 @@
         }
       }
     },
-    "Values for the Branding page" : {
+    "Values to Paste" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Valeurs pour la page Branding"
+            "value" : "Valeurs à coller"
           }
         }
       }
@@ -5493,6 +5593,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Les chaînes dont tu as activé la cloche sur YouTube ne figurent pas non plus dans l’API — un abonnement indique s’il couvre les mises en ligne ou tout, mais rien des trois réglages de la cloche. Avec une session Accueil YouTube connectée, le bouton ci-dessus lit plutôt ta vraie boîte de notifications et en tire les chaînes : une chaîne n’y apparaît que parce que sa cloche est activée. Une lacune en découle — une chaîne qui n’a rien publié récemment n’a rien dans la boîte qui permette de la trouver."
+          }
+        }
+      }
+    },
+    "Why You Were Signed Out" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pourquoi tu as été déconnecté"
           }
         }
       }
@@ -5853,6 +5963,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ton vrai fil d’accueil n’existe que sur la page de YouTube : l’API Data a abandonné le fil personnalisé en 2016 et les vidéos associées en 2023. Te connecter ici ouvre youtube.com dans une vue web et garde ses cookies sur cet appareil, à part de la connexion Google ci-dessus — celle-là est un jeton limité à l’API, celle-ci une session de navigateur. L’app lit l’ordre des vidéos de ta page d’accueil et récupère via l’API tout ce qu’elle affiche à leur sujet. Cela sort de ce que les conditions de YouTube autorisent aux apps, cela peut casser à chaque changement de la page, et c’est ton compte qui en porte le risque. Déconnecte-toi ici et l’app oublie la session, et le segment Accueil avec elle."
+          }
+        }
+      }
+    },
+    "Your subscriptions, playlists and likes leave Library until you sign in again. Favorites, history and downloads aren't affected." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes abonnements, tes playlists et tes « J’aime » quittent la Bibliothèque jusqu’à ta prochaine connexion. Les favoris, l’historique et les téléchargements ne sont pas touchés."
           }
         }
       }

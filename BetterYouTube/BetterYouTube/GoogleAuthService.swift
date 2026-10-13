@@ -46,7 +46,7 @@ enum AuthError: LocalizedError {
                 Google refused the consent screen (access_denied). While the OAuth consent screen is \
                 in Testing, only accounts listed as test users can sign in. Publish it under Google \
                 Auth Platform → Audience, after filling in Branding with the values linked from \
-                Settings → YouTube Account, or add your Google account under Test users.
+                Settings → Account, or add your Google account under Test users.
                 """)
             }
             if let reason {
@@ -161,7 +161,7 @@ final class GoogleAuthService: ObservableObject {
         String(localized: """
         Google stopped accepting the saved sign-in. While the OAuth consent screen is in Testing, \
         refresh tokens expire after seven days. Publish it under Google Auth Platform → Audience, \
-        after filling in Branding with the values linked from Settings → YouTube Account, and \
+        after filling in Branding with the values linked from Settings → Account, and \
         this stops. Sign in again to carry on.
         """)
     }

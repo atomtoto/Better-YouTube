@@ -186,8 +186,8 @@ private struct CloudStep: View {
     }
 }
 
-/// A value to paste into Google Cloud, with a button that copies it.
-private struct CopyableValueRow: View {
+/// A value to paste into Google Cloud, with a button that copies it. Settings → Account uses it too.
+struct CopyableValueRow: View {
     var label: LocalizedStringResource?
     let value: String
     @State private var copied = false
@@ -508,8 +508,8 @@ private struct FeatureRow: View {
     }
 }
 
-/// A numbered step that opens a Google Cloud page in the browser.
-private struct SetupLink: View {
+/// A numbered step that opens a Google Cloud page in the browser. Settings → Account uses it too.
+struct SetupLink: View {
     let number: Int
     let title: LocalizedStringKey
     let detail: LocalizedStringKey

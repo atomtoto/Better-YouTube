@@ -1,6 +1,10 @@
 import SwiftUI
 
 /// The Google sign-in, and the account it bought you.
+///
+/// Signed out, the pane reads top to bottom as the way in: what signing in is for, then the three
+/// things it takes — a Google Cloud project, its client ID, and the sign-in itself. Signed in, it
+/// is the account, the way out, and the Cloud project kept to hand for later.
 struct AccountSection: View {
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var watchLater: WatchLaterStore
@@ -8,157 +12,68 @@ struct AccountSection: View {
 
     @State private var isSigningIn = false
     @State private var authError: String?
+    @State private var confirmsSignOut = false
+    /// Open on a first visit, closed once a client ID is in place: by then the Cloud project
+    /// exists, and the steps would only push the sign-in button down the screen.
+    @State private var showsCloudSteps = GoogleAuthService.shared.redirectScheme == nil
     /// The signed-in account's own YouTube channel, for the avatar and name at the top.
     @State private var account: Channel?
+
+    @ScaledMetric(relativeTo: .largeTitle) private var avatarSize = 84
 
     var body: some View {
         if demo.isActive {
             DemoSection()
+        } else if auth.isSignedIn {
+            signedIn
         } else {
-            accountSection
+            signedOut
         }
     }
 
-    private var accountSection: some View {
-        Section {
-            if auth.isSignedIn {
-                signedIn
-                cloudSetupLinks
-            } else {
-                cloudSetupLinks
-                signedOut
-            }
-        } header: {
-            Text("YouTube Account")
-        } footer: {
-            Text("""
-            OAuth is recommended for browsing and account features; an API key is optional. \
-            Publish the consent screen, or Google signs you out every seven days: the app's website \
-            lists the values its Branding page needs. Leave the logo empty. Watch Later uses \
-            the separate youtube.com session. The app's watch history can \
-            sync through iCloud; it is separate from your YouTube account's history.
-
-            On the consent screen, tick the YouTube permission before Continue: left unticked, \
-            Google issues a sign-in that can't do anything and the app has to throw it away.
-
-            Passkeys don't work in the sign-in sheet — the system only offers them in Safari \
-            itself. Sign in to Google in Safari first, with your passkey, and this sheet borrows \
-            that session and won't ask for anything at all.
-            """)
-        }
-        .task(id: auth.isSignedIn) {
-            guard auth.isSignedIn else {
-                account = nil
-                return
-            }
-            account = try? await YouTubeAPIService.shared.myChannel()
-        }
-    }
+    // MARK: Signed in
 
     @ViewBuilder
     private var signedIn: some View {
-        HStack(spacing: 14) {
-            AvatarView(url: account?.thumbnailURL, size: 52)
-                .artworkShadow()
-            VStack(alignment: .leading, spacing: 3) {
-                Text(account?.title ?? String(localized: "Signed in with Google"))
-                    .font(.headline)
-                    .lineLimit(1)
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+        Section {
+            header(title: account?.title ?? String(localized: "Signed in with Google"), detail: detail) {
+                AvatarView(url: account?.thumbnailURL, size: avatarSize)
+                    .artworkShadow()
             }
         }
-        .padding(.vertical, 4)
-
-        Button("Sign Out", role: .destructive) {
-            auth.signOut()
-            // The next account has a playlist of its own; drop this one's.
-            watchLater.reset()
+        .task {
+            account = try? await YouTubeAPIService.shared.myChannel()
         }
-    }
+        // The next account to sign in is not this one; don't show its picture meanwhile.
+        .onDisappear { account = nil }
 
-    @ViewBuilder
-    private var signedOut: some View {
-        // Google ending the session looks from here like the app dropping it for no
-        // reason, and the usual cause has a fix worth naming.
-        if let reason = auth.lastSignOutReason {
-            Label {
-                Text(reason)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            } icon: {
-                Image(systemName: "clock.badge.exclamationmark")
-                    .foregroundStyle(.orange)
+        Section {
+            Label("Connected with Google", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+
+            Button("Sign Out", role: .destructive) {
+                confirmsSignOut = true
             }
-        }
-
-        // Bound straight to the store rather than through a draft. There is no Save button here —
-        // the field always wrote through on every keystroke — so the draft was only ever a second
-        // copy to keep in step, and one the app reset had to reach in and clear.
-#if os(macOS)
-        TextField("OAuth ID", text: $auth.clientId)
-            .identifierField()
-            .onChange(of: auth.clientId) { _, _ in authError = nil }
-#else
-        TextField("Click here to add YouTube OAuth client ID", text: $auth.clientId)
-            .identifierField()
-            .onChange(of: auth.clientId) { _, _ in authError = nil }
-#endif
-
-        if let inputError = auth.clientIdInputError,
-           case .clientIdIsURL = inputError {
-            Text(inputError.localizedDescription)
-                .font(.footnote)
-                .foregroundStyle(.red)
-        }
-
-        Button {
-            signIn()
-        } label: {
-            HStack {
-                if isSigningIn {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Image(systemName: "person.crop.circle.badge.plus")
+            .confirmationDialog("Sign out of Google?", isPresented: $confirmsSignOut, titleVisibility: .visible) {
+                Button("Sign Out", role: .destructive) {
+                    auth.signOut()
+                    // The next account has a playlist of its own; drop this one's.
+                    watchLater.reset()
                 }
-                Text("Sign in with Google")
+            } message: {
+                Text("Your subscriptions, playlists and likes leave Library until you sign in again. Favorites, history and downloads aren't affected.")
             }
+        } footer: {
+            Text("Subscriptions, playlists and likes are in Library. Your YouTube Home feed and YouTube's Watch Later use a separate youtube.com sign-in, under YouTube Home.")
         }
-        .disabled(isSigningIn || auth.redirectScheme == nil)
 
-        if let authError {
-            Text(authError)
-                .font(.footnote)
-                .foregroundStyle(.red)
+        Section {
+            DisclosureGroup("Google Cloud Project") {
+                cloudSteps
+            }
+        } footer: {
+            Text("If Google signs you out every seven days, the app is still in Testing in your Cloud project: publish it (step 4).")
         }
-    }
-
-    @ViewBuilder
-    private var cloudSetupLinks: some View {
-        Text("Google Cloud setup · select your project on each page")
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-        Link(destination: GoogleCloudSetupURL.youtubeDataAPI) {
-            ExternalLinkLabel("Enable YouTube Data API v3")
-        }
-        Link(destination: GoogleCloudSetupURL.oauthClients) {
-            ExternalLinkLabel("Create or find an OAuth client ID")
-        }
-        Link(destination: GoogleCloudSetupURL.oauthBranding) {
-            ExternalLinkLabel("Fill in Branding")
-        }
-        Link(destination: BrandingValue.setupInstructions) {
-            ExternalLinkLabel("Values for the Branding page")
-        }
-        Link(destination: GoogleCloudSetupURL.oauthAudience) {
-            ExternalLinkLabel("Publish the app")
-        }
-        Text("Choose an iOS client (also used on macOS) with this app's bundle ID: \(Bundle.main.bundleIdentifier ?? "com.atomtoto.BetterYouTube")")
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .textSelection(.enabled)
     }
 
     /// The channel's own numbers once they arrive; until then — or for a Google account with no
@@ -172,8 +87,176 @@ struct AccountSection: View {
             parts.append(CountFormatter.videos(videos))
         }
         return parts.isEmpty
-            ? String(localized: "Subscriptions, playlists and likes are available in Library.")
+            ? String(localized: "Google account")
             : parts.joined(separator: " · ")
+    }
+
+    // MARK: Signed out
+
+    @ViewBuilder
+    private var signedOut: some View {
+        Section {
+            header(
+                title: String(localized: "Not Signed In"),
+                detail: String(localized: "Sign in with Google for your subscriptions, playlists and likes.")
+            ) {
+                Image(systemName: "person.crop.circle.fill")
+                    .resizable()
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.secondary)
+                    .frame(width: avatarSize, height: avatarSize)
+            }
+        }
+
+        // Google ending the session looks from here like the app dropping it for no
+        // reason, and the usual cause has a fix worth naming.
+        if let reason = auth.lastSignOutReason {
+            Section {
+                Label {
+                    Text(reason)
+                        .font(.footnote)
+                } icon: {
+                    Image(systemName: "clock.badge.exclamationmark")
+                        .foregroundStyle(.orange)
+                }
+            } header: {
+                Text("Why You Were Signed Out")
+            }
+        }
+
+        Section {
+            DisclosureGroup(isExpanded: $showsCloudSteps) {
+                cloudSteps
+            } label: {
+                Label {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Prepare Google Cloud")
+                        Text("Once, in a few minutes.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "checklist")
+                        .foregroundStyle(.tint)
+                }
+            }
+        } header: {
+            Text("Step 1 · Google Cloud")
+        } footer: {
+            Text("Better YouTube reaches YouTube through your own Google Cloud project: it's free, and set up once. Choose the same project on each linked page.")
+        }
+
+        // Bound straight to the store rather than through a draft. There is no Save button here —
+        // the field always wrote through on every keystroke — so the draft was only ever a second
+        // copy to keep in step, and one the app reset had to reach in and clear.
+        Section {
+            TextField("OAuth client ID", text: $auth.clientId, prompt: Text("Paste your client ID"))
+                .identifierField()
+                .onChange(of: auth.clientId) { _, _ in authError = nil }
+        } header: {
+            Text("Step 2 · OAuth Client ID")
+        } footer: {
+            if let inputError = auth.clientIdInputError {
+                Label(inputError.localizedDescription, systemImage: "exclamationmark.circle.fill")
+                    .foregroundStyle(.red)
+            } else if auth.redirectScheme != nil {
+                Label("Client ID looks right.", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            } else {
+                Text("It ends in .apps.googleusercontent.com. You can find it under Google Cloud → Clients.")
+            }
+        }
+
+        Section {
+            Button(action: signIn) {
+                Label {
+                    Text("Sign in with Google")
+                } icon: {
+                    if isSigningIn {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "person.crop.circle.badge.plus")
+                    }
+                }
+            }
+            .disabled(isSigningIn || auth.redirectScheme == nil)
+
+            if let authError {
+                Label(authError, systemImage: "exclamationmark.circle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+        } header: {
+            Text("Step 3 · Sign In")
+        } footer: {
+            if auth.redirectScheme == nil {
+                Text("Paste your client ID above first.")
+            } else {
+                Text("""
+                On Google's consent screen, tick the YouTube permission before Continue. \
+                To use a passkey, sign in to Google in Safari first: this sheet reuses that session.
+                """)
+            }
+        }
+        .sensoryFeedback(.error, trigger: authError) { _, error in error != nil }
+    }
+
+    // MARK: Header
+
+    /// The account at the top of the pane, centred the way the system's Settings shows its own:
+    /// a picture, a name, one line under it.
+    private func header(title: String, detail: String, @ViewBuilder picture: () -> some View) -> some View {
+        VStack(spacing: 10) {
+            picture()
+                .accessibilityHidden(true)
+            Text(title)
+                .font(.title2.bold())
+                .lineLimit(2)
+            Text(detail)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .listRowBackground(Color.clear)
+    }
+
+    // MARK: Google Cloud
+
+    /// The one-time setup in Google Cloud, the same steps first-run setup walks through, with the
+    /// values to paste kept folded away until they're wanted.
+    @ViewBuilder
+    private var cloudSteps: some View {
+        SetupLink(
+            number: 1,
+            title: "Enable YouTube Data API v3",
+            detail: "Required for browsing and account features.",
+            url: GoogleCloudSetupURL.youtubeDataAPI
+        )
+        SetupLink(
+            number: 2,
+            title: "Create an OAuth client ID",
+            detail: "Choose the iOS application type, including on a Mac, with the bundle ID below.",
+            url: GoogleCloudSetupURL.oauthClients
+        )
+        SetupLink(
+            number: 3,
+            title: "Fill in Branding",
+            detail: "Paste the values below. Leave the logo empty.",
+            url: GoogleCloudSetupURL.oauthBranding
+        )
+        SetupLink(
+            number: 4,
+            title: "Publish the app",
+            detail: "Otherwise Google signs you out every seven days.",
+            url: GoogleCloudSetupURL.oauthAudience
+        )
+        DisclosureGroup("Values to Paste") {
+            CopyableValueRow(label: "Bundle ID", value: Bundle.main.bundleIdentifier ?? "com.atomtoto.BetterYouTube")
+            ForEach(BrandingValue.allCases) { item in
+                CopyableValueRow(label: item.field, value: item.value)
+            }
+        }
     }
 
     private func signIn() {
