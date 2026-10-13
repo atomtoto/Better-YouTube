@@ -44,6 +44,7 @@ enum AppReset {
         UserDefaults.standard.removeObject(forKey: FloatingMiniPlayerSize.storageKey)
         UserDefaults.standard.removeObject(forKey: PlayerManager.autoplayKey)
         UserDefaults.standard.removeObject(forKey: SettingsTabPreference.storageKey)
+        UserDefaults.standard.removeObject(forKey: SearchTabPreference.storageKey)
         UserDefaults.standard.removeObject(forKey: LaunchSectionPreference.storageKey)
         UserDefaults.standard.removeObject(forKey: OnboardingProgress.startedKey)
         UserDefaults.standard.removeObject(forKey: OnboardingProgress.completedKey)

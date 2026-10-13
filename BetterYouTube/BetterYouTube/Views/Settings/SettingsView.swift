@@ -4,6 +4,12 @@ enum SettingsTabPreference {
     static let storageKey = "show_settings_tab"
 }
 
+/// Whether Search is an ordinary tab inside the tab bar, with its field under the title, rather
+/// than the separate button at the end of the bar that turns into a field along the bottom.
+enum SearchTabPreference {
+    static let storageKey = "search_in_tab_bar"
+}
+
 /// The section the app opens on. It is read once, at launch, so a change applies the next time
 /// the app starts rather than moving the screen under the person who just changed it.
 enum LaunchSectionPreference: String, CaseIterable, Identifiable {

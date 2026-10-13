@@ -67,6 +67,7 @@ struct SettingsPaneView: View {
     @AppStorage(LaunchSectionPreference.storageKey) private var launchSection = LaunchSectionPreference.home
     #if os(iOS)
     @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
+    @AppStorage(SearchTabPreference.storageKey) private var searchInTabBar = false
     #endif
 
     var body: some View {
@@ -105,6 +106,9 @@ struct SettingsPaneView: View {
                 #if os(iOS)
                 Section {
                     Toggle("Show Settings in Tab Bar", isOn: $showsSettingsTab)
+                    Toggle("Search in Tab Bar", isOn: $searchInTabBar)
+                } footer: {
+                    Text("Search in Tab Bar makes Search a tab like the others, with its field under the title. Turned off, Search is a separate button at the end of the tab bar that turns into a field along the bottom.")
                 }
                 #endif
                 ResetSection()

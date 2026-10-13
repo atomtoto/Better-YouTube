@@ -189,6 +189,16 @@ extension SearchFieldPlacement {
         .toolbar
         #endif
     }
+
+    /// Where it goes when Search is an ordinary tab in the bar instead: always on screen under
+    /// the navigation bar's title on a phone, and in the toolbar on a Mac all the same.
+    static var underTitle: SearchFieldPlacement {
+        #if os(iOS)
+        .navigationBarDrawer(displayMode: .always)
+        #else
+        .toolbar
+        #endif
+    }
 }
 
 // MARK: - View modifiers that only one platform has

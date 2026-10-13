@@ -16,6 +16,7 @@ struct RootTabView: View {
     @AppStorage(OnboardingProgress.completedKey) private var hasCompletedOnboarding = false
     #if os(iOS)
     @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
+    @AppStorage(SearchTabPreference.storageKey) private var searchInTabBar = false
     #endif
 
     var body: some View {
@@ -128,6 +129,11 @@ struct RootTabView: View {
             NavigationStack(path: $router.homePath) { HomeView() }
         case .search:
             NavigationStack { SearchView(viewModel: search) }
+                #if os(iOS)
+                // Rebuilt when its field moves between the bottom and the title: moved in place,
+                // the field under the title was drawn without its capsule.
+                .id(searchInTabBar)
+                #endif
         case .library:
             NavigationStack { LibraryView() }
         case .settings:
@@ -144,10 +150,12 @@ struct RootTabView: View {
             }
             .badge(notificationStore.unreadCount)
 
-            // The search role lifts Search out of the bar into a button of its own at the end,
-            // which turns into the search field along the bottom when selected — in thumb reach,
-            // like the field this app used to draw itself. See `SearchView`.
-            Tab("Search", systemImage: "magnifyingglass", value: AppRouter.Tab.search, role: .search) {
+            // By default the search role lifts Search out of the bar into a button of its own at
+            // the end, which turns into the search field along the bottom when selected — in
+            // thumb reach, like the field this app used to draw itself. Settings can put it back
+            // in the bar as an ordinary tab, with its field under the title. See `SearchView`.
+            Tab("Search", systemImage: "magnifyingglass", value: AppRouter.Tab.search,
+                role: searchInTabBar ? nil : .search) {
                 screen(for: .search)
             }
 
@@ -162,7 +170,7 @@ struct RootTabView: View {
             }
         }
         // Lifts the search tab out of the bar and turns it into the field along the bottom.
-        .tabViewSearchActivation(.searchTabSelection)
+        .tabViewSearchActivation(searchInTabBar ? .automatic : .searchTabSelection)
         // Shrink the floating tab bar as you scroll down, the way Apple's own apps do — it
         // comes back at the top of the scroll, not on the first flick upwards. The player bar
         // above it follows the same rule, see `minimizesPlayerBarOnScroll`.

@@ -72,6 +72,7 @@ struct PlayerContainerView: View {
     @AppStorage(FloatingMiniPlayerSize.storageKey) private var floatingSize = FloatingMiniPlayerSize.defaultSize
     #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @AppStorage(SearchTabPreference.storageKey) private var searchInTabBar = false
     #endif
 
     private let metrics = PlayerMetrics()
@@ -85,6 +86,16 @@ struct PlayerContainerView: View {
     private var isLandscape: Bool { verticalSizeClass == .compact }
     #endif
 
+    /// Whether the minimized tab bar has Search's separate button at its trailing end, which the
+    /// pill has to stop short of — as it stops short of the tab button at the leading end.
+    private var clearsSearchButton: Bool {
+        #if os(iOS)
+        !searchInTabBar
+        #else
+        false
+        #endif
+    }
+
     var body: some View {
         GeometryReader { proxy in
             let layout = PlayerLayout(
@@ -95,7 +106,8 @@ struct PlayerContainerView: View {
                 floatingSize: floatingSize,
                 floatingOnLeft: floatingOnLeft,
                 horizontalDrag: horizontalDrag,
-                isFullScreen: player.isFullScreen
+                isFullScreen: player.isFullScreen,
+                clearsSearchButton: clearsSearchButton
             )
             playerBody(in: layout)
                 .offset(y: barDragOffset)
@@ -565,13 +577,37 @@ extension View {
     /// Shrinks the docked bar to its pill as you scroll down and brings it back once you reach
     /// the top again, so it behaves like the tab bar it sits on — `tabBarMinimizeBehavior` is
     /// the tab bar's half of the same idea. Attach it to a screen's scroll view.
+    ///
+    /// A screen whose content fits never shrinks it: there is nothing to scroll to, so the
+    /// rubber-band of a drag on it is not a scroll, and the bar stays full size.
     func minimizesPlayerBarOnScroll() -> some View {
-        onScrollGeometryChange(for: CGFloat.self) { geometry in
-            geometry.contentOffset.y + geometry.contentInsets.top
+        onScrollGeometryChange(for: PlayerBarScroll.self) { geometry in
+            let insets = geometry.contentInsets
+            let overflow = geometry.contentSize.height + insets.top + insets.bottom
+                - geometry.containerSize.height
+            return PlayerBarScroll(
+                offset: geometry.contentOffset.y + insets.top,
+                canScroll: overflow > PlayerBarScroll.minimumOverflow
+            )
         } action: { previous, current in
-            PlayerManager.shared.scrollDidMove(from: previous, to: current)
+            PlayerManager.shared.scrollDidMove(
+                from: previous.offset,
+                to: current.offset,
+                canScroll: current.canScroll
+            )
         }
     }
+}
+
+/// What a screen's scroll view tells the docked bar: how far down it is, and whether it has
+/// anywhere to go at all.
+private struct PlayerBarScroll: Equatable {
+    /// Content that overflows by less than this only moves as far as the bar's own threshold
+    /// — not a scroll anyone meant, so it counts as fitting.
+    static let minimumOverflow: CGFloat = 8
+
+    let offset: CGFloat
+    let canScroll: Bool
 }
 
 // MARK: - Geometry
@@ -609,6 +645,16 @@ private struct PlayerMetrics {
         #endif
     }
 
+    /// Search's separate button plus a gap, at the other end of the same row. Only kept clear
+    /// while Search is that button rather than a tab inside the bar.
+    var compactTrailingClearance: CGFloat {
+        #if os(iOS)
+        return 68
+        #else
+        return 0
+        #endif
+    }
+
     let artworkPadding: CGFloat = 8
     let headerHeight: CGFloat = 44
     /// The pill the bar shrinks to on scroll keeps the artwork and play/pause, nothing else.
@@ -625,7 +671,8 @@ private struct PlayerMetrics {
 
 /// Interpolates the player between the three shapes it can take. The bar keeps its trailing edge
 /// as it shrinks and drops as it narrows, so the pill lands in the bottom-right corner — in the
-/// tab bar's own row, beside the pill the tab bar has minimized to by then.
+/// tab bar's own row, beside the pill the tab bar has minimized to by then, and short of Search's
+/// button when that sits at the end of the row.
 private struct PlayerLayout {
     let size: CGSize
     let metrics: PlayerMetrics
@@ -637,6 +684,13 @@ private struct PlayerLayout {
     let horizontalDrag: CGFloat
     /// Set in landscape, where the video has the screen to itself.
     let isFullScreen: Bool
+    /// Set while Search is a button of its own at the end of the tab bar's row.
+    let clearsSearchButton: Bool
+
+    /// How far the pill stops short of the trailing edge, on top of the usual inset.
+    private func trailingClearance(at compactness: CGFloat) -> CGFloat {
+        clearsSearchButton ? metrics.compactTrailingClearance * compactness : 0
+    }
 
     var barFrame: CGRect { barFrame(at: compactness) }
     var dockedVideoFrame: CGRect { dockedVideoFrame(at: compactness) }
@@ -669,7 +723,10 @@ private struct PlayerLayout {
                 compactness
             )
             let bottom = size.height - clearance
-            let trailingX = max(metrics.barInset, size.width - metrics.barInset - width)
+            let trailingX = max(
+                metrics.barInset,
+                size.width - metrics.barInset - trailingClearance(at: compactness) - width
+            )
             let leadingX = min(trailingX, metrics.barInset + metrics.compactLeadingClearance * compactness)
             let anchorX = floatingOnLeft ? leadingX : trailingX
             return CGRect(
@@ -683,7 +740,7 @@ private struct PlayerLayout {
         let width = lerp(size.width - metrics.barInset * 2, compactBarWidth, compactness)
         let bottom = size.height - lerp(metrics.tabBarClearance, metrics.compactTabBarClearance, compactness)
         return CGRect(
-            x: size.width - metrics.barInset - width,
+            x: size.width - metrics.barInset - trailingClearance(at: compactness) - width,
             y: bottom - height,
             width: max(0, width),
             height: max(0, height)

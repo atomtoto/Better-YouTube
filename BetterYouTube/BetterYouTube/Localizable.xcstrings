@@ -3886,6 +3886,26 @@
         }
       }
     },
+    "Search in Tab Bar" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recherche dans la barre d’onglets"
+          }
+        }
+      }
+    },
+    "Search in Tab Bar makes Search a tab like the others, with its field under the title. Turned off, Search is a separate button at the end of the tab bar that turns into a field along the bottom." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recherche dans la barre d’onglets fait de Recherche un onglet comme les autres, avec son champ sous le titre. Désactivé, Recherche est un bouton séparé au bout de la barre d’onglets, qui devient un champ en bas de l’écran."
+          }
+        }
+      }
+    },
     "Search or paste a YouTube link" : {
       "localizations" : {
         "fr" : {

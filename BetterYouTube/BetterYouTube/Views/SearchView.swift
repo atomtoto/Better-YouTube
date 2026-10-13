@@ -10,6 +10,9 @@ struct SearchView: View {
     /// when a link leaves the search tab.
     @ObservedObject var viewModel: SearchViewModel
     @FocusState private var isFieldFocused: Bool
+    #if os(iOS)
+    @AppStorage(SearchTabPreference.storageKey) private var searchInTabBar = false
+    #endif
 
     var body: some View {
         Group {
@@ -33,7 +36,7 @@ struct SearchView: View {
         .background(Color.appBackground)
         .searchFocused($isFieldFocused)
         .navigationTitle("Search")
-        .searchField(viewModel)
+        .searchField(viewModel, placement: fieldPlacement)
         // A search on its way — submitted, a suggestion or a recent search tapped, a filter
         // changed — puts the keyboard away, so the results it brings are not hidden behind it.
         .onChange(of: viewModel.isSearching) { _, searching in
@@ -63,6 +66,16 @@ struct SearchView: View {
                 isFieldFocused = true
             }
         }
+    }
+
+    /// Along the bottom when Search is its own button, under the title when it is a tab in the
+    /// bar like the others.
+    private var fieldPlacement: SearchFieldPlacement {
+        #if os(iOS)
+        searchInTabBar ? .underTitle : .searchTab
+        #else
+        .searchTab
+        #endif
     }
 
     // MARK: Filters
@@ -241,18 +254,19 @@ extension View {
     /// a phone's search tab turns into it along the bottom, and a Mac keeps it in the toolbar. On
     /// the tab view instead, the field spread to every tab, and stayed open over Home when a link
     /// moved there mid-search.
-    func searchField(_ viewModel: SearchViewModel) -> some View {
-        modifier(SearchField(viewModel: viewModel))
+    func searchField(_ viewModel: SearchViewModel, placement: SearchFieldPlacement = .searchTab) -> some View {
+        modifier(SearchField(viewModel: viewModel, placement: placement))
     }
 }
 
 private struct SearchField: ViewModifier {
     @ObservedObject var viewModel: SearchViewModel
+    let placement: SearchFieldPlacement
     @EnvironmentObject private var recents: RecentSearchStore
 
     func body(content: Content) -> some View {
         content
-            .searchable(text: $viewModel.query, isPresented: $viewModel.isPresented, placement: .searchTab,
+            .searchable(text: $viewModel.query, isPresented: $viewModel.isPresented, placement: placement,
                         prompt: "Search or paste a YouTube link")
             .searchSuggestions { suggestions }
             .onSubmit(of: .search) { viewModel.submitOrOpen() }
