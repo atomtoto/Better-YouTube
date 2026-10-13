@@ -80,7 +80,7 @@ final class YouTubeWebSession: ObservableObject {
         YouTubeFeedReader.playlists.invalidatePlaylistPage()
         feedGeneration = UUID()
         feedCache.clear()
-        AccountLibraryCache.shared.clearWebPlaylists()
+        AccountLibraryCache.shared.clearWebSession()
     }
     @Published var rendering: FeedRendering {
         didSet {

@@ -233,6 +233,14 @@ final class WatchLaterStore: ObservableObject {
     @Published private(set) var usesYouTubeWatchLater = false
     @Published private(set) var sessionRevision = UUID()
     @Published private(set) var pendingVideoIDs: Set<String> = []
+    /// The web session `entries` were read under.
+    private var entriesGeneration: UUID?
+    /// The read under way. One at a time, and not tied to the screen that asked for it: leaving
+    /// Library before the page has been read shouldn't throw the read away.
+    private var reading: (generation: UUID, task: Task<Void, Never>)?
+    /// youtube.com's list as last read, so Library and every Watch Later button have it before
+    /// the page has been read again. None during a demo.
+    private var cache: AccountLibraryCache? { DemoMode.isRunning ? nil : .shared }
 
     private init() {
         // Remove the obsolete pointer. The playlist itself belongs to the user, so the app does
@@ -240,13 +248,25 @@ final class WatchLaterStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "watch_later_playlist_id")
         let session = YouTubeWebSession.shared
         usesYouTubeWatchLater = session.isSignedIn
+        // The copy only exists while the session that read it does — ending that session deletes
+        // it — so it can be shown before the cookie jar has even been checked.
+        if let cached: [PlaylistEntry] = cache?.load(.watchLater) {
+            usesYouTubeWatchLater = true
+            entries = cached
+            entriesGeneration = session.feedGeneration
+        }
         sessionObservation = session.$isSignedIn.combineLatest(session.$feedGeneration)
             .removeDuplicates { $0.0 == $1.0 && $0.1 == $1.1 }
-            .dropFirst().sink { [weak self] signedIn, _ in
+            .dropFirst().sink { [weak self] signedIn, generation in
                 Task { @MainActor in
                     guard let self else { return }
                     self.usesYouTubeWatchLater = signedIn
-                    self.entries = []
+                    // The session being confirmed keeps the list; one that ended or was replaced
+                    // takes it along.
+                    if !signedIn || generation != self.entriesGeneration {
+                        self.entries = []
+                        self.entriesGeneration = nil
+                    }
                     self.errorMessage = nil
                     // Library reloads on demand; do not compete with Home during app startup.
                     self.sessionRevision = UUID()
@@ -270,12 +290,20 @@ final class WatchLaterStore: ObservableObject {
     func refresh() async {
         guard usesYouTubeWatchLater else { entries = []; return }
         let generation = YouTubeWebSession.shared.feedGeneration
+        if let reading, reading.generation == generation { return await reading.task.value }
+        let task = Task { await read(under: generation) }
+        reading = (generation, task)
+        await task.value
+    }
+
+    private func read(under generation: UUID) async {
+        defer { if reading?.generation == generation { reading = nil } }
         isLoading = true
         defer { isLoading = false }
         do {
             let fetched = try await YouTubeWebPlaylistService.shared.entries()
             guard usesYouTubeWatchLater, generation == YouTubeWebSession.shared.feedGeneration else { return }
-            entries = fetched
+            keep(fetched, readUnder: generation)
             errorMessage = nil
         } catch is CancellationError {
         } catch {
@@ -284,11 +312,19 @@ final class WatchLaterStore: ObservableObject {
         }
     }
 
+    private func keep(_ fetched: [PlaylistEntry], readUnder generation: UUID) {
+        entries = fetched
+        entriesGeneration = generation
+        cache?.save(fetched, as: .watchLater)
+    }
+
     /// Clears the cached account state. Called when signing out, since the next account will have
     /// a playlist of its own.
     func reset() {
         sessionRevision = UUID()
         entries = []
+        entriesGeneration = nil
+        cache?.save(nil as [PlaylistEntry]?, as: .watchLater)
         errorMessage = nil
     }
 
@@ -409,7 +445,7 @@ final class WatchLaterStore: ObservableObject {
         do {
             let fetched = try await YouTubeWebPlaylistService.shared.setSaved(saved, videoID: video.id)
             guard usesYouTubeWatchLater, generation == YouTubeWebSession.shared.feedGeneration else { return }
-            entries = fetched
+            keep(fetched, readUnder: generation)
             errorMessage = nil
         } catch is CancellationError {
         } catch {
