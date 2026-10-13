@@ -223,8 +223,7 @@ struct AccountLibraryCache: Sendable {
 
     let folder: URL
 
-    init(folder: URL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("youtube-library", isDirectory: true)) {
+    init(folder: URL = Platform.cachesFolder.appendingPathComponent("youtube-library", isDirectory: true)) {
         self.folder = folder
     }
 

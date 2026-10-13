@@ -397,3 +397,18 @@ struct NativeLocalPlayerTests {
     }
 }
 #endif
+
+#if os(macOS)
+struct MacFileLocationTests {
+    /// Outside the App Sandbox Documents is the user's own, and the app's files must not land in it.
+    @Test func appFilesStayOutOfTheUsersDocuments() {
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL.path
+        let identifier = Bundle.main.bundleIdentifier ?? "com.atomtoto.BetterYouTube"
+        for folder in [Platform.dataFolder, Platform.cachesFolder, DownloadStore.root, DemoMode.storeFile("library.json")] {
+            #expect(!folder.standardizedFileURL.path.hasPrefix(documents + "/"))
+        }
+        #expect(Platform.dataFolder.lastPathComponent == identifier)
+        #expect(Platform.cachesFolder.lastPathComponent == identifier)
+    }
+}
+#endif

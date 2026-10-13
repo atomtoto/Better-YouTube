@@ -35,7 +35,7 @@ final class DemoMode: ObservableObject {
     // MARK: - Where the demo keeps its things
 
     nonisolated private static var documents: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        Platform.dataFolder
     }
 
     /// The demo's library, positions and inbox: beside the real files, never in place of them.

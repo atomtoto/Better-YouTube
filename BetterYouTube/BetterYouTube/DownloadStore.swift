@@ -154,8 +154,7 @@ final class DownloadStore: ObservableObject {
     /// Not main-actor isolated: the background session's delegate needs these paths too, and it
     /// arrives on a queue of its own. `FileManager.default` is safe to ask from anywhere.
     nonisolated static var root: URL {
-        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        return documents.appendingPathComponent("Downloads", isDirectory: true)
+        Platform.dataFolder.appendingPathComponent("Downloads", isDirectory: true)
     }
 
     /// Where a finished transfer is parked between the delegate callback and the move into place.

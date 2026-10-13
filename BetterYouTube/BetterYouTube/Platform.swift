@@ -140,6 +140,43 @@ enum Platform {
     }
 }
 
+// MARK: - Where files live
+
+extension Platform {
+    /// Where the app keeps what it owns: the library, the playback positions, the inbox, the
+    /// downloads. On a phone that is Documents, which the Files app shows under the app's name.
+    /// On a Mac it is the app's folder in Application Support: Documents there is the user's own
+    /// as soon as the app runs outside the App Sandbox — a build signed without its entitlements,
+    /// as `xcodebuild CODE_SIGNING_ALLOWED=NO` makes — and the app's files would land among theirs.
+    nonisolated static var dataFolder: URL {
+        #if os(macOS)
+        applicationFolder(in: .applicationSupportDirectory)
+        #else
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        #endif
+    }
+
+    /// Where the app keeps what it can fetch again. The same on both platforms, with the same
+    /// caveat on a Mac: outside the sandbox Caches is shared by every app, so ours gets a folder.
+    nonisolated static var cachesFolder: URL {
+        #if os(macOS)
+        applicationFolder(in: .cachesDirectory)
+        #else
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        #endif
+    }
+
+    #if os(macOS)
+    /// A folder named after the bundle identifier, which is how Mac apps share these directories.
+    /// Inside the sandbox it simply sits in the app's container.
+    nonisolated private static func applicationFolder(in directory: FileManager.SearchPathDirectory) -> URL {
+        let base = FileManager.default.urls(for: directory, in: .userDomainMask)[0]
+        let name = Bundle.main.bundleIdentifier ?? "com.atomtoto.BetterYouTube"
+        return base.appendingPathComponent(name, isDirectory: true)
+    }
+    #endif
+}
+
 // MARK: - Colours
 
 /// The app's surfaces, named for their role rather than for either platform's palette.

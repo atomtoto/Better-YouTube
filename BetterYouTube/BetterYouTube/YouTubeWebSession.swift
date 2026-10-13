@@ -740,8 +740,7 @@ struct YouTubeHomeSnapshot: Codable {
 struct YouTubeHomeCache {
     static let didChange = Notification.Name("BetterYouTube.YouTubeHomeCacheDidChange")
     let url: URL
-    init(url: URL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("youtube-home-v1.json")) {
+    init(url: URL = Platform.cachesFolder.appendingPathComponent("youtube-home-v1.json")) {
         self.url = url
     }
     func load(now: Date = Date()) -> YouTubeHomeSnapshot? {
