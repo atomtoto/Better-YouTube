@@ -988,6 +988,14 @@ final class PlayerManager: ObservableObject {
         }
     }
 
+    /// A touch on the tab bar's row. The shrunk tab bar grows back when touched, with nothing
+    /// scrolled, so the bar grows back with it — the two are meant to be the same size.
+    func tabBarWasTouched() {
+        guard isBarCompact else { return }
+        scrollRun = 0
+        setBarCompact(false)
+    }
+
     private func setBarCompact(_ compact: Bool) {
         guard isBarCompact != compact else { return }
         // `.snappy` is the system's own preset for chrome that jumps between two states, which

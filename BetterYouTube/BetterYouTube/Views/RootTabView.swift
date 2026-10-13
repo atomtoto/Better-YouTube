@@ -17,6 +17,9 @@ struct RootTabView: View {
     #if os(iOS)
     @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
     @AppStorage(SearchTabPreference.storageKey) private var searchInTabBar = false
+    /// Where the tab bar's row starts, in window coordinates. A tab's content is the one place
+    /// that knows: its bottom safe area is the tab bar plus the home indicator.
+    @State private var tabBarTop = CGFloat.infinity
     #endif
 
     var body: some View {
@@ -146,7 +149,7 @@ struct RootTabView: View {
     private var tabs: some View {
         TabView(selection: $router.selectedTab) {
             Tab("Home", systemImage: "play.circle.fill", value: AppRouter.Tab.home) {
-                screen(for: .home)
+                tab(.home)
             }
             .badge(notificationStore.unreadCount)
 
@@ -156,16 +159,16 @@ struct RootTabView: View {
             // in the bar as an ordinary tab, with its field under the title. See `SearchView`.
             Tab("Search", systemImage: "magnifyingglass", value: AppRouter.Tab.search,
                 role: searchInTabBar ? nil : .search) {
-                screen(for: .search)
+                tab(.search)
             }
 
             Tab("Library", systemImage: "tray.full.fill", value: AppRouter.Tab.library) {
-                screen(for: .library)
+                tab(.library)
             }
 
             if showsSettingsTab {
                 Tab("Settings", systemImage: "gearshape.fill", value: AppRouter.Tab.settings) {
-                    screen(for: .settings)
+                    tab(.settings)
                 }
             }
         }
@@ -175,6 +178,21 @@ struct RootTabView: View {
         // comes back at the top of the scroll, not on the first flick upwards. The player bar
         // above it follows the same rule, see `minimizesPlayerBarOnScroll`.
         .tabBarMinimizeBehavior(.onScrollDown)
+        // Touching the shrunk tab bar brings it back without any scroll, which the player bar
+        // has no other way to hear about. Simultaneous, so the tab bar still gets the touch.
+        .simultaneousGesture(SpatialTapGesture(coordinateSpace: .global).onEnded { tap in
+            if tap.location.y >= tabBarTop { player.tabBarWasTouched() }
+        })
+    }
+
+    /// A section's screen, measuring where the tab bar's row starts on the way.
+    private func tab(_ tab: AppRouter.Tab) -> some View {
+        screen(for: tab)
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.frame(in: .global).maxY - proxy.safeAreaInsets.bottom
+            } action: { top in
+                tabBarTop = top
+            }
     }
 
 #else
