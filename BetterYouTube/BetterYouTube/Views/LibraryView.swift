@@ -35,7 +35,7 @@ struct LibraryView: View {
                 if auth.isSignedIn || webSession.isSignedIn {
                     if auth.isSignedIn {
                         NavigationLink {
-                            SubscriptionsView(channels: viewModel.subscriptions, onRefresh: { await reload() })
+                            SubscriptionsView(channels: viewModel.subscriptions, isLoading: viewModel.isLoading, onRefresh: { await reload() })
                         } label: {
                             LibraryRow(icon: "person.2.fill", tint: .red, title: "Subscriptions", count: viewModel.subscriptions.count)
                         }
@@ -48,7 +48,7 @@ struct LibraryView: View {
                     }
 
                     NavigationLink {
-                        PlaylistsView(playlists: viewModel.playlists, onRefresh: { await reload() })
+                        PlaylistsView(playlists: viewModel.playlists, isLoading: viewModel.isLoading, onRefresh: { await reload() })
                     } label: {
                         LibraryRow(icon: "music.note.list", tint: .orange, title: "Playlists", count: viewModel.playlists.count)
                     }
@@ -167,22 +167,24 @@ struct LibraryView: View {
             }
             #endif
         }
-        .task(id: "\(auth.isSignedIn)-\(webSession.isSignedIn)-\(webSession.feedGeneration)-\(watchLater.sessionRevision)") {
-            await watchLater.refresh()
-            if auth.isSignedIn || webSession.isSignedIn {
-                await viewModel.load(apiSignedIn: auth.isSignedIn, webSignedIn: webSession.isSignedIn)
-            } else {
-                viewModel.reset()
-            }
+        .task(id: "\(auth.isSignedIn)-\(webSession.hasCheckedSession)-\(webSession.isSignedIn)-\(webSession.feedGeneration)-\(watchLater.sessionRevision)") {
+            // Until the cookie jar has been read, youtube.com counts as signed out, and loading
+            // then asked for the account's own playlists alone.
+            guard webSession.hasCheckedSession else { return }
+            if !auth.isSignedIn, !webSession.isSignedIn { viewModel.reset() }
+            await reload()
         }
     }
 
-    /// What a pull — or, on a Mac, the Refresh button — asks for.
+    /// What a pull — or, on a Mac, the Refresh button — asks for. Watch Later and the account
+    /// side by side: the account's rows shouldn't wait for a Watch Later page to be read.
     private func reload() async {
-        await watchLater.refresh()
+        let watchLater = watchLater
+        async let watchLaterRefresh: Void = watchLater.refresh()
         if auth.isSignedIn || webSession.isSignedIn {
             await viewModel.load(apiSignedIn: auth.isSignedIn, webSignedIn: webSession.isSignedIn)
         }
+        await watchLaterRefresh
     }
 
     private var signInPrompt: some View {

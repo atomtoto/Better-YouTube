@@ -80,6 +80,7 @@ final class YouTubeWebSession: ObservableObject {
         YouTubeFeedReader.playlists.invalidatePlaylistPage()
         feedGeneration = UUID()
         feedCache.clear()
+        AccountLibraryCache.shared.clearWebPlaylists()
     }
     @Published var rendering: FeedRendering {
         didSet {
@@ -250,7 +251,7 @@ final class YouTubeFeedReader {
             ? "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
             : YouTubeWebSession.userAgent
         let destination = isNotifications ? URL(string: "https://www.youtube.com/")! : url
-        try await waitForLoad(destination, in: webView, readyWhenVideosAppear: !isNotifications)
+        try await waitForLoad(destination, in: webView, readiness: isNotifications ? .loaded : .videosAppear)
 
         if webView.url?.host?.contains("consent.") == true {
             throw YouTubeFeedIssue.consentNeeded
@@ -325,7 +326,7 @@ final class YouTubeFeedReader {
         if webView.url?.path != "/" || webView.url?.host?.hasSuffix("youtube.com") != true {
             var url = URLComponents(url: YouTubeWebSession.homeURL, resolvingAgainstBaseURL: false)!
             url.queryItems = [URLQueryItem(name: "hl", value: "en")]
-            try await waitForLoad(url.url!, in: webView, readyWhenVideosAppear: true)
+            try await waitForLoad(url.url!, in: webView, readiness: .videosAppear)
         }
         guard session.isSignedIn, session.feedGeneration == generation else { throw CancellationError() }
         do {
@@ -359,9 +360,21 @@ final class YouTubeFeedReader {
         webView?.loadHTMLString("", baseURL: nil)
     }
 
+    /// When a page counts as loaded.
+    enum Readiness {
+        /// WebKit's own load event: every image, frame and script of the page.
+        case loaded
+        /// The first watch links are on the page — a feed is readable long before its artwork.
+        case videosAppear
+        /// The page is parsed and its YouTube configuration set: all a request made from inside
+        /// it needs, seconds before the desktop site has finished loading the rest.
+        case sessionConfigured
+    }
+
     /// A separate reader instance serves playlist operations so they cannot interrupt Home.
     func withPlaylistPage<T>(
         _ url: URL = URL(string: "https://www.youtube.com/playlist?list=WL&hl=en")!,
+        readiness: Readiness = .loaded,
         operation: (WKWebView) async throws -> T
     ) async throws -> T {
         await YouTubeWebSession.shared.refresh()
@@ -378,7 +391,7 @@ final class YouTubeFeedReader {
             webView.removeFromSuperview()
         }
         webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
-        try await waitForLoad(url, in: webView, readyWhenVideosAppear: false)
+        try await waitForLoad(url, in: webView, readiness: readiness)
         guard webView.url?.host == "www.youtube.com" else { throw YouTubeFeedIssue.consentNeeded }
         return try await operation(webView)
     }
@@ -471,19 +484,25 @@ final class YouTubeFeedReader {
     })();
     """#
 
-    private func waitForLoad(_ url: URL, in webView: WKWebView, readyWhenVideosAppear: Bool) async throws {
+    private func waitForLoad(_ url: URL, in webView: WKWebView, readiness: Readiness) async throws {
         let loadID = UUID()
         activeLoadID = loadID
         committedLoad = false
         defer { activeLoadID = nil; loadingNavigation = nil }
-        // Recommendations can be usable before images and secondary page resources finish.
+        // Recommendations, and requests made from inside the page, can go ahead before images
+        // and secondary page resources finish.
         let earlyRead = Task {
-            guard readyWhenVideosAppear else { return }
+            guard readiness != .loaded else { return }
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
                 guard self.activeLoadID == loadID, self.loadContinuation != nil else { return }
                 guard self.committedLoad else { continue }
-                if let ids = try? await self.videoIds(in: webView), !ids.isEmpty {
+                let ready = switch readiness {
+                case .loaded: false
+                case .videosAppear: (try? await self.videoIds(in: webView))?.isEmpty == false
+                case .sessionConfigured: (try? await webView.evaluateJavaScript(Self.sessionConfiguredScript)) as? Bool == true
+                }
+                if ready {
                     guard self.activeLoadID == loadID, !Task.isCancelled else { return }
                     self.finishLoad(with: nil)
                     return
@@ -532,6 +551,12 @@ final class YouTubeFeedReader {
             continuation.resume()
         }
     }
+
+    /// Whether the document has been parsed — every inline script run — and YouTube's
+    /// configuration is there to authenticate a request with.
+    private static let sessionConfiguredScript = """
+    document.readyState !== 'loading' && !!(window.ytcfg && ytcfg.get && ytcfg.get('INNERTUBE_CONTEXT'))
+    """
 
     /// Every `watch?v=` link on the page that isn't an advert, deduplicated, in document order.
     ///

@@ -65,6 +65,8 @@ struct VideoListView: View {
 /// Grid of subscribed channels.
 struct SubscriptionsView: View {
     let channels: [Channel]
+    /// Shown as loading rather than empty until the first list arrives.
+    var isLoading = false
     var onRefresh: (@Sendable () async -> Void)? = nil
     @State private var filter = ""
 
@@ -82,7 +84,9 @@ struct SubscriptionsView: View {
 
     var body: some View {
         Group {
-            if channels.isEmpty {
+            if channels.isEmpty, isLoading {
+                ProgressView()
+            } else if channels.isEmpty {
                 ContentUnavailableView(
                     "No Subscriptions",
                     systemImage: "person.2",
@@ -129,6 +133,8 @@ struct SubscriptionsView: View {
 /// The signed-in account's playlists.
 struct PlaylistsView: View {
     let playlists: [Playlist]
+    /// Shown as loading rather than empty until the first list arrives.
+    var isLoading = false
     var onRefresh: (@Sendable () async -> Void)? = nil
     @State private var filter = ""
 
@@ -144,7 +150,9 @@ struct PlaylistsView: View {
 
     var body: some View {
         Group {
-            if displayedPlaylists.isEmpty {
+            if displayedPlaylists.isEmpty, isLoading {
+                ProgressView()
+            } else if displayedPlaylists.isEmpty {
                 ContentUnavailableView(
                     "No Playlists",
                     systemImage: "music.note.list",

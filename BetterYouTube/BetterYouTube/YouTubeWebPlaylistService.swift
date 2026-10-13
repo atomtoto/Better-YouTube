@@ -23,7 +23,8 @@ final class YouTubeWebPlaylistService {
     func playlists() async throws -> [Playlist] {
         try await serialized { session, generation in
             try await self.reader.withPlaylistPage(
-                URL(string: "https://www.youtube.com/feed/playlists?hl=en")!
+                URL(string: "https://www.youtube.com/feed/playlists?hl=en")!,
+                readiness: .sessionConfigured
             ) { webView in
                 try self.validate(session, generation)
                 let result = try await self.call(Self.playlistsScript, arguments: [:], in: webView,
@@ -43,7 +44,7 @@ final class YouTubeWebPlaylistService {
 
     private func perform(action: String, videoID: String, playlistID: String) async throws -> [PlaylistEntry] {
         try await serialized { session, generation in
-            try await self.reader.withPlaylistPage { webView in
+            try await self.reader.withPlaylistPage(readiness: .sessionConfigured) { webView in
                 try self.validate(session, generation)
                 let result = try await self.call(
                     Self.script,

@@ -303,6 +303,8 @@ final class GoogleAuthService: ObservableObject {
 
         KeychainStore.save(tokens)
         UserDefaults.standard.set(tokens.grantedScope, forKey: Self.grantedScopeKey)
+        // What Library kept from last time may be another account's.
+        AccountLibraryCache.shared.clearAccount()
         self.tokens = tokens
         lastSignOutReason = nil
     }
@@ -316,6 +318,7 @@ final class GoogleAuthService: ObservableObject {
     private func signOut(reason: String?) {
         KeychainStore.clear()
         UserDefaults.standard.removeObject(forKey: Self.grantedScopeKey)
+        AccountLibraryCache.shared.clearAccount()
         tokens = nil
         lastSignOutReason = reason
         // Set outright rather than leaning on the observer: this also runs from `init`, where

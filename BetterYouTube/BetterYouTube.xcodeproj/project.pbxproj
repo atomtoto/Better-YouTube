@@ -71,6 +71,7 @@
 		D10CA2000000000000000003 /* Fixtures in Resources */ = {isa = PBXBuildFile; fileRef = D10CA2000000000000000004 /* Fixtures */; };
 		D10CA3000000000000000001 /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = D10CA3000000000000000002 /* ThirdPartyNotices.txt */; };
 		D10CA4000000000000000001 /* YouTubeHomeCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA4000000000000000002 /* YouTubeHomeCacheTests.swift */; };
+		D10CA6000000000000000001 /* AccountLibraryCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA6000000000000000002 /* AccountLibraryCacheTests.swift */; };
 		D10CA5100000000000000001 /* YouTubeWebPlaylistService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA5100000000000000002 /* YouTubeWebPlaylistService.swift */; };
 		D10CA5400000000000000001 /* YouTubeWebCommentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA5400000000000000002 /* YouTubeWebCommentService.swift */; };
 		D10CA5200000000000000001 /* PlaylistPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10CA5200000000000000002 /* PlaylistPickerView.swift */; };
@@ -224,6 +225,7 @@
 		D10CA2000000000000000004 /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fixtures; sourceTree = "<group>"; };
 		D10CA3000000000000000002 /* ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.txt; sourceTree = "<group>"; };
 		D10CA4000000000000000002 /* YouTubeHomeCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeHomeCacheTests.swift; sourceTree = "<group>"; };
+		D10CA6000000000000000002 /* AccountLibraryCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountLibraryCacheTests.swift; sourceTree = "<group>"; };
 		D10CA5100000000000000002 /* YouTubeWebPlaylistService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeWebPlaylistService.swift; sourceTree = "<group>"; };
 		D10CA5400000000000000002 /* YouTubeWebCommentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeWebCommentService.swift; sourceTree = "<group>"; };
 		D10CA5200000000000000002 /* PlaylistPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistPickerView.swift; sourceTree = "<group>"; };
@@ -405,6 +407,7 @@
 				D10CA2000000000000000004 /* Fixtures */,
 				D10CA5300000000000000002 /* YouTubeWebPlaylistTests.swift */,
 				D10CA4000000000000000002 /* YouTubeHomeCacheTests.swift */,
+				D10CA6000000000000000002 /* AccountLibraryCacheTests.swift */,
 				BEEFF0000000000000000000 /* CountFormatterTests.swift */,
 				BEEFF1000000000000000000 /* DownloadConfigLinkTests.swift */,
 				BEEFF2000000000000000000 /* DurationFormatterTests.swift */,
@@ -657,6 +660,7 @@
 				D10CA2000000000000000001 /* LocalDownloadTests.swift in Sources */,
 				D10CA5300000000000000001 /* YouTubeWebPlaylistTests.swift in Sources */,
 				D10CA4000000000000000001 /* YouTubeHomeCacheTests.swift in Sources */,
+				D10CA6000000000000000001 /* AccountLibraryCacheTests.swift in Sources */,
 				BEEFB0000000000000000000 /* CountFormatterTests.swift in Sources */,
 				BEEFB1000000000000000000 /* DownloadConfigLinkTests.swift in Sources */,
 				BEEFB2000000000000000000 /* DurationFormatterTests.swift in Sources */,
