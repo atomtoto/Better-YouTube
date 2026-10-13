@@ -722,6 +722,23 @@ final class PlayerManager: ObservableObject {
         playNext()
     }
 
+    /// Puts a video at the end of what plays next. With nothing playing there is no queue to
+    /// join, so the video simply starts.
+    func addToQueue(_ video: Video) {
+        guard currentVideo != nil else {
+            play(video)
+            return
+        }
+        guard !isQueued(video) else { return }
+        upNext.append(video)
+        refreshNowPlaying()
+    }
+
+    /// Whether the video is playing now or already waiting in the queue.
+    func isQueued(_ video: Video) -> Bool {
+        currentVideo?.id == video.id || upNext.contains { $0.id == video.id }
+    }
+
     func playNext() {
         guard !upNext.isEmpty else {
             isPlaying = false

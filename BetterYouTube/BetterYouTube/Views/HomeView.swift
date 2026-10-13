@@ -334,9 +334,17 @@ struct VideoMenuItems: View {
     @EnvironmentObject private var watchLater: WatchLaterStore
     @EnvironmentObject private var downloads: DownloadStore
     @EnvironmentObject private var downloadManager: DownloadManager
+    @EnvironmentObject private var player: PlayerManager
 
     @ViewBuilder
     var body: some View {
+        Button {
+            player.addToQueue(video)
+        } label: {
+            Label("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward")
+        }
+        .disabled(player.isQueued(video))
+
         Button {
             Task {
                 await watchLater.toggle(video)
