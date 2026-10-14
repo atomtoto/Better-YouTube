@@ -381,8 +381,16 @@ struct PlaylistHeaderView: View {
             if videoCount > 0 {
                 HStack(spacing: 12) {
                     Button(action: onPlay) {
-                        Label("Play", systemImage: "play.fill")
-                            .frame(maxWidth: .infinity)
+                        // In a List row a Label draws its icon in the accent color rather than in the
+                        // button style's foreground, which on the prominent button's accent fill
+                        // leaves it invisible.
+                        Label {
+                            Text("Play")
+                        } icon: {
+                            Image(systemName: "play.fill")
+                                .foregroundStyle(.white)
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
 
