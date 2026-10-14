@@ -527,8 +527,11 @@ struct SetupLink: View {
                             .foregroundStyle(.secondary)
                     }
                 } icon: {
+                    // Palette, not monochrome: a monochrome numeral is knocked out of the circle and
+                    // shows the background, which turns dark in dark mode.
                     Image(systemName: "\(number).circle.fill")
-                        .foregroundStyle(Color.accentColor)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, Color.accentColor)
                 }
                 Spacer(minLength: 8)
                 // Says the page opens outside the app, the way Settings marks its web links.
