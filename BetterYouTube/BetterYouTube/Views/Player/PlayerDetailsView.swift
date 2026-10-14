@@ -530,12 +530,14 @@ struct PlayerDetailsView: View {
 
             HStack(alignment: .center, spacing: 8) {
                 TextField("Add a comment", text: $newCommentText, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
                     .lineLimit(1...4)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color.appSecondaryBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .onSubmit { postComment() }
 
-                SendButton(isSending: viewModel.isPostingComment, action: postComment)
-                    .disabled(!canPostComment || viewModel.isPostingComment)
+                SendButton(canSend: canPostComment, isSending: viewModel.isPostingComment, diameter: 38, action: postComment)
                     .accessibilityLabel("Post comment")
             }
 
@@ -768,22 +770,35 @@ private struct PlayerActionPill: View {
     }
 }
 
-/// The round send button beside a comment or reply field.
+/// The round send button beside a comment or reply field: filled with the accent colour
+/// once there is something to send, and quiet until then.
 private struct SendButton: View {
+    let canSend: Bool
     let isSending: Bool
+    let diameter: CGFloat
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            if isSending {
-                ProgressView()
-            } else {
-                Image(systemName: "arrow.up")
-                    .fontWeight(.semibold)
+            ZStack {
+                Circle()
+                    .fill(canSend ? Color.accentColor : Color.appSecondaryBackground)
+                    .frame(width: diameter, height: diameter)
+
+                if isSending {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(canSend ? .white : .secondary)
+                } else {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: diameter * 0.4, weight: .bold))
+                        .foregroundStyle(canSend ? Color.white : Color.secondary.opacity(0.5))
+                }
             }
         }
-        .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.circle)
+        .buttonStyle(PillButtonStyle())
+        .disabled(!canSend || isSending)
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: canSend)
     }
 }
 
@@ -872,14 +887,20 @@ struct CommentRowView: View {
     private var replyComposer: some View {
         HStack(alignment: .center, spacing: 8) {
             TextField("Write a reply", text: $replyText, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain)
                 .lineLimit(1...3)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.appSecondaryBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .onSubmit { postReply() }
 
-            SendButton(isSending: viewModel.sendingReplyTo.contains(comment.id), action: postReply)
-                .controlSize(.small)
-                .disabled(!canPostReply || viewModel.sendingReplyTo.contains(comment.id))
-                .accessibilityLabel("Post reply")
+            SendButton(
+                canSend: canPostReply,
+                isSending: viewModel.sendingReplyTo.contains(comment.id),
+                diameter: 32,
+                action: postReply
+            )
+            .accessibilityLabel("Post reply")
         }
     }
 
