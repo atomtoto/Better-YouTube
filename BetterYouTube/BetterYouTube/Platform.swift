@@ -138,6 +138,16 @@ enum Platform {
         true
         #endif
     }
+
+    /// True where a numbered step draws its numeral in white inside the accent circle. On a Mac
+    /// the monochrome symbol knocks the numeral out to the background, which is dark in dark mode.
+    static var stepNumeralsAreWhite: Bool {
+        #if os(macOS)
+        true
+        #else
+        false
+        #endif
+    }
 }
 
 // MARK: - Where files live
