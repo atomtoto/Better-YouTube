@@ -193,6 +193,16 @@ final class YouTubeWebSession: ObservableObject {
 
 // MARK: - Reading the feed
 
+#if os(macOS)
+/// The reader's web view on a Mac, where a view has no `isUserInteractionEnabled` to turn off.
+/// Transparent is not enough there: it would still take clicks, and the keyboard focus whenever
+/// a page focuses one of its own fields, leaving the window's text fields deaf to typing.
+private final class HiddenReaderWebView: WKWebView {
+    override var acceptsFirstResponder: Bool { false }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+}
+#endif
+
 /// Reads the *order* of YouTube's home page, and nothing else.
 ///
 /// The web view loads m.youtube.com as the signed-in session, and one line of JavaScript collects
@@ -407,10 +417,12 @@ final class YouTubeFeedReader {
         let webView = self.webView ?? makeWebView()
         self.webView = webView
 
+        // Not the key window: on a Mac that is the welcome sheet on a first launch, and the
+        // reader would sit in the very window the user is typing their client ID into.
         #if os(macOS)
-        guard let host = Platform.keyWindow?.contentView else { return webView }
+        guard let host = Platform.mainWindow?.contentView else { return webView }
         #else
-        guard let host = Platform.keyWindow else { return webView }
+        guard let host = Platform.mainWindow else { return webView }
         #endif
 
         if webView.superview !== host {
@@ -442,7 +454,11 @@ final class YouTubeFeedReader {
                 in: .page
             ))
         }
+        #if os(macOS)
+        let webView = HiddenReaderWebView(frame: .zero, configuration: configuration)
+        #else
         let webView = WKWebView(frame: .zero, configuration: configuration)
+        #endif
         webView.customUserAgent = YouTubeWebSession.userAgent
         webView.navigationDelegate = bridge
         // Invisible and deaf to input: it is behind the whole app and only there to lay out.

@@ -66,6 +66,20 @@ enum Platform {
         #endif
     }
 
+    /// The app's own window, beneath any sheet it is showing. On a Mac a sheet is a window of its
+    /// own and becomes the key window while it is up — the welcome screen, on a first launch — so
+    /// what has to stay out of the user's way, like the hidden feed reader, goes here instead.
+    @MainActor
+    static var mainWindow: PlatformWindow? {
+        #if os(macOS)
+        var window = NSApplication.shared.mainWindow ?? keyWindow
+        while let parent = window?.sheetParent { window = parent }
+        return window
+        #else
+        return keyWindow
+        #endif
+    }
+
     /// Opens a URL outside the app — a watch page in the browser, a settings pane.
     @MainActor
     static func open(_ url: URL) {
