@@ -262,8 +262,8 @@ With a paid team:
    entitlement files use the development APNs environment for local development; verify the final
    signed archive uses the environment required by its distribution profile. Preserve the Mac's
    App Sandbox entitlements, which every variant keeps.
-3. Run a signed build with an Apple Account signed into iCloud. CI builds and offline test hosts
-   do not validate live iCloud synchronization; tests and previews skip live engine initialization.
+3. Run a signed build with an Apple Account signed into iCloud. Unsigned builds and offline test
+   hosts do not validate live iCloud synchronization; tests and previews skip live engine initialization.
 
 The service uses `CKSyncEngine` with a custom zone named **`BetterYouTubeLibrary`** in the user's
 private CloudKit database. The record type is **`LibraryEntry`** with **`schemaVersion`** (Int64,
@@ -552,8 +552,8 @@ friends, or as `String(localized:)` when it has to travel as a `String`, so it i
 The test action is pinned to English, so tests that check a message read the same on any machine.
 
 `scripts/check-localizations.py` fails when any string the apps show has no French translation —
-one added in code and never put in a catalog as well as one left untranslated — and CI runs it on
-every push. It leaves the working copy as it found it, so it is safe to run locally too.
+one added in code and never put in a catalog as well as one left untranslated. It leaves the
+working copy as it found it, so it is safe to run whenever you like.
 
 ## Running on Apple Watch
 
@@ -752,25 +752,31 @@ scripts/detect-signing.sh        Detects a free or paid signing team before each
 scripts/build-demo-catalog.py    Rebuilds the demo's catalogue from the videos' public pages
 ```
 
-## Continuous integration
+## Tests and checks
 
-`.github/workflows/build.yml` builds the app with `xcodebuild` on a GitHub-hosted macOS runner for
-every push and pull request — **for iOS, macOS and watchOS simulators** — so compile errors
-surface without a local Mac, and so the platform nobody is currently working on can't quietly stop
-compiling.
+There is no GitHub Actions workflow: the app is built and tested on a Mac. The hosted macOS runner
+compiled with an Xcode whose Swift compiler crashed while generating code for `HomeView.swift`,
+which failed every run without a mistake in the code, so the automatic build was removed. It is
+still in the git history (`.github/workflows/build.yml`) if you want it back.
 
-A third job runs the unit tests (`BetterYouTubeTests`) on macOS. They cover the pure parts, which
-are the ones worth pinning down because nothing on screen tells you when they are wrong: the ISO
-8601 duration formatter, the Google Takeout CSV reader, the abbreviated counts in English and
-French, what a `betteryoutube://` setup link accepts and refuses, which YouTube links open what,
-which text in a description is a timestamp, and the new-upload ledger that decides what is worth a
-notification — alongside downloads, playback positions, CarPlay and iCloud sync. The API client
-is tested against canned responses in the Data API's own JSON: pagination, search decoding,
-errors and the quota each call is charged, with no network, key or charge to the real count.
-macOS rather than the simulator because it needs no device booted; the code under test has no
-platform in it either way.
+The unit tests (`BetterYouTubeTests`) run with ⌘U in Xcode, or from the command line on macOS:
 
-A fourth job fails the run when a string has no French translation — see
+```sh
+cd BetterYouTube
+xcodebuild test -project BetterYouTube.xcodeproj -scheme BetterYouTube -destination "platform=macOS"
+```
+
+They cover the pure parts, which are the ones worth pinning down because nothing on screen tells
+you when they are wrong: the ISO 8601 duration formatter, the Google Takeout CSV reader, the
+abbreviated counts in English and French, what a `betteryoutube://` setup link accepts and
+refuses, which YouTube links open what, which text in a description is a timestamp, and the
+new-upload ledger that decides what is worth a notification — alongside downloads, playback
+positions, CarPlay and iCloud sync. The API client is tested against canned responses in the Data
+API's own JSON: pagination, search decoding, errors and the quota each call is charged, with no
+network, key or charge to the real count. macOS rather than the simulator because it needs no
+device booted; the code under test has no platform in it either way.
+
+`scripts/check-localizations.py` fails when a string has no French translation — see
 [Localization](#localization).
 
 Every target builds in the Swift 6 language mode, so the compiler checks for data races across
