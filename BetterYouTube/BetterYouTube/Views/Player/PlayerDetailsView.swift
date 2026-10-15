@@ -291,7 +291,7 @@ struct PlayerDetailsView: View {
                         title: viewModel.isDisliked ? String(localized: "Dislike") : "",
                         systemImage: viewModel.isDisliked ? "hand.thumbsdown.fill" : "hand.thumbsdown",
                         isActive: viewModel.isDisliked,
-                        activeTint: .red,
+                        activeTint: .purple,
                         isBusy: viewModel.isRating
                     ) {
                         Task { await viewModel.toggleDislike() }
