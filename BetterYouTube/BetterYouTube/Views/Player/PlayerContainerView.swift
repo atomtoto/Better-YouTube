@@ -633,7 +633,7 @@ private struct PlayerMetrics {
     /// The pill drops into the tab bar's own row rather than hovering above it, and a little
     /// below its bottom edge to line up with the pill the tab bar minimizes to. By then the tab
     /// bar is minimized too — the same scroll shrinks both — so the space beside it is free.
-    let compactTabBarClearance: CGFloat = -7
+    let compactTabBarClearance: CGFloat = -6
     #endif
 
     var compactLeadingClearance: CGFloat {
@@ -658,7 +658,12 @@ private struct PlayerMetrics {
     let artworkPadding: CGFloat = 8
     let headerHeight: CGFloat = 44
     /// The pill the bar shrinks to on scroll keeps the artwork and play/pause, nothing else.
+    #if os(macOS)
     let compactBarHeight: CGFloat = 52
+    #else
+    /// As tall as the minimized tab bar and Search's button on the same row, so the three line up.
+    let compactBarHeight: CGFloat = 48
+    #endif
     let playButtonWidth: CGFloat = 38
     let closeButtonWidth: CGFloat = 38
     let controlsTrailingPadding: CGFloat = 10
