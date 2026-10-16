@@ -309,22 +309,6 @@ struct PlayerDetailsView: View {
                         library.toggleFavorite(displayed)
                     }
 
-                    PlayerDownloadPill(
-                        video: displayed,
-                        store: downloads,
-                        manager: downloadManager
-                    )
-
-                    // AVKit exposes its own PiP button for local playback, so the pill is for streams.
-                    if !player.isLocal {
-                        PlayerActionPill(
-                            title: String(localized: "Picture in Picture"),
-                            systemImage: "pip.enter"
-                        ) {
-                            player.startPictureInPicture()
-                        }
-                    }
-
                     PlayerActionPill(
                         title: String(localized: "Later", comment: "Short button title that adds the video to Watch Later"),
                         systemImage: watchLater.contains(displayed) ? "clock.fill" : "clock",
@@ -352,6 +336,22 @@ struct PlayerDetailsView: View {
                         }
                         .buttonStyle(PillButtonStyle())
                         .simultaneousGesture(TapGesture().onEnded { shareTaps += 1 })
+                    }
+
+                    PlayerDownloadPill(
+                        video: displayed,
+                        store: downloads,
+                        manager: downloadManager
+                    )
+
+                    // AVKit exposes its own PiP button for local playback, so the pill is for streams.
+                    if !player.isLocal {
+                        PlayerActionPill(
+                            title: String(localized: "Picture in Picture"),
+                            systemImage: "pip.enter"
+                        ) {
+                            player.startPictureInPicture()
+                        }
                     }
                 }
                 .padding(.vertical, 2)
