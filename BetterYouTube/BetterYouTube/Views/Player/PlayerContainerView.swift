@@ -612,15 +612,6 @@ private struct PlayerBarScroll: Equatable {
 
 // MARK: - Geometry
 
-#if os(iOS)
-/// The button the floating tab bar minimizes to, at the leading end of its row. The pill keeps
-/// clear of it, and it is the one place in the row whose touch grows the tab bar back.
-enum MinimizedTabButton {
-    /// From the screen's leading edge to just past the button.
-    static let extent: CGFloat = 88
-}
-#endif
-
 /// Fixed measurements of the docked player. The bar is shaped to sit with the floating tab bar:
 /// same horizontal inset, same corner radius, just taller. Adjust these together if the tab bar's
 /// own metrics change.
@@ -648,7 +639,7 @@ private struct PlayerMetrics {
     var compactLeadingClearance: CGFloat {
         #if os(iOS)
         // Collapsed system tab button plus a gap, on the same bottom row as the player.
-        return MinimizedTabButton.extent - barInset
+        return 68
         #else
         return 0
         #endif
