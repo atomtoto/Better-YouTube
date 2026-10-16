@@ -227,3 +227,25 @@ enum AutoPictureInPicturePreference {
         UserDefaults.standard.bool(forKey: storageKey)
     }
 }
+
+/// Settings → Playback → Skip Back and Skip Forward: how far the player's skip buttons, a double
+/// tap on the video and the lock screen's skip buttons jump. Ten seconds unless changed.
+enum SkipIntervalPreference {
+    static let backKey = "skip_back_seconds"
+    static let forwardKey = "skip_forward_seconds"
+    /// The lengths SF Symbols draw a skip button for.
+    static let choices = [5, 10, 15, 30, 45, 60]
+    static let defaultSeconds = 10
+
+    static var back: Int { stored(backKey) }
+    static var forward: Int { stored(forwardKey) }
+
+    /// A stored value no button can be drawn for falls back to the default.
+    static func valid(_ seconds: Int) -> Int {
+        choices.contains(seconds) ? seconds : defaultSeconds
+    }
+
+    private static func stored(_ key: String) -> Int {
+        valid(UserDefaults.standard.integer(forKey: key))
+    }
+}

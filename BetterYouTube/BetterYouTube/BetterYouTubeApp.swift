@@ -247,14 +247,15 @@ struct PlayerCommands: Commands {
 
             Divider()
 
-            Button("Skip Back 15 Seconds") {
-                player.seek(to: player.progress.currentTime - 15)
+            // The lengths chosen in Settings → Playback, as the player's own buttons use.
+            Button("Back \(SkipIntervalPreference.back) Seconds") {
+                player.seek(to: player.progress.currentTime - Double(SkipIntervalPreference.back))
             }
             .keyboardShortcut(.leftArrow, modifiers: [.command, .option])
             .disabled(player.currentVideo == nil)
 
-            Button("Skip Forward 15 Seconds") {
-                player.seek(to: player.progress.currentTime + 15)
+            Button("Forward \(SkipIntervalPreference.forward) Seconds") {
+                player.seek(to: player.progress.currentTime + Double(SkipIntervalPreference.forward))
             }
             .keyboardShortcut(.rightArrow, modifiers: [.command, .option])
             .disabled(player.currentVideo == nil)

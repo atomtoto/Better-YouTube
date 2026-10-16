@@ -90,6 +90,9 @@ final class NowPlaying {
         commands.pauseCommand.isEnabled = video != nil
         commands.togglePlayPauseCommand.isEnabled = video != nil
         commands.nextTrackCommand.isEnabled = hasNext
+        // Settings → Playback, the same lengths as the player's own skip buttons.
+        commands.skipForwardCommand.preferredIntervals = [NSNumber(value: SkipIntervalPreference.forward)]
+        commands.skipBackwardCommand.preferredIntervals = [NSNumber(value: SkipIntervalPreference.back)]
         guard let video else {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             #if os(macOS)
@@ -199,7 +202,6 @@ final class NowPlaying {
                 return .success
             }
         }
-        commands.skipForwardCommand.preferredIntervals = [15]
         commands.skipForwardCommand.addTarget { event in
             guard let event = event as? MPSkipIntervalCommandEvent else { return .commandFailed }
             return MainActor.assumeIsolated {
@@ -208,7 +210,6 @@ final class NowPlaying {
                 return .success
             }
         }
-        commands.skipBackwardCommand.preferredIntervals = [15]
         commands.skipBackwardCommand.addTarget { event in
             guard let event = event as? MPSkipIntervalCommandEvent else { return .commandFailed }
             return MainActor.assumeIsolated {

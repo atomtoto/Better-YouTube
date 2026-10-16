@@ -913,12 +913,12 @@
         }
       }
     },
-    "Back 10 Seconds" : {
+    "Back %lld Seconds" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reculer de 10 secondes"
+            "value" : "Reculer de %lld secondes"
           }
         }
       }
@@ -2133,12 +2133,12 @@
         }
       }
     },
-    "Forward 10 Seconds" : {
+    "Forward %lld Seconds" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avancer de 10 secondes"
+            "value" : "Avancer de %lld secondes"
           }
         }
       }
@@ -2369,6 +2369,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Accueil"
+          }
+        }
+      }
+    },
+    "How far the player's skip buttons, a double tap on either side of the video and the lock screen's buttons jump." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La durée du saut des boutons du lecteur, d’un double toucher de chaque côté de la vidéo et des boutons de l’écran verrouillé."
           }
         }
       }
@@ -4598,22 +4608,22 @@
         }
       }
     },
-    "Skip Back 15 Seconds" : {
+    "Skip Back" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reculer de 15 secondes"
+            "value" : "Reculer de"
           }
         }
       }
     },
-    "Skip Forward 15 Seconds" : {
+    "Skip Forward" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avancer de 15 secondes"
+            "value" : "Avancer de"
           }
         }
       }

@@ -152,6 +152,8 @@ private struct PlaybackSection: View {
     @AppStorage(FloatingMiniPlayerSize.storageKey) private var floatingSize = FloatingMiniPlayerSize.defaultSize
     @AppStorage(PlayerManager.autoplayKey) private var autoplaysNext = true
     @AppStorage(HoldToSpeedUpPreference.storageKey) private var holdsToSpeedUp = true
+    @AppStorage(SkipIntervalPreference.backKey) private var skipBack = SkipIntervalPreference.defaultSeconds
+    @AppStorage(SkipIntervalPreference.forwardKey) private var skipForward = SkipIntervalPreference.defaultSeconds
     #if os(iOS)
     @AppStorage(FullScreenPlayerPreference.storageKey) private var fullScreenPlayer = FullScreenPlayerPreference.app
     @AppStorage(BackgroundPlaybackPreference.storageKey) private var playsInBackground = true
@@ -173,6 +175,23 @@ private struct PlaybackSection: View {
             Text("Background Playback keeps the sound going when you lock the iPhone or leave the app; turned off, the video pauses. With Picture in Picture, a playing video moves to a small window over your other apps when you go to the Home Screen.")
         }
         #endif
+
+        Section {
+            Picker("Skip Back", selection: $skipBack) {
+                ForEach(SkipIntervalPreference.choices, id: \.self) { seconds in
+                    Text(Duration.seconds(seconds), format: .units(allowed: [.minutes, .seconds], width: .wide))
+                        .tag(seconds)
+                }
+            }
+            Picker("Skip Forward", selection: $skipForward) {
+                ForEach(SkipIntervalPreference.choices, id: \.self) { seconds in
+                    Text(Duration.seconds(seconds), format: .units(allowed: [.minutes, .seconds], width: .wide))
+                        .tag(seconds)
+                }
+            }
+        } footer: {
+            Text("How far the player's skip buttons, a double tap on either side of the video and the lock screen's buttons jump.")
+        }
 
         Section {
             Toggle("Hold to Play at 2×", isOn: $holdsToSpeedUp)

@@ -18,6 +18,8 @@ struct PlayerControlsOverlay: View {
     let isFullScreen: Bool
 
     @AppStorage(HoldToSpeedUpPreference.storageKey) private var holdsToSpeedUp = true
+    @AppStorage(SkipIntervalPreference.backKey) private var storedSkipBack = SkipIntervalPreference.defaultSeconds
+    @AppStorage(SkipIntervalPreference.forwardKey) private var storedSkipForward = SkipIntervalPreference.defaultSeconds
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
     @State private var isShown = true
     @State private var hideTask: Task<Void, Never>?
@@ -28,7 +30,8 @@ struct PlayerControlsOverlay: View {
     @State private var skipFeedback: SkipFeedback?
     @GestureState private var isHolding = false
 
-    private static let skipInterval: Double = 10
+    private var skipBack: Int { SkipIntervalPreference.valid(storedSkipBack) }
+    private var skipForward: Int { SkipIntervalPreference.valid(storedSkipForward) }
     /// Not every device has Picture in Picture — the Simulator, for one — and a button that can
     /// only fail is better left out.
     private static let supportsPictureInPicture = AVPictureInPictureController.isPictureInPictureSupported()
@@ -105,10 +108,10 @@ struct PlayerControlsOverlay: View {
         HStack(spacing: 0) {
             Color.clear
                 .contentShape(Rectangle())
-                .gesture(taps(skipping: -Self.skipInterval))
+                .gesture(taps(skipping: -Double(skipBack)))
             Color.clear
                 .contentShape(Rectangle())
-                .gesture(hold.exclusively(before: taps(skipping: Self.skipInterval)))
+                .gesture(hold.exclusively(before: taps(skipping: Double(skipForward))))
         }
         .accessibilityHidden(true)
     }
@@ -214,13 +217,13 @@ struct PlayerControlsOverlay: View {
         GlassEffectContainer {
             HStack(spacing: 28) {
                 Button {
-                    skip(by: -Self.skipInterval)
+                    skip(by: -Double(skipBack))
                 } label: {
-                    Image(systemName: "gobackward.10")
+                    Image(systemName: "gobackward.\(skipBack)")
                         .font(.title3)
                         .padding(4)
                 }
-                .accessibilityLabel("Back 10 Seconds")
+                .accessibilityLabel("Back \(skipBack) Seconds")
 
                 Button {
                     player.togglePlayPause()
@@ -241,13 +244,13 @@ struct PlayerControlsOverlay: View {
                 .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
 
                 Button {
-                    skip(by: Self.skipInterval)
+                    skip(by: Double(skipForward))
                 } label: {
-                    Image(systemName: "goforward.10")
+                    Image(systemName: "goforward.\(skipForward)")
                         .font(.title3)
                         .padding(4)
                 }
-                .accessibilityLabel("Forward 10 Seconds")
+                .accessibilityLabel("Forward \(skipForward) Seconds")
             }
         }
         .buttonStyle(.glass)
