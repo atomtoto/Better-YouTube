@@ -967,15 +967,21 @@ final class PlayerManager: ObservableObject {
     /// scrolling back to the *top* brings it back — which is the rule the tab bar underneath
     /// follows. Scrolling up part-way leaves both of them small, so the two never disagree.
     ///
-    /// Content that fits on screen can't scroll, so it never shrinks the bar — however far it is
-    /// dragged and rubber-banded — and counts as being at the top.
+    /// Content that fits on screen can't scroll, so it never changes the bar — however far it is
+    /// dragged and rubber-banded.
     func scrollDidMove(from previous: CGFloat, to current: CGFloat, canScroll: Bool) {
         guard currentVideo != nil, !isExpanded else { return }
-
-        // The top, and only the top, is what restores the bar.
-        guard canScroll, current > Self.topTolerance else {
+        guard canScroll else {
             scrollRun = 0
-            setBarCompact(false)
+            return
+        }
+
+        // The top, and only the top, is what restores the bar — once a scroll gets back to it.
+        // A screen that merely starts there, like one just opened, leaves the bar as it is: the
+        // tab bar stays minimized when you open a screen, so the bar has to as well.
+        guard current > Self.topTolerance else {
+            scrollRun = 0
+            if previous > Self.topTolerance { setBarCompact(false) }
             return
         }
 
