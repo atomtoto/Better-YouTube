@@ -376,24 +376,24 @@ struct NativeLocalPlayerTests {
         let playback = LocalPlayback()
         playback.load(url: fixture("video.mp4"))
         let item = playback.player.currentItem
-        let controller = AVPlayerViewController()
-        controller.player = playback.player
+        let view = LocalPlayerLayerView()
         let coordinator = LocalPlayerSurface.Coordinator(playback: playback)
-        coordinator.attach(controller)
+        coordinator.attach(view)
         defer { coordinator.detach(); playback.stop() }
+        #expect(view.playerLayer.player === playback.player)
 
         NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
-        #expect(controller.player == nil)
+        #expect(view.playerLayer.player == nil)
         #expect(playback.player.currentItem === item)
         NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
-        #expect(controller.player === playback.player)
-        #expect(controller.player?.currentItem === item)
+        #expect(view.playerLayer.player === playback.player)
+        #expect(view.playerLayer.player?.currentItem === item)
 
         // An active PiP presentation must keep its player even while the app is away.
-        coordinator.playerViewControllerWillStartPictureInPicture(controller)
+        coordinator.pictureInPictureWillStart()
         NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
-        #expect(controller.player === playback.player)
-        coordinator.playerViewControllerDidStopPictureInPicture(controller)
+        #expect(view.playerLayer.player === playback.player)
+        coordinator.pictureInPictureDidStop()
     }
 }
 #endif

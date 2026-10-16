@@ -23,12 +23,18 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   completions — free of quota, and switched off in Settings → Library. Pasting a YouTube link
   opens it instead of searching for it — see [Opening YouTube links](#opening-youtube-links)
 - **Playback** — the official YouTube embedded player (WKWebView), so playback stays within
-  YouTube's Terms of Service. Turning the phone on its side hands the video to iOS's own
-  full-screen presentation — the system's controls, over the app — and turning it back puts the
-  player where it was. On a Mac, ⇧⌘F fills the window instead. On an iPad held landscape the
-  player stands in two columns: the video with its details, and beside it up next and the
-  comments. Autoplay of the next video can be turned off in Settings → Playback, and a sleep timer
-  in the player's menu stops playback after a while or at the end of the video
+  YouTube's Terms of Service, under the app's own native controls: play and pause, 10-second
+  skips (also a double tap on either half of the video), a scrubber split into the video's
+  chapters, captions, Picture in Picture, full screen, and a settings menu with YouTube's own
+  choices — quality, captions and their auto-translation, audio track and speed. Holding the right
+  half of the video plays it at 2× while held (Settings → Playback). A downloaded video gets the
+  same controls. YouTube's own layer only shows through for an ad or its end-screen suggestions.
+  Turning the phone on its side, or the full-screen button, plays the video full screen in the
+  same player — or in iOS's own, if Settings → Playback → Full-Screen Player says so — and turning
+  it back puts the player where it was. On a Mac, ⇧⌘F fills the window instead. On an iPad held
+  landscape the player stands in two columns: the video with its details, and beside it up next
+  and the comments. Autoplay of the next video can be turned off in Settings → Playback, and a
+  sleep timer in the player's menu stops playback after a while or at the end of the video
 - **Resume playback** — reopening a video on iPhone, iPad or Mac continues from its last saved
   position, including downloaded videos. Positions survive app launches and sync through iCloud;
   videos that reached the end start again from the beginning. Artwork shows how much of a video

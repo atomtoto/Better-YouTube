@@ -2,8 +2,8 @@ import SwiftUI
 
 /// The expanded player. The video is the shared surface drawn through the gap in this view.
 ///
-/// The header deliberately sits *above* the video rather than overlaying it: the embed draws
-/// YouTube's own transport controls, and an overlay would swallow the taps meant for them.
+/// The header deliberately sits *above* the video rather than overlaying it: the player's own
+/// controls are drawn over the video, and a header there would swallow the taps meant for them.
 ///
 /// Its layout is fixed to the full-screen metrics even while the player is being pulled down —
 /// the container fades and moves it as one piece, so none of this re-flows mid-drag.

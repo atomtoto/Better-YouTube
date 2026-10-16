@@ -151,6 +151,10 @@ private struct PlaybackSection: View {
     @AppStorage(MiniPlayerStyle.storageKey) private var miniPlayerStyle = MiniPlayerStyle.platformDefault
     @AppStorage(FloatingMiniPlayerSize.storageKey) private var floatingSize = FloatingMiniPlayerSize.defaultSize
     @AppStorage(PlayerManager.autoplayKey) private var autoplaysNext = true
+    @AppStorage(HoldToSpeedUpPreference.storageKey) private var holdsToSpeedUp = true
+    #if os(iOS)
+    @AppStorage(FullScreenPlayerPreference.storageKey) private var fullScreenPlayer = FullScreenPlayerPreference.app
+    #endif
 
     var body: some View {
         Section {
@@ -158,6 +162,24 @@ private struct PlaybackSection: View {
         } footer: {
             Text("Plays the next video in the list when one ends. Turned off, YouTube's own suggestions stay on screen at the end instead. In a car, the queue always continues.")
         }
+
+        Section {
+            Toggle("Hold to Play at 2×", isOn: $holdsToSpeedUp)
+        } footer: {
+            Text("Touch and hold the right half of the video to play it at double speed until you let go, as in the YouTube app.")
+        }
+
+        #if os(iOS)
+        Section {
+            Picker("Full-Screen Player", selection: $fullScreenPlayer) {
+                ForEach(FullScreenPlayerPreference.allCases) { player in
+                    Text(player.title).tag(player)
+                }
+            }
+        } footer: {
+            Text("Used when you turn the phone on its side. This app's player keeps its controls, chapters, captions and settings menu. iOS's player has the system's controls, without YouTube's captions.")
+        }
+        #endif
 
         Section {
             Picker("Mini Player", selection: $miniPlayerStyle) {

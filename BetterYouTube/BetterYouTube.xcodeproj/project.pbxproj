@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		66B498DBEE6CB5AC8F82FC30 /* PlaybackOptionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A96EB9FD75B692A4E78D34A /* PlaybackOptionsTests.swift */; };
+		666B08A2C4CD540D7B5351C6 /* PlayerControlsOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447E8B97CC56E7E1FD3A3C02 /* PlayerControlsOverlay.swift */; };
+		B4AF15A427799EDC86C3C947 /* PlaybackOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBA130B6979EF4ECCB021042 /* PlaybackOptions.swift */; };
 		CA1200000000000000000003 /* CarPlayPlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1200000000000000000004 /* CarPlayPlaybackTests.swift */; };
 		CA1200000000000000000001 /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1200000000000000000002 /* CarPlaySceneDelegate.swift */; };
 		AA72D02F304D47CB86C5A001 /* PlaybackPositionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA72D02F304D47CB86C5A002 /* PlaybackPositionStore.swift */; };
@@ -161,6 +164,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		6A96EB9FD75B692A4E78D34A /* PlaybackOptionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackOptionsTests.swift; sourceTree = "<group>"; };
+		447E8B97CC56E7E1FD3A3C02 /* PlayerControlsOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerControlsOverlay.swift; sourceTree = "<group>"; };
+		CBA130B6979EF4ECCB021042 /* PlaybackOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackOptions.swift; sourceTree = "<group>"; };
 		CA1200000000000000000004 /* CarPlayPlaybackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayPlaybackTests.swift; sourceTree = "<group>"; };
 		CA1200000000000000000002 /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
 		AA72D02F304D47CB86C5A002 /* PlaybackPositionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPositionStore.swift; sourceTree = "<group>"; };
@@ -313,6 +319,7 @@
 			isa = PBXGroup;
 			children = (
 				989F6E87E9B3CF0057F0FCC7 /* LocalPlayerSurface.swift */,
+				447E8B97CC56E7E1FD3A3C02 /* PlayerControlsOverlay.swift */,
 				DFBA4A2E90A83CCEA3BEE9ED /* PlayerSurface.swift */,
 				E2594FCB99B0F3BE3777EAF6 /* PlayerContainerView.swift */,
 				BE2744C99CF77303B5A53C52 /* ExpandedPlayerView.swift */,
@@ -400,6 +407,7 @@
 				D9D475EEF80BD3FFE6C80DA0 /* YouTubeLinkTests.swift */,
 				ADCF052A069B96442ABB04DA /* NotificationStoreTests.swift */,
 				AA72D02F304D47CB86C5A004 /* PlaybackPositionTests.swift */,
+				6A96EB9FD75B692A4E78D34A /* PlaybackOptionsTests.swift */,
 				CA1200000000000000000004 /* CarPlayPlaybackTests.swift */,
 				6674D421281E4885BA4BE4EB /* ICloudSyncServiceTests.swift */,
 				505540D7FD3146C3A3DA4107 /* CloudLibrarySyncTests.swift */,
@@ -436,6 +444,7 @@
 				42CAC8DB58C94E1995B46E8D /* CloudSyncEntry.swift */,
 				6ECDDB993DD4C6CDAA43CDB3 /* DownloadConfigLink.swift */,
 				F212278CDA1C2466E2A0C880 /* LocalPlayback.swift */,
+				CBA130B6979EF4ECCB021042 /* PlaybackOptions.swift */,
 				3EDBA542F6162FE9537251BC /* DownloadManager.swift */,
 				D29E2556D0A833F15A04D6B0 /* DownloadService.swift */,
 				D10CA1000000000000000002 /* LocalDownloadResolver.swift */,
@@ -654,6 +663,7 @@
 				3BEED17A6D38B073C2FC9C3B /* YouTubeLinkTests.swift in Sources */,
 				BAC7AB84BCE20E3EB354C669 /* NotificationStoreTests.swift in Sources */,
 				AA72D02F304D47CB86C5A003 /* PlaybackPositionTests.swift in Sources */,
+				66B498DBEE6CB5AC8F82FC30 /* PlaybackOptionsTests.swift in Sources */,
 				CA1200000000000000000003 /* CarPlayPlaybackTests.swift in Sources */,
 				D718ABA5C1C041D68CC808C5 /* ICloudSyncServiceTests.swift in Sources */,
 				426FB6EDC6984A72A626DD0F /* CloudLibrarySyncTests.swift in Sources */,
@@ -747,8 +757,10 @@
 				D10CA1000000000000000001 /* LocalDownloadResolver.swift in Sources */,
 				D78B569CDE1F67ADF9AC73A7 /* DownloadManager.swift in Sources */,
 				61855544A58CD804FE142178 /* LocalPlayback.swift in Sources */,
+				B4AF15A427799EDC86C3C947 /* PlaybackOptions.swift in Sources */,
 				77E26E4559CB67E2D529AD5D /* DownloadsView.swift in Sources */,
 				A8AA70CD423FD5DCC238368F /* LocalPlayerSurface.swift in Sources */,
+				666B08A2C4CD540D7B5351C6 /* PlayerControlsOverlay.swift in Sources */,
 				C6BACBED1D1C50E9026BAEAC /* DownloadConfigLink.swift in Sources */,
 				B1A2C3D40E5F60718293A4B5 /* Platform.swift in Sources */,
 			);

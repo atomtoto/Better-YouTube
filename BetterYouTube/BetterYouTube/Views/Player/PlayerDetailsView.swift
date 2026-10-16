@@ -344,14 +344,11 @@ struct PlayerDetailsView: View {
                         .simultaneousGesture(TapGesture().onEnded { shareTaps += 1 })
                     }
 
-                    // AVKit exposes its own PiP button for local playback, so the pill is for streams.
-                    if !player.isLocal {
-                        PlayerActionPill(
-                            title: String(localized: "Picture in Picture"),
-                            systemImage: "pip.enter"
-                        ) {
-                            player.startPictureInPicture()
-                        }
+                    PlayerActionPill(
+                        title: String(localized: "Picture in Picture"),
+                        systemImage: "pip.enter"
+                    ) {
+                        player.startPictureInPicture()
                     }
                 }
                 .padding(.vertical, 2)

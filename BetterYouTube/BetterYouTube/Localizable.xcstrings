@@ -822,12 +822,52 @@
         }
       }
     },
+    "Audio Track" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Piste audio"
+          }
+        }
+      }
+    },
     "Authorized domain" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Domaine autorisé"
+          }
+        }
+      }
+    },
+    "Auto" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto"
+          }
+        }
+      }
+    },
+    "Auto (%@)" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto (%@)"
+          }
+        }
+      }
+    },
+    "Auto-Translate" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Traduction automatique"
           }
         }
       }
@@ -858,6 +898,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Retour"
+          }
+        }
+      }
+    },
+    "Back 10 Seconds" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reculer de 10 secondes"
           }
         }
       }
@@ -958,6 +1008,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Annuler le téléchargement"
+          }
+        }
+      }
+    },
+    "Captions" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sous-titres"
           }
         }
       }
@@ -1802,6 +1862,16 @@
         }
       }
     },
+    "Exit Full Screen" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quitter le plein écran"
+          }
+        }
+      }
+    },
     "Favorite" : {
       "localizations" : {
         "fr" : {
@@ -2012,6 +2082,16 @@
         }
       }
     },
+    "Forward 10 Seconds" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avancer de 10 secondes"
+          }
+        }
+      }
+    },
     "Found %lld videos — choose their destination" : {
       "localizations" : {
         "en" : {
@@ -2048,6 +2128,26 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Full Screen" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plein écran"
+          }
+        }
+      }
+    },
+    "Full-Screen Player" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecteur plein écran"
           }
         }
       }
@@ -2198,6 +2298,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Maintiens le doigt sur une vidéo et choisis « Télécharger ». Elle arrive dans le dossier Téléchargements et se lit depuis là où que tu la retrouves — y compris sans réseau."
+          }
+        }
+      }
+    },
+    "Hold to Play at 2×" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenir pour lire en 2×"
           }
         }
       }
@@ -2793,6 +2903,17 @@
         }
       }
     },
+    "Normal" : {
+      "comment" : "Playback speed of 1×",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Normale"
+          }
+        }
+      }
+    },
     "Not Interested" : {
       "localizations" : {
         "fr" : {
@@ -3285,6 +3406,16 @@
         }
       }
     },
+    "Picture in Picture isn't available for this video right now." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’image dans l’image n’est pas disponible pour cette vidéo pour l’instant."
+          }
+        }
+      }
+    },
     "Play" : {
       "localizations" : {
         "fr" : {
@@ -3365,12 +3496,42 @@
         }
       }
     },
+    "Playback Position" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Position de lecture"
+          }
+        }
+      }
+    },
+    "Playback Speed" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vitesse de lecture"
+          }
+        }
+      }
+    },
     "Player" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lecteur"
+          }
+        }
+      }
+    },
+    "Playing at Double Speed" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture en vitesse double"
           }
         }
       }
@@ -4996,6 +5157,16 @@
         }
       }
     },
+    "This App's Player" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecteur de l’app"
+          }
+        }
+      }
+    },
     "This Month" : {
       "localizations" : {
         "fr" : {
@@ -5206,6 +5377,16 @@
         }
       }
     },
+    "Touch and hold the right half of the video to play it at double speed until you let go, as in the YouTube app." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintiens le doigt sur la moitié droite de la vidéo pour la lire deux fois plus vite, jusqu’à ce que tu le relâches, comme dans l’app YouTube."
+          }
+        }
+      }
+    },
     "Try Again" : {
       "localizations" : {
         "fr" : {
@@ -5236,12 +5417,32 @@
         }
       }
     },
+    "Turn Off Captions" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactiver les sous-titres"
+          }
+        }
+      }
+    },
     "Turn Off Timer" : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Désactiver le minuteur"
+          }
+        }
+      }
+    },
+    "Turn On Captions" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activer les sous-titres"
           }
         }
       }
@@ -5397,16 +5598,6 @@
         }
       }
     },
-    "Use the Picture in Picture button in the video's native playback controls." : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Utilise le bouton Image dans l’image des commandes de lecture natives de la vidéo."
-          }
-        }
-      }
-    },
     "Use this bundle ID" : {
       "localizations" : {
         "fr" : {
@@ -5423,6 +5614,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Utiliser ce service de téléchargement ?"
+          }
+        }
+      }
+    },
+    "Used when you turn the phone on its side. This app's player keeps its controls, chapters, captions and settings menu. iOS's player has the system's controls, without YouTube's captions." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisé quand tu tournes le téléphone. Le lecteur de l’app garde ses commandes, ses chapitres, ses sous-titres et son menu de réglages. Le lecteur d’iOS a les commandes du système, sans les sous-titres de YouTube."
           }
         }
       }
@@ -6083,6 +6284,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "La synchro iCloud est en pause pendant la démo. Ta bibliothèque est conservée telle quelle."
+          }
+        }
+      }
+    },
+    "iOS Player" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecteur d’iOS"
           }
         }
       }

@@ -184,27 +184,38 @@ struct PlayerContainerView: View {
             // 2. The one and only video surface. It keeps its full-screen layout size in every
             //    state and is *scaled* into the bar rather than resized: re-laying out a web view
             //    on every frame of a drag is what made collapsing the player stutter. Expanded,
-            //    it takes the taps so YouTube's own controls work; docked, they fall through to
-            //    the bar and expand the player.
+            //    the player's controls sit over it and travel with it; docked, the taps fall
+            //    through to the bar and expand the player.
             videoSurface
                 .frame(width: video.width, height: video.height)
+                .overlay {
+                    if player.isExpanded, !player.isSystemFullScreen {
+                        PlayerControlsOverlay(
+                            player: player,
+                            options: player.options,
+                            isFullScreen: player.isFullScreen
+                        )
+                        .opacity(chromeOpacity(expansion: expansion))
+                        .transition(.opacity)
+                    }
+                }
                 .clipShape(
                     RoundedRectangle(
                         cornerRadius: layout.videoCornerRadius(expansion: expansion) / max(scale, 0.01),
                         style: .continuous
                     )
                 )
-                // Local transport handles its own gestures; the header still allows collapse.
+                // Full screen has nothing to collapse into, so only the controls' own gestures run.
                 .simultaneousGesture(
                     collapseDrag(travel: layout.collapseTravel).gesture,
-                    including: player.isFullScreen || player.isLocal ? .subviews : .all
+                    including: player.isFullScreen ? .subviews : .all
                 )
                 .scaleEffect(scale)
                 .position(x: center.x, y: center.y - videoScrollOffset * expansion)
                 .allowsHitTesting(player.isExpanded)
                 #if os(macOS)
                 // The macOS ScrollView occupies the whole window. Keep the shared video above
-                // its transparent gap so YouTube's playback controls still receive clicks.
+                // its transparent gap so the player's controls still receive clicks.
                 .zIndex(player.isExpanded ? 1 : 0)
                 #endif
 
@@ -349,19 +360,12 @@ struct PlayerContainerView: View {
 
     /// Whichever player is live. They swap in the same slot and are laid out identically, so
     /// the morph between the bar and full screen is unaware that there are two of them — and a
-    /// downloaded video docks, expands and goes full screen exactly like a streamed one.
+    /// downloaded video docks, expands and goes full screen exactly like a streamed one, under
+    /// the same controls.
     @ViewBuilder
     private var videoSurface: some View {
         if player.isLocal {
-            #if os(iOS)
-            LocalPlayerSurface(playback: player.local, showsControls: player.isExpanded)
-            #else
-            LocalPlayerSurface(
-                playback: player.local,
-                showsControls: player.isExpanded,
-                usesFullScreenControls: player.isFullScreen
-            )
-            #endif
+            LocalPlayerSurface(playback: player.local)
         } else if player.currentVideo != nil || player.hasWebView {
             PlayerSurface(webView: player.webView)
         } else {
@@ -420,7 +424,7 @@ struct PlayerContainerView: View {
 struct PlayerDragState {
     /// How far the finger has pulled, in points, downwards only.
     var translation: CGFloat = 0
-    /// Set once the drag reads as vertical, so sideways scrubs stay with YouTube's controls.
+    /// Set once the drag reads as vertical, so sideways scrubs stay with the player's scrubber.
     var isVertical = false
 }
 
@@ -520,18 +524,9 @@ struct PlayerActions: View {
                 Label("Open in YouTube", systemImage: "arrow.up.forward.app")
             }
         }
-        // AVKit exposes its own PiP button for local iOS playback.
-        #if os(iOS)
-        if !player.isLocal {
-            Button { player.startPictureInPicture() } label: {
-                Label("Picture in Picture", systemImage: "pip.enter")
-            }
-        }
-        #else
         Button { player.startPictureInPicture() } label: {
             Label("Picture in Picture", systemImage: "pip.enter")
         }
-        #endif
         Button(role: .destructive) {
             player.close()
         } label: {
