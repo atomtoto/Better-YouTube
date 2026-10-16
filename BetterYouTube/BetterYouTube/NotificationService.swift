@@ -114,7 +114,11 @@ final class NotificationService: NSObject, ObservableObject {
 
 // MARK: - UNUserNotificationCenterDelegate
 
-extension NotificationService: UNUserNotificationCenterDelegate {
+// `@preconcurrency` lets the tap handler below stay on the main actor. UIKit asserts that the
+// completion handler behind the async `didReceive` is called on the main thread; a `nonisolated`
+// async version finishes on a background executor and the app aborts as soon as a notification
+// is tapped.
+extension NotificationService: @preconcurrency UNUserNotificationCenterDelegate {
     /// Show banners even while the app is open, like YouTube does.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
@@ -123,43 +127,30 @@ extension NotificationService: UNUserNotificationCenterDelegate {
         [.banner, .sound, .list]
     }
 
-    nonisolated func userNotificationCenter(
+    func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        // Everything needed is read out here, before the hop. `userInfo` is
-        // `[AnyHashable: Any]`, which is not Sendable, so carrying the dictionary itself into the
-        // main actor is an error under Swift 6 — the same reason `PlayerEvent` is kept to
-        // primitives. Strings and a URL cross on their own.
         let userInfo = response.notification.request.content.userInfo
         guard let videoId = userInfo["videoId"] as? String else { return }
-        let actionIdentifier = response.actionIdentifier
-        let title = userInfo["title"] as? String ?? ""
-        let channelId = userInfo["channelId"] as? String ?? ""
-        let channelTitle = userInfo["channelTitle"] as? String ?? ""
-        let thumbnailURL = (userInfo["thumbnailURL"] as? String).flatMap(URL.init(string:))
 
-        if actionIdentifier == NotificationIdentifier.watchLater {
+        if response.actionIdentifier == NotificationIdentifier.watchLater {
             let video = Video(
                 id: videoId,
-                title: title,
-                channelId: channelId,
-                channelTitle: channelTitle,
+                title: userInfo["title"] as? String ?? "",
+                channelId: userInfo["channelId"] as? String ?? "",
+                channelTitle: userInfo["channelTitle"] as? String ?? "",
                 description: "",
-                thumbnailURL: thumbnailURL,
+                thumbnailURL: (userInfo["thumbnailURL"] as? String).flatMap(URL.init(string:)),
                 publishedAt: nil
             )
             await WatchLaterStore.shared.add(video)
         } else {
-            await MainActor.run {
-                AppRouter.shared.open(videoId: videoId)
-            }
+            AppRouter.shared.open(videoId: videoId)
         }
 
-        await MainActor.run {
-            if let item = NotificationStore.shared.items.first(where: { $0.videoId == videoId }) {
-                NotificationStore.shared.markRead(item)
-            }
+        if let item = NotificationStore.shared.items.first(where: { $0.videoId == videoId }) {
+            NotificationStore.shared.markRead(item)
         }
     }
 }
