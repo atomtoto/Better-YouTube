@@ -12,6 +12,8 @@ struct VideoChapter: Identifiable, Hashable, Sendable, Decodable {
     let title: String
     /// Where it starts, in seconds.
     let start: Double
+    /// YouTube's picture of the chapter. Chapters read from a description have none.
+    var thumbnail: URL?
     var id: Double { start }
 }
 

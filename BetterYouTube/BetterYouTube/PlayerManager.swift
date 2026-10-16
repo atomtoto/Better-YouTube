@@ -1841,11 +1841,21 @@ final class PlayerManager: ObservableObject {
             list = lists[0].value.chapters.map(function (chapter) {
               return chapter.chapterRenderer;
             }).filter(Boolean).map(function (chapter) {
-              return { title: textOf(chapter.title), start: (chapter.timeRangeStartMillis || 0) / 1000 };
+              return { title: textOf(chapter.title), start: (chapter.timeRangeStartMillis || 0) / 1000,
+                thumbnail: chapterThumbnail(chapter.thumbnail) };
             });
           }
           chapterCache = { video: watchedVideo, list: list };
           return list;
+        }
+
+        // The smallest of a chapter's pictures that is still sharp in a list row.
+        function chapterThumbnail(thumbnail) {
+          var sizes = (thumbnail && thumbnail.thumbnails) || [];
+          var sharp = sizes.filter(function (size) { return size.width >= 300; })
+            .sort(function (a, b) { return a.width - b.width; })[0];
+          var picked = sharp || sizes[sizes.length - 1];
+          return picked && picked.url ? picked.url : undefined;
         }
 
         function captionID(track) {

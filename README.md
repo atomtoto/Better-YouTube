@@ -40,7 +40,8 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   videos that reached the end start again from the beginning. Artwork shows how much of a video
   was watched, and Library lists what was left part-way through under *Continue Watching*
 - **Video detail** — stats, a description whose timestamps seek the video and whose YouTube links
-  open in the app, comments (Top or Newest, page after page, with tappable timestamps too), a
+  open in the app, the video's chapters under it (the one playing, and a tap lists them all with
+  YouTube's pictures; picking one jumps there), comments (Top or Newest, page after page, with tappable timestamps too), a
   share sheet — including *Share at 1:23* — and a thumbs-up that is the real like on your YouTube
   account (the heart beside it is the app's own favorites)
 - **Channels** — profile header, every upload page by page, the channel's public playlists, and

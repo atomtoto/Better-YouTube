@@ -192,6 +192,17 @@
         }
       }
     },
+    "%lld of %lld" : {
+      "comment" : "Which chapter is playing, out of how many: 2 of 7",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld sur %2$lld"
+          }
+        }
+      }
+    },
     "%lld older ones skipped" : {
       "localizations" : {
         "en" : {
@@ -1088,6 +1099,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Les chaînes que tu suis sur YouTube apparaissent ici."
+          }
+        }
+      }
+    },
+    "Chapter %lld" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chapitre %lld"
+          }
+        }
+      }
+    },
+    "Chapters" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chapitres"
           }
         }
       }
@@ -3286,6 +3317,16 @@
         }
       }
     },
+    "Opens all chapters" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre tous les chapitres"
+          }
+        }
+      }
+    },
     "Opens all comments" : {
       "localizations" : {
         "fr" : {
@@ -3542,6 +3583,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lecteur"
+          }
+        }
+      }
+    },
+    "Playing Now" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En cours de lecture"
           }
         }
       }

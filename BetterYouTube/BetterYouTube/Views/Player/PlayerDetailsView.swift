@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Everything below the video in the expanded player: title, actions, channel, description,
-/// the up-next queue and comments.
+/// chapters, the up-next queue and comments.
 struct PlayerDetailsView: View {
     let video: Video
     /// Set on a wide iPad, where the details stand in two columns rather than one under the
@@ -27,6 +27,7 @@ struct PlayerDetailsView: View {
     @State private var watchLaterError: String?
     @State private var showsPlaylistPicker = false
     @State private var showsComments = false
+    @State private var showsChapters = false
     // What the native haptics below are keyed to: each tap moves its counter once.
     @State private var shareTaps = 0
     @State private var channelTaps = 0
@@ -70,6 +71,28 @@ struct PlayerDetailsView: View {
         .task { await viewModel.loadAll() }
         .sheet(isPresented: $showsPlaylistPicker) {
             PlaylistPickerView(video: displayed)
+        }
+        .sheet(isPresented: $showsChapters) {
+            NavigationStack {
+                ChapterList(options: player.options, progress: player.progress,
+                            isPlaying: player.isPlaying) { chapter in
+                    seek(to: chapter.start)
+                }
+                .navigationTitle("Chapters")
+                #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+                #endif
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showsChapters = false }
+                    }
+                }
+            }
+            #if os(macOS)
+            .frame(minWidth: 420, minHeight: 480)
+            #endif
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         #if os(iOS)
         .sheet(isPresented: $showsComments) {
@@ -196,6 +219,13 @@ struct PlayerDetailsView: View {
 
             if !displayed.description.isEmpty {
                 descriptionCard
+            }
+
+            // Chapters belong to the video playing, which is the one these details are for.
+            if player.currentVideo?.id == video.id {
+                ChaptersCard(options: player.options, progress: player.progress) {
+                    showsChapters = true
+                }
             }
         }
     }
@@ -423,9 +453,11 @@ struct PlayerDetailsView: View {
                 seek(to: start ?? 0)
             case .video(let id, let start):
                 showsComments = false
+                showsChapters = false
                 Task { await player.open(videoId: id, startTime: start) }
             default:
                 showsComments = false
+                showsChapters = false
                 Task { await router.follow(link) }
             }
             return .handled
@@ -433,11 +465,12 @@ struct PlayerDetailsView: View {
     }
 
     /// Jumps to a moment of the video on screen, and plays from there — what tapping a chapter
-    /// does everywhere else. The comments sheet steps aside so the jump can be seen.
+    /// does everywhere else. The comments and chapters sheets step aside so the jump can be seen.
     private func seek(to seconds: TimeInterval) {
         guard player.currentVideo?.id == video.id else { return }
         seeks += 1
         showsComments = false
+        showsChapters = false
         player.seek(to: seconds)
         if !player.isPlaying { player.resume() }
     }

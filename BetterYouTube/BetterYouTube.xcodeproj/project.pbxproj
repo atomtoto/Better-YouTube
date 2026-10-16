@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		50FC2AF7B811064F64189666 /* PlayerChaptersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF4809431F28D245D57ABBF /* PlayerChaptersView.swift */; };
 		66B498DBEE6CB5AC8F82FC30 /* PlaybackOptionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A96EB9FD75B692A4E78D34A /* PlaybackOptionsTests.swift */; };
 		666B08A2C4CD540D7B5351C6 /* PlayerControlsOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447E8B97CC56E7E1FD3A3C02 /* PlayerControlsOverlay.swift */; };
 		B4AF15A427799EDC86C3C947 /* PlaybackOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBA130B6979EF4ECCB021042 /* PlaybackOptions.swift */; };
@@ -164,6 +165,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		ABF4809431F28D245D57ABBF /* PlayerChaptersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerChaptersView.swift; sourceTree = "<group>"; };
 		6A96EB9FD75B692A4E78D34A /* PlaybackOptionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackOptionsTests.swift; sourceTree = "<group>"; };
 		447E8B97CC56E7E1FD3A3C02 /* PlayerControlsOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerControlsOverlay.swift; sourceTree = "<group>"; };
 		CBA130B6979EF4ECCB021042 /* PlaybackOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackOptions.swift; sourceTree = "<group>"; };
@@ -319,6 +321,7 @@
 			isa = PBXGroup;
 			children = (
 				989F6E87E9B3CF0057F0FCC7 /* LocalPlayerSurface.swift */,
+				ABF4809431F28D245D57ABBF /* PlayerChaptersView.swift */,
 				447E8B97CC56E7E1FD3A3C02 /* PlayerControlsOverlay.swift */,
 				DFBA4A2E90A83CCEA3BEE9ED /* PlayerSurface.swift */,
 				E2594FCB99B0F3BE3777EAF6 /* PlayerContainerView.swift */,
@@ -760,6 +763,7 @@
 				B4AF15A427799EDC86C3C947 /* PlaybackOptions.swift in Sources */,
 				77E26E4559CB67E2D529AD5D /* DownloadsView.swift in Sources */,
 				A8AA70CD423FD5DCC238368F /* LocalPlayerSurface.swift in Sources */,
+				50FC2AF7B811064F64189666 /* PlayerChaptersView.swift in Sources */,
 				666B08A2C4CD540D7B5351C6 /* PlayerControlsOverlay.swift in Sources */,
 				C6BACBED1D1C50E9026BAEAC /* DownloadConfigLink.swift in Sources */,
 				B1A2C3D40E5F60718293A4B5 /* Platform.swift in Sources */,
