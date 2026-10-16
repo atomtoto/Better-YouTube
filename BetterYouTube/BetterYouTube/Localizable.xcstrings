@@ -3185,6 +3185,16 @@
         }
       }
     },
+    "Passkeys don't work here. Sign in with your Google password." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les clés d’accès ne fonctionnent pas ici. Connecte-toi avec ton mot de passe Google."
+          }
+        }
+      }
+    },
     "Paste it into the OAuth client's Bundle ID field." : {
       "localizations" : {
         "fr" : {

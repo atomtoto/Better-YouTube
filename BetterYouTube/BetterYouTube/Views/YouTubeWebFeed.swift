@@ -18,6 +18,16 @@ struct YouTubeSignInView: View {
                     Task { await session.refresh() }
                 }
                 .ignoresSafeArea(edges: .bottom)
+                // The page has no WebAuthn (see `withoutWebAuthn`), so Google never offers a
+                // passkey here. Say so before someone goes looking for one.
+                .safeAreaBar(edge: .top) {
+                    Label("Passkeys don't work here. Sign in with your Google password.", systemImage: "key.slash")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                }
                 .navigationTitle("youtube.com")
                 .inlineNavigationBar()
                 .toolbar {
