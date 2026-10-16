@@ -174,12 +174,13 @@ struct RootTabView: View {
         }
         // Lifts the search tab out of the bar and turns it into the field along the bottom.
         .tabViewSearchActivation(searchInTabBar ? .automatic : .searchTabSelection)
-        // Shrink the floating tab bar as you scroll down, the way Apple's own apps do — it
-        // comes back at the top of the scroll, not on the first flick upwards. The player bar
-        // above it follows the same rule, see `minimizesPlayerBarOnScroll`.
+        // Shrink the floating tab bar as you scroll down, the way Apple's own apps do; a flick
+        // back up restores it. The player bar above it follows it, see
+        // `TabBarMinimizationWatcher`.
         .tabBarMinimizeBehavior(.onScrollDown)
         // Touching the shrunk tab bar brings it back without any scroll, which the player bar
-        // has no other way to hear about. See `PassiveTap` for why it isn't a SwiftUI gesture.
+        // has no other way to hear about when the tab bar's state can't be read. See
+        // `PassiveTap` for why it isn't a SwiftUI gesture.
         .gesture(PassiveTap { location in
             if location.y >= tabBarTop { player.tabBarWasTouched() }
         })
@@ -272,6 +273,105 @@ private struct PassiveTap: UIGestureRecognizerRepresentable {
         ) -> Bool {
             true
         }
+    }
+}
+#endif
+
+#if os(iOS)
+/// Whether the floating tab bar is minimized, read off the tab bar itself.
+///
+/// `tabBarMinimizeBehavior` decides when the tab bar minimizes and restores on rules of its own —
+/// a flick upwards brings it back, a slow drag doesn't, not even all the way to the top — and no
+/// API reports the outcome. The tab bar's views show it, though: minimizing reveals the button it
+/// shrinks to, restoring reveals the full bar, and both happen as its animation starts. Watching
+/// those two is what lets the docked player move with it.
+///
+/// They are UIKit's own views, found by class name. If an iOS update lays the tab bar out
+/// differently, or the tab bar isn't along the bottom, `isMinimized()` answers `nil` and the
+/// player falls back to following the scroll.
+@MainActor
+final class TabBarMinimizationWatcher {
+    private let onChange: (Bool) -> Void
+    private var minimized: Bool?
+    /// The full bar and the button it minimizes to. They are rebuilt along with the tab view, so
+    /// they are found again whenever they leave the window.
+    private weak var fullBar: UIView?
+    private weak var minimizedButton: UIView?
+    private var observations: [NSKeyValueObservation] = []
+    /// Looking for the tab bar walks the whole window, so a search that came up empty waits a
+    /// moment before it is tried again — `isMinimized()` is asked on every frame of a scroll.
+    private var nextSearch = Date.distantPast
+
+    init(onChange: @escaping (Bool) -> Void) {
+        self.onChange = onChange
+    }
+
+    /// The tab bar's state, or `nil` when it can't be read.
+    func isMinimized() -> Bool? {
+        if fullBar?.window == nil || minimizedButton?.window == nil {
+            attach()
+        }
+        return minimized
+    }
+
+    private func attach() {
+        observations = []
+        minimized = nil
+        guard Date() >= nextSearch else { return }
+        nextSearch = Date().addingTimeInterval(1)
+
+        guard let tabBar = Self.bottomTabBar(),
+              let fullBar = tabBar.subviews.first(where: { Self.isView($0, named: "_UITabBarItemPlatterView") }),
+              let minimizedButton = tabBar.subviews.first(where: { Self.isView($0, named: "_UITabBarPlatterView") })
+        else { return }
+
+        self.fullBar = fullBar
+        self.minimizedButton = minimizedButton
+        minimized = fullBar.isHidden
+        // Each view is shown as the tab bar starts moving towards it, and the other is hidden
+        // only once it gets there, so it is the one appearing that says where it is going.
+        observations = [
+            minimizedButton.layer.observe(\.isHidden) { [weak self] layer, _ in
+                guard !layer.isHidden else { return }
+                MainActor.assumeIsolated { self?.update(minimized: true) }
+            },
+            fullBar.layer.observe(\.isHidden) { [weak self] layer, _ in
+                guard !layer.isHidden else { return }
+                MainActor.assumeIsolated { self?.update(minimized: false) }
+            },
+        ]
+    }
+
+    private func update(minimized: Bool) {
+        guard self.minimized != minimized else { return }
+        self.minimized = minimized
+        onChange(minimized)
+    }
+
+    /// The app's tab bar, if it runs along the bottom of its window — the only place it
+    /// minimizes, and the only place the docked player sits beside it.
+    private static func bottomTabBar() -> UITabBar? {
+        for scene in UIApplication.shared.connectedScenes {
+            guard let scene = scene as? UIWindowScene else { continue }
+            for window in scene.windows {
+                guard let tabBar = firstTabBar(in: window) else { continue }
+                let frame = tabBar.convert(tabBar.bounds, to: window)
+                if frame.maxY >= window.bounds.maxY - 1 { return tabBar }
+            }
+        }
+        return nil
+    }
+
+    private static func firstTabBar(in view: UIView) -> UITabBar? {
+        if let tabBar = view as? UITabBar { return tabBar }
+        for subview in view.subviews {
+            if let tabBar = firstTabBar(in: subview) { return tabBar }
+        }
+        return nil
+    }
+
+    private static func isView(_ view: UIView, named name: String) -> Bool {
+        NSStringFromClass(type(of: view)) == name
     }
 }
 #endif

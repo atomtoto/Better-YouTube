@@ -962,15 +962,28 @@ final class PlayerManager: ObservableObject {
     private static let topTolerance: CGFloat = 0.5
     /// Downward scroll travelled since the bar was last full size.
     private var scrollRun: CGFloat = 0
+    #if os(iOS)
+    /// The tab bar's own minimized state, which the bar follows whenever it can be read.
+    private lazy var tabBar = TabBarMinimizationWatcher { [weak self] minimized in
+        self?.tabBarDidChange(minimized: minimized)
+    }
+    #endif
 
-    /// Fed by every screen's scroll view: scrolling down shrinks the bar to its pill, and
-    /// scrolling back to the *top* brings it back — which is the rule the tab bar underneath
-    /// follows. Scrolling up part-way leaves both of them small, so the two never disagree.
+    /// Fed by every screen's scroll view. The bar is the same size as the tab bar underneath, so
+    /// where the tab bar's state can be read, the bar simply follows it — the tab bar decides
+    /// when to minimize and restore on rules of its own, see `TabBarMinimizationWatcher`.
     ///
-    /// Content that fits on screen can't scroll, so it never changes the bar — however far it is
-    /// dragged and rubber-banded.
+    /// Otherwise the scroll decides: scrolling down shrinks the bar to its pill, and scrolling
+    /// back to the *top* brings it back. Content that fits on screen can't scroll, so it never
+    /// changes the bar — however far it is dragged and rubber-banded.
     func scrollDidMove(from previous: CGFloat, to current: CGFloat, canScroll: Bool) {
         guard currentVideo != nil, !isExpanded else { return }
+        #if os(iOS)
+        if let minimized = tabBar.isMinimized() {
+            setBarCompact(minimized)
+            return
+        }
+        #endif
         guard canScroll else {
             scrollRun = 0
             return
@@ -998,16 +1011,26 @@ final class PlayerManager: ObservableObject {
     /// scrolled, so the bar grows back with it — the two are meant to be the same size.
     func tabBarWasTouched() {
         guard isBarCompact else { return }
+        #if os(iOS)
+        // The tab bar reports for itself when it can, and only a touch on its button restores it.
+        if tabBar.isMinimized() != nil { return }
+        #endif
         scrollRun = 0
         setBarCompact(false)
     }
 
+    #if os(iOS)
+    private func tabBarDidChange(minimized: Bool) {
+        guard currentVideo != nil, !isExpanded else { return }
+        setBarCompact(minimized)
+    }
+    #endif
+
     private func setBarCompact(_ compact: Bool) {
         guard isBarCompact != compact else { return }
         // `.snappy` is the system's own preset for chrome that jumps between two states, which
-        // is the closest we can get to the curve the tab bar minimizes on: its state isn't
-        // published, so the two are kept in step by reacting to the same scroll on the same
-        // frame rather than by sharing an animation.
+        // is the closest we can get to the curve the tab bar minimizes on: the two don't share
+        // an animation, so they are kept in step by starting on the same frame.
         withAnimation(.snappy) {
             isBarCompact = compact
         }

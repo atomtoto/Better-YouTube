@@ -51,6 +51,7 @@ enum FloatingMiniPlayerSize: String, CaseIterable, Identifiable {
 /// layout instead of a jump, and the finger can drive it directly.
 struct PlayerContainerView: View {
     @EnvironmentObject private var player: PlayerManager
+    @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var downloads: DownloadStore
     @EnvironmentObject private var downloadManager: DownloadManager
     /// The pull-down that shrinks the expanded player back into the bar.
@@ -96,12 +97,22 @@ struct PlayerContainerView: View {
         #endif
     }
 
+    /// Whether Search's field runs along the bottom, where the minimized tab bar would be. It
+    /// keeps its width however the results scroll, so the bar stays full size above it.
+    private var showsSearchFieldAtBottom: Bool {
+        #if os(iOS)
+        !searchInTabBar && router.selectedTab == .search
+        #else
+        false
+        #endif
+    }
+
     var body: some View {
         GeometryReader { proxy in
             let layout = PlayerLayout(
                 size: proxy.size,
                 metrics: metrics,
-                compactness: player.isBarCompact ? 1 : 0,
+                compactness: player.isBarCompact && !showsSearchFieldAtBottom ? 1 : 0,
                 style: displayedMiniPlayerStyle,
                 floatingSize: floatingSize,
                 floatingOnLeft: floatingOnLeft,
@@ -574,9 +585,9 @@ private struct SleepTimerMenu: View {
 // MARK: - Shrinking the bar on scroll
 
 extension View {
-    /// Shrinks the docked bar to its pill as you scroll down and brings it back once you reach
-    /// the top again, so it behaves like the tab bar it sits on — `tabBarMinimizeBehavior` is
-    /// the tab bar's half of the same idea. Attach it to a screen's scroll view.
+    /// Keeps the docked bar the same size as the tab bar it sits on as you scroll: shrunk to its
+    /// pill while the tab bar is minimized, full size once it is back — see
+    /// `PlayerManager.scrollDidMove`. Attach it to a screen's scroll view.
     ///
     /// A screen whose content fits never shrinks it: there is nothing to scroll to, so the
     /// rubber-band of a drag on it is not a scroll, and the bar stays full size.
