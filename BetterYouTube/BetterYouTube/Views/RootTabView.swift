@@ -17,9 +17,9 @@ struct RootTabView: View {
     #if os(iOS)
     @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
     @AppStorage(SearchTabPreference.storageKey) private var searchInTabBar = false
-    /// Where the tab bar's row starts, in window coordinates. A tab's content is the one place
-    /// that knows: its bottom safe area is the tab bar plus the home indicator.
-    @State private var tabBarTop = CGFloat.infinity
+    /// The tab bar's row, in window coordinates. A tab's content is the one place that knows:
+    /// its bottom safe area is the tab bar plus the home indicator.
+    @State private var tabBarRow = CGRect.null
     #endif
 
     var body: some View {
@@ -179,19 +179,25 @@ struct RootTabView: View {
         // above it follows the same rule, see `minimizesPlayerBarOnScroll`.
         .tabBarMinimizeBehavior(.onScrollDown)
         // Touching the shrunk tab bar brings it back without any scroll, which the player bar
-        // has no other way to hear about. See `PassiveTap` for why it isn't a SwiftUI gesture.
+        // has no other way to hear about. Only its button does that: the rest of the row is the
+        // pill, Search's button and the content between them, none of which grow the tab bar.
+        // See `PassiveTap` for why it isn't a SwiftUI gesture.
         .gesture(PassiveTap { location in
-            if location.y >= tabBarTop { player.tabBarWasTouched() }
+            var button = tabBarRow
+            button.size.width = MinimizedTabButton.extent
+            if button.contains(location) { player.tabBarWasTouched() }
         })
     }
 
-    /// A section's screen, measuring where the tab bar's row starts on the way.
+    /// A section's screen, measuring the tab bar's row on the way.
     private func tab(_ tab: AppRouter.Tab) -> some View {
         screen(for: tab)
-            .onGeometryChange(for: CGFloat.self) { proxy in
-                proxy.frame(in: .global).maxY - proxy.safeAreaInsets.bottom
-            } action: { top in
-                tabBarTop = top
+            .onGeometryChange(for: CGRect.self) { proxy in
+                // The frame already stops where the safe area starts, so the row is just below it.
+                let frame = proxy.frame(in: .global)
+                return CGRect(x: frame.minX, y: frame.maxY, width: frame.width, height: proxy.safeAreaInsets.bottom)
+            } action: { row in
+                tabBarRow = row
             }
     }
 
