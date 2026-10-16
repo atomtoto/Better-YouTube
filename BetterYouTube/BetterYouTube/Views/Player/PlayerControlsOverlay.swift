@@ -70,7 +70,12 @@ struct PlayerControlsOverlay: View {
             if case .active = phase { show() } else { scheduleHide(after: .milliseconds(600)) }
         }
         #endif
-        .onChange(of: player.isPlaying, initial: true) { _, _ in scheduleHide() }
+        .onChange(of: player.isPlaying, initial: true) { _, playing in
+            // Paused from somewhere else — the lock screen, headphones, leaving the app — the
+            // controls come back to say so, as YouTube's do.
+            if !playing { isShown = true }
+            scheduleHide()
+        }
         .onChange(of: isShown, initial: true) { _, shown in player.setControlsShown(shown) }
         .onChange(of: isHolding) { _, holding in
             if holding {

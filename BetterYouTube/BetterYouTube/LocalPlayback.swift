@@ -2,6 +2,7 @@ import AVFoundation
 import AVKit
 import Combine
 import Foundation
+import UniformTypeIdentifiers
 
 /// Plays a downloaded file.
 ///
@@ -46,9 +47,15 @@ final class LocalPlayback {
     /// Installed by the surface, which owns the Picture in Picture controller. Answers whether
     /// Picture in Picture could start.
     var onPictureInPictureRequest: (() -> Bool)?
+    /// Set by the surface while the video is in its Picture in Picture window, where it goes on
+    /// playing with the app in the background whatever Settings say about the sound alone.
+    var isInPictureInPicture = false
 
     private var audibleGroup: AVMediaSelectionGroup?
     private var legibleGroup: AVMediaSelectionGroup?
+    /// Feeds a YouTube stream to the player — see `RangedStreamLoader`. Kept here because the
+    /// asset only holds its delegate weakly.
+    private var streamLoader: RangedStreamLoader?
 
     private var timeObserver: Any?
     private var statusObservation: NSKeyValueObservation?
@@ -100,14 +107,23 @@ final class LocalPlayback {
 
     /// Points the player at a file. Re-loading the file already playing is a no-op, so replaying a
     /// video from a list doesn't restart what is already on screen.
-    func load(url: URL) {
+    /// `ranged` is for a stream the player fetches itself; a stream handed to an AirPlay
+    /// receiver — CarPlay's video — has to stay a plain URL the receiver can fetch.
+    func load(url: URL, ranged: Bool = true) {
         guard currentURL != url else { return }
         currentURL = url
         pendingSeek = nil
         seekGeneration += 1
         isSeeking = false
 
-        let item = AVPlayerItem(url: url)
+        let item: AVPlayerItem
+        if !url.isFileURL, ranged, let loader = RangedStreamLoader(url: url) {
+            streamLoader = loader
+            item = AVPlayerItem(asset: loader.asset)
+        } else {
+            streamLoader = nil
+            item = AVPlayerItem(url: url)
+        }
         audibleGroup = nil
         legibleGroup = nil
         observe(item)
@@ -223,6 +239,7 @@ final class LocalPlayback {
         isSeeking = false
         audibleGroup = nil
         legibleGroup = nil
+        streamLoader = nil
         itemStatusObservation = nil
         if let endObserver {
             NotificationCenter.default.removeObserver(endObserver)
@@ -276,5 +293,133 @@ final class LocalPlayback {
         let elapsed = time.seconds.isFinite ? time.seconds : 0
         let total = player.currentItem?.duration.seconds ?? 0
         onProgress?(elapsed, total.isFinite ? total : 0)
+    }
+}
+
+/// Feeds a YouTube stream to AVPlayer in bounded byte ranges.
+///
+/// YouTube serves a bounded range — `bytes=0-2097151` — at full speed, but throttles the
+/// open-ended requests AVPlayer makes on its own to about 30 KB/s. That is a crawl even for
+/// sound alone, and playback never got going. So the player is given the stream under a scheme
+/// of the app's own, and this asks YouTube for it one bounded piece at a time, which is also how
+/// downloads fetch it.
+final class RangedStreamLoader: NSObject, AVAssetResourceLoaderDelegate, @unchecked Sendable {
+    static let scheme = "betteryoutube-stream"
+    /// Small enough to answer quickly, big enough that a song is a handful of requests.
+    private static let pieceSize: Int64 = 2 * 1024 * 1024
+
+    let asset: AVURLAsset
+    private let remoteURL: URL
+    /// Everything below runs on this queue: AVFoundation calls the delegate there, and the
+    /// session reports there too.
+    private let queue = DispatchQueue(label: "com.atomtoto.BetterYouTube.ranged-stream")
+    private let session: URLSession
+    private var contentLength: Int64?
+    private var contentType: String?
+    private var tasks: [ObjectIdentifier: URLSessionDataTask] = [:]
+
+    init?(url: URL) {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              components.scheme == "https" else { return nil }
+        components.scheme = Self.scheme
+        guard let streamURL = components.url else { return nil }
+        remoteURL = url
+        asset = AVURLAsset(url: streamURL)
+        let delegateQueue = OperationQueue()
+        delegateQueue.underlyingQueue = queue
+        delegateQueue.maxConcurrentOperationCount = 1
+        session = URLSession(configuration: .default, delegate: nil, delegateQueue: delegateQueue)
+        super.init()
+        asset.resourceLoader.setDelegate(self, queue: queue)
+    }
+
+    deinit {
+        session.invalidateAndCancel()
+    }
+
+    func resourceLoader(_ resourceLoader: AVAssetResourceLoader,
+                        shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
+        let start: Int64
+        var end: Int64?
+        if let data = loadingRequest.dataRequest {
+            start = data.currentOffset != 0 ? data.currentOffset : data.requestedOffset
+            if !data.requestsAllDataToEndOfResource {
+                end = data.requestedOffset + Int64(data.requestedLength) - 1
+            }
+        } else {
+            start = 0
+            end = 1
+        }
+        fetch(Request(loadingRequest), from: start, through: end)
+        return true
+    }
+
+    func resourceLoader(_ resourceLoader: AVAssetResourceLoader, didCancel loadingRequest: AVAssetResourceLoadingRequest) {
+        tasks.removeValue(forKey: ObjectIdentifier(loadingRequest))?.cancel()
+    }
+
+    /// One piece, then the next, until the player has what it asked for — or the whole stream,
+    /// when it asked for everything to the end.
+    private func fetch(_ request: Request, from offset: Int64, through end: Int64?) {
+        var last = offset + Self.pieceSize - 1
+        if let end { last = min(last, end) }
+        if let contentLength { last = min(last, contentLength - 1) }
+        var urlRequest = URLRequest(url: remoteURL)
+        urlRequest.setValue("bytes=\(offset)-\(last)", forHTTPHeaderField: "Range")
+        let task = session.dataTask(with: urlRequest) { [weak self] data, response, error in
+            self?.receive(request, offset: offset, end: end, data: data, response: response, error: error)
+        }
+        tasks[request.id] = task
+        task.resume()
+    }
+
+    private func receive(_ request: Request, offset: Int64, end: Int64?,
+                         data: Data?, response: URLResponse?, error: Error?) {
+        let loading = request.loading
+        guard !loading.isCancelled, !loading.isFinished else { return }
+        if let error {
+            tasks[request.id] = nil
+            if (error as? URLError)?.code != .cancelled { loading.finishLoading(with: error) }
+            return
+        }
+        guard let response = response as? HTTPURLResponse, (200...299).contains(response.statusCode),
+              let data else {
+            tasks[request.id] = nil
+            loading.finishLoading(with: URLError(.badServerResponse))
+            return
+        }
+        if contentLength == nil {
+            contentLength = MediaByteRange(header: response.value(forHTTPHeaderField: "Content-Range"))?.total
+                ?? (response.statusCode == 200 ? Int64(data.count) : nil)
+        }
+        if contentType == nil { contentType = response.mimeType }
+        if let information = loading.contentInformationRequest {
+            information.contentType = contentType.flatMap { UTType(mimeType: $0)?.identifier }
+                ?? UTType.mpeg4Movie.identifier
+            information.contentLength = contentLength ?? Int64(data.count)
+            information.isByteRangeAccessSupported = true
+        }
+        guard let dataRequest = loading.dataRequest else {
+            tasks[request.id] = nil
+            loading.finishLoading()
+            return
+        }
+        dataRequest.respond(with: data)
+        let next = offset + Int64(data.count)
+        let target = end ?? ((contentLength ?? next) - 1)
+        if data.isEmpty || next > target {
+            tasks[request.id] = nil
+            loading.finishLoading()
+        } else {
+            fetch(request, from: next, through: end)
+        }
+    }
+
+    /// A loading request, carried across the session's callbacks. They all run on `queue`, the
+    /// one AVFoundation hands the request over on.
+    private struct Request: @unchecked Sendable {
+        let loading: AVAssetResourceLoadingRequest
+        var id: ObjectIdentifier { ObjectIdentifier(loading) }
+        init(_ loading: AVAssetResourceLoadingRequest) { self.loading = loading }
     }
 }

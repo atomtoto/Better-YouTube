@@ -147,12 +147,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
-    /// Arrives before WebKit is suspended, early enough to hand a playing online video to the
-    /// native player when the display locks or the app leaves the foreground.
-    func applicationWillResignActive(_ application: UIApplication) {
-        Task { @MainActor in PlayerManager.shared.prepareForBackgroundPlayback() }
-    }
-
     func application(
         _ application: UIApplication,
         didReceiveRemoteNotification userInfo: [AnyHashable: Any],

@@ -1,5 +1,8 @@
 import Foundation
 import Testing
+#if os(iOS)
+import UIKit
+#endif
 @testable import BetterYouTube
 
 @MainActor
@@ -75,3 +78,72 @@ struct PlaybackOptionsTests {
         #expect(options.rate == 1.25)
     }
 }
+
+#if os(iOS)
+@Suite(.serialized)
+@MainActor
+struct BackgroundPlaybackTests {
+    @Test("Leaving the app moves a streamed video's sound to the native player, and returning gives it back to the embed")
+    func handoffAndReturn() async throws {
+        UserDefaults.standard.removeObject(forKey: BackgroundPlaybackPreference.storageKey)
+        let audio = try audioFixture()
+        let player = PlayerManager(resolveAudio: { _ in audio }, downloadedMediaURL: { _ in nil })
+        defer {
+            NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
+            player.close()
+        }
+        player.play(video())
+        // The embed would report itself playing; there is no web view here to do it.
+        player.resume()
+        #expect(player.source == .embed)
+
+        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        try await waitUntil { player.source == .local(audio) }
+        #expect(player.isPlaying)
+
+        NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
+        #expect(player.source == .embed)
+        #expect(player.isPlaying)
+    }
+
+    @Test("With Background Playback off, leaving the app pauses instead")
+    func pausesWhenTurnedOff() {
+        UserDefaults.standard.set(false, forKey: BackgroundPlaybackPreference.storageKey)
+        let player = PlayerManager(resolveAudio: { _ in
+            Issue.record("Nothing should be resolved for the background when it is off")
+            throw CancellationError()
+        }, downloadedMediaURL: { _ in nil })
+        defer {
+            NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
+            UserDefaults.standard.removeObject(forKey: BackgroundPlaybackPreference.storageKey)
+            player.close()
+        }
+        player.play(video())
+        player.resume()
+
+        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        #expect(!player.isPlaying)
+        #expect(player.source == .embed)
+    }
+
+    private func audioFixture() throws -> URL {
+        try #require(Bundle(for: BackgroundFixtureMarker.self)
+            .url(forResource: "audio", withExtension: "m4a", subdirectory: "Fixtures"))
+    }
+
+    private func video() -> Video {
+        Video(id: "background-test-\(UUID().uuidString)", title: "Video", channelId: "channel",
+              channelTitle: "Channel", description: "", thumbnailURL: nil, publishedAt: nil)
+    }
+
+    private func waitUntil(_ condition: () -> Bool) async throws {
+        for _ in 0..<100 {
+            if condition() { return }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        Issue.record("Timed out")
+    }
+}
+
+private final class BackgroundFixtureMarker: NSObject {}
+#endif

@@ -84,7 +84,7 @@ final class NowPlaying {
     /// position *jumps* — never on the position ticking, which the system extrapolates from the
     /// playback rate on its own.
     func update(video: Video?, isPlaying: Bool, elapsed: Double, duration: Double,
-                audioOnly: Bool = false, hasNext: Bool = false) {
+                rate: Double = 1, audioOnly: Bool = false, hasNext: Bool = false) {
         let commands = MPRemoteCommandCenter.shared()
         commands.playCommand.isEnabled = video != nil
         commands.pauseCommand.isEnabled = video != nil
@@ -102,7 +102,9 @@ final class NowPlaying {
             MPMediaItemPropertyTitle: video.title,
             MPMediaItemPropertyArtist: video.channelTitle,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: elapsed,
-            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+            // The speed chosen in the player, so the lock screen's scrubber keeps up with it.
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? rate : 0.0,
+            MPNowPlayingInfoPropertyDefaultPlaybackRate: rate,
             MPNowPlayingInfoPropertyIsLiveStream: false,
             MPNowPlayingInfoPropertyMediaType: audioOnly
                 ? MPNowPlayingInfoMediaType.audio.rawValue : MPNowPlayingInfoMediaType.video.rawValue

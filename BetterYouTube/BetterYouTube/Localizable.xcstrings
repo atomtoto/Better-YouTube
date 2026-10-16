@@ -922,6 +922,26 @@
         }
       }
     },
+    "Background Playback" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture en arrière-plan"
+          }
+        }
+      }
+    },
+    "Background Playback keeps the sound going when you lock the iPhone or leave the app; turned off, the video pauses. With Picture in Picture, a playing video moves to a small window over your other apps when you go to the Home Screen." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La lecture en arrière-plan garde le son quand tu verrouilles l’iPhone ou quittes l’app ; désactivée, la vidéo se met en pause. Avec l’image dans l’image, une vidéo en cours passe dans une petite fenêtre au-dessus de tes autres apps quand tu reviens à l’écran d’accueil."
+          }
+        }
+      }
+    },
     "Bearer token (optional)" : {
       "localizations" : {
         "fr" : {

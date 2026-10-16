@@ -65,9 +65,14 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
 - **Downloads** — videos kept in a `Downloads` folder on the device and played from the file
   wherever they turn up in the app, with no network at all. Downloads run directly on the device;
   a self-hosted resolver remains optional — see [Downloads](#downloads)
-- **Background playback** — the audio carries on when the app is backgrounded or the screen
-  locks, with title, artwork, scrubber and transport on the lock screen and in Control Centre
-  (on a Mac: the media widget in Control Centre and the keyboard's play/pause key)
+- **Background playback** — the sound carries on when the app is left or the iPhone locks, with
+  title, artwork, scrubber and transport on the lock screen and in Control Centre (on a Mac: the
+  media widget in Control Centre and the keyboard's play/pause key). WebKit can't play once the
+  app is away, so a streamed video's sound moves to the native player — YouTube's sound-only
+  stream, fetched in bounded ranges, which YouTube serves at full speed — and the queue goes on
+  the same way; back in the app, the embed takes the picture back at the same moment. Turned off
+  in Settings → Playback, the video pauses instead. Picture in Picture, off unless turned on
+  there, moves a playing video to its window when you go to the Home Screen
 - **Settings** — Google sign-in, API key, library counts, what is left of the day's API quota,
   whether the app opens on Home or Library, and a reset that puts the device back to a fresh install
 - **Apple Watch** — synced YouTube Home and library, direct search with the watch's network,

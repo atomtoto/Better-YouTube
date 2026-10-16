@@ -130,7 +130,11 @@ struct LocalPlayerSurface: UIViewRepresentable {
         private var pictureInPicture: AVPictureInPictureController?
         /// iOS's own full-screen player, for when Settings asks for it rather than the app's.
         private var fullScreenController: LocalFullScreenPlayerController?
-        private var isInPictureInPicture = false
+        private var isInPictureInPicture = false {
+            didSet { playback.isInPictureInPicture = isInPictureInPicture }
+        }
+        /// Picture in Picture AVKit started on its own as the app was left, put back on return.
+        private var startedPictureInPictureOnLeaving = false
         private var isDetachedForBackground = false
 
         init(playback: LocalPlayback) { self.playback = playback }
@@ -140,7 +144,7 @@ struct LocalPlayerSurface: UIViewRepresentable {
             view.playerLayer.player = playback.player
             if AVPictureInPictureController.isPictureInPictureSupported() {
                 pictureInPicture = AVPictureInPictureController(playerLayer: view.playerLayer)
-                pictureInPicture?.canStartPictureInPictureAutomaticallyFromInline = true
+                pictureInPicture?.canStartPictureInPictureAutomaticallyFromInline = AutoPictureInPicturePreference.isEnabled
                 pictureInPicture?.delegate = self
             }
             playback.onPictureInPictureRequest = { [weak self] in
@@ -156,10 +160,14 @@ struct LocalPlayerSurface: UIViewRepresentable {
                 guard let self, self.playback.wantsFullScreen else { return }
                 self.presentFullScreen()
             }
+            NotificationCenter.default.addObserver(self, selector: #selector(willResignActive),
+                name: UIApplication.willResignActiveNotification, object: nil)
             NotificationCenter.default.addObserver(self, selector: #selector(background),
                 name: UIApplication.didEnterBackgroundNotification, object: nil)
             NotificationCenter.default.addObserver(self, selector: #selector(foreground),
                 name: UIApplication.willEnterForegroundNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(didBecomeActive),
+                name: UIApplication.didBecomeActiveNotification, object: nil)
         }
 
         func detach() {
@@ -168,6 +176,7 @@ struct LocalPlayerSurface: UIViewRepresentable {
             playback.onFullScreenRequest = nil
             pictureInPicture?.delegate = nil
             pictureInPicture = nil
+            playback.isInPictureInPicture = false
             fullScreenController?.onDismiss = nil
             fullScreenController?.player = nil
             fullScreenController = nil
@@ -191,6 +200,25 @@ struct LocalPlayerSurface: UIViewRepresentable {
             if fullScreenController == nil { view?.playerLayer.player = playback.player }
         }
 
+        /// Settings → Playback → Picture in Picture decides whether AVKit moves a playing video
+        /// to its window on the way to the Home Screen. Read at the last moment, so a change in
+        /// Settings counts without the surface being rebuilt.
+        @objc private func willResignActive() {
+            let automatic = AutoPictureInPicturePreference.isEnabled
+            pictureInPicture?.canStartPictureInPictureAutomaticallyFromInline = automatic
+            fullScreenController?.canStartPictureInPictureAutomaticallyFromInline = automatic
+        }
+
+        /// Back in the app: Picture in Picture AVKit started on the way out goes back into the
+        /// player, as in the YouTube app.
+        @objc private func didBecomeActive() {
+            guard startedPictureInPictureOnLeaving else { return }
+            startedPictureInPictureOnLeaving = false
+            if pictureInPicture?.isPictureInPictureActive == true {
+                pictureInPicture?.stopPictureInPicture()
+            }
+        }
+
         // MARK: Picture in Picture
 
         func pictureInPictureControllerWillStartPictureInPicture(_ controller: AVPictureInPictureController) {
@@ -203,10 +231,13 @@ struct LocalPlayerSurface: UIViewRepresentable {
 
         func pictureInPictureWillStart() {
             isInPictureInPicture = true
+            // Started by AVKit as the app was left, rather than from the player's button.
+            startedPictureInPictureOnLeaving = UIApplication.shared.applicationState != .active
         }
 
         func pictureInPictureDidStop() {
             isInPictureInPicture = false
+            startedPictureInPictureOnLeaving = false
             if UIApplication.shared.applicationState == .background { background() }
         }
 
@@ -237,7 +268,7 @@ struct LocalPlayerSurface: UIViewRepresentable {
             let fullScreen = LocalFullScreenPlayerController()
             fullScreen.player = playback.player
             fullScreen.allowsPictureInPicturePlayback = true
-            fullScreen.canStartPictureInPictureAutomaticallyFromInline = true
+            fullScreen.canStartPictureInPictureAutomaticallyFromInline = AutoPictureInPicturePreference.isEnabled
             // PlayerManager owns the lock-screen metadata and remote commands.
             fullScreen.updatesNowPlayingInfoCenter = false
             fullScreen.videoGravity = .resizeAspect

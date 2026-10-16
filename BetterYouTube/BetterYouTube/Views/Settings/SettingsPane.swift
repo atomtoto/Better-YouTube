@@ -154,6 +154,8 @@ private struct PlaybackSection: View {
     @AppStorage(HoldToSpeedUpPreference.storageKey) private var holdsToSpeedUp = true
     #if os(iOS)
     @AppStorage(FullScreenPlayerPreference.storageKey) private var fullScreenPlayer = FullScreenPlayerPreference.app
+    @AppStorage(BackgroundPlaybackPreference.storageKey) private var playsInBackground = true
+    @AppStorage(AutoPictureInPicturePreference.storageKey) private var startsPictureInPicture = false
     #endif
 
     var body: some View {
@@ -162,6 +164,15 @@ private struct PlaybackSection: View {
         } footer: {
             Text("Plays the next video in the list when one ends. Turned off, YouTube's own suggestions stay on screen at the end instead. In a car, the queue always continues.")
         }
+
+        #if os(iOS)
+        Section {
+            Toggle("Background Playback", isOn: $playsInBackground)
+            Toggle("Picture in Picture", isOn: $startsPictureInPicture)
+        } footer: {
+            Text("Background Playback keeps the sound going when you lock the iPhone or leave the app; turned off, the video pauses. With Picture in Picture, a playing video moves to a small window over your other apps when you go to the Home Screen.")
+        }
+        #endif
 
         Section {
             Toggle("Hold to Play at 2×", isOn: $holdsToSpeedUp)

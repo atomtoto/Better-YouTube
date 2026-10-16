@@ -205,3 +205,23 @@ enum HoldToSpeedUpPreference {
         UserDefaults.standard.object(forKey: storageKey) as? Bool ?? true
     }
 }
+
+/// Settings → Playback → Background Playback: the sound goes on when the app is left or the
+/// iPhone locked. On unless turned off.
+enum BackgroundPlaybackPreference {
+    static let storageKey = "background_playback"
+
+    static var isEnabled: Bool {
+        UserDefaults.standard.object(forKey: storageKey) as? Bool ?? true
+    }
+}
+
+/// Settings → Playback → Picture in Picture: a playing video moves to its Picture in Picture
+/// window when the app is left for the Home Screen. Off unless turned on.
+enum AutoPictureInPicturePreference {
+    static let storageKey = "auto_picture_in_picture"
+
+    static var isEnabled: Bool {
+        UserDefaults.standard.bool(forKey: storageKey)
+    }
+}
