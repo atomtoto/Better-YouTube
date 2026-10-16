@@ -330,6 +330,12 @@ struct PlayerDetailsView: View {
                         showsPlaylistPicker = true
                     }
 
+                    PlayerDownloadPill(
+                        video: displayed,
+                        store: downloads,
+                        manager: downloadManager
+                    )
+
                     if let url = displayed.watchURL {
                         ShareLink(item: url) {
                             PlayerPillFace(title: String(localized: "Share"), systemImage: "square.and.arrow.up")
@@ -337,12 +343,6 @@ struct PlayerDetailsView: View {
                         .buttonStyle(PillButtonStyle())
                         .simultaneousGesture(TapGesture().onEnded { shareTaps += 1 })
                     }
-
-                    PlayerDownloadPill(
-                        video: displayed,
-                        store: downloads,
-                        manager: downloadManager
-                    )
 
                     // AVKit exposes its own PiP button for local playback, so the pill is for streams.
                     if !player.isLocal {
