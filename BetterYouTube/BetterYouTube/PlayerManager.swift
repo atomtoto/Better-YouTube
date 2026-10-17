@@ -1133,6 +1133,7 @@ final class PlayerManager: ObservableObject {
                 isBarCompact = false
             } else {
                 isExpanded = wasExpandedBeforeFullScreen
+                matchBarToTabBar()
             }
             isFullScreen = landscape
         }
@@ -1248,6 +1249,7 @@ final class PlayerManager: ObservableObject {
             withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
                 isExpanded = wasExpandedBeforeFullScreen
                 isFullScreen = false
+                matchBarToTabBar()
             }
         }
     }
@@ -1433,7 +1435,18 @@ final class PlayerManager: ObservableObject {
     func collapse() {
         withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
             isExpanded = false
+            matchBarToTabBar()
         }
+    }
+
+    /// Docking the player lands it at the tab bar's size: shrunk to its pill if the tab bar was
+    /// minimized while the player was open. Called inside the docking animation, so the player
+    /// shrinks on its way down rather than once it gets there.
+    private func matchBarToTabBar() {
+        #if os(iOS)
+        guard !isExpanded, let minimized = tabBar.isMinimized() else { return }
+        isBarCompact = minimized
+        #endif
     }
 
     // MARK: - Events from the web player

@@ -371,7 +371,8 @@ final class TabBarMinimizationWatcher {
     }
 
     private static func isView(_ view: UIView, named name: String) -> Bool {
-        NSStringFromClass(type(of: view)) == name
+        // Without the module prefix `NSStringFromClass` adds ("UIKit._UITabBarPlatterView").
+        String(describing: type(of: view)) == name
     }
 }
 #endif
