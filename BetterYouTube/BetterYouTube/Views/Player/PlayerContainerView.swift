@@ -193,7 +193,8 @@ struct PlayerContainerView: View {
                         PlayerControlsOverlay(
                             player: player,
                             options: player.options,
-                            isFullScreen: player.isFullScreen
+                            isFullScreen: player.isFullScreen,
+                            locksCollapse: $drag.isLocked
                         )
                         .opacity(chromeOpacity(expansion: expansion))
                         .transition(.opacity)
@@ -426,6 +427,9 @@ struct PlayerDragState {
     var translation: CGFloat = 0
     /// Set once the drag reads as vertical, so sideways scrubs stay with the player's scrubber.
     var isVertical = false
+    /// Set while the player's own controls hold the finger — dragging the scrubber, or holding to
+    /// speed up — so that moving down can't also pull the player away.
+    var isLocked = false
 }
 
 /// The pull-down itself, built the same way wherever it is attached, so the drag starts wherever
@@ -446,6 +450,7 @@ struct PlayerCollapseDrag {
         // would be divided by that scale — the video would bolt away from the finger.
         DragGesture(minimumDistance: 10, coordinateSpace: .global)
             .onChanged { value in
+                guard !state.isLocked else { return }
                 if !state.isVertical {
                     guard value.translation.height > abs(value.translation.width) else { return }
                     state.isVertical = true

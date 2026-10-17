@@ -16,6 +16,9 @@ struct PlayerControlsOverlay: View {
     @ObservedObject var player: PlayerManager
     @ObservedObject var options: PlaybackOptions
     let isFullScreen: Bool
+    /// True while a touch on the scrubber or a hold to speed up is in progress, so the player's
+    /// pull-down leaves that touch alone.
+    @Binding var locksCollapse: Bool
 
     @AppStorage(HoldToSpeedUpPreference.storageKey) private var holdsToSpeedUp = true
     @AppStorage(SkipIntervalPreference.backKey) private var storedSkipBack = SkipIntervalPreference.defaultSeconds
@@ -80,6 +83,9 @@ struct PlayerControlsOverlay: View {
             scheduleHide()
         }
         .onChange(of: isShown, initial: true) { _, shown in player.setControlsShown(shown) }
+        .onChange(of: isHolding || scrubTime != nil, initial: true) { _, locked in
+            locksCollapse = locked
+        }
         .onChange(of: isHolding) { _, holding in
             if holding {
                 // The picture is what a held finger wants to see, as in the YouTube app.
@@ -93,6 +99,7 @@ struct PlayerControlsOverlay: View {
             if open { hideTask?.cancel() } else { scheduleHide() }
         }
         .onDisappear {
+            locksCollapse = false
             hideTask?.cancel()
             player.endSpeedingUp()
             player.setControlsShown(false)
