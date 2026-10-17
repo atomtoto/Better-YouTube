@@ -549,10 +549,12 @@ private struct ChapterScrubber: View {
                 }
                 .frame(height: isScrubbing ? 6 : 4)
 
+                // A plain dot at rest; held, it grows into a glass lens over the bar.
                 Circle()
-                    .fill(.tint)
-                    .frame(width: isScrubbing ? 18 : 12, height: isScrubbing ? 18 : 12)
-                    .offset(x: fraction * width - (isScrubbing ? 9 : 6))
+                    .fill(.tint.opacity(isScrubbing ? 0 : 1))
+                    .glassEffect(isScrubbing ? .regular : .identity, in: Circle())
+                    .frame(width: isScrubbing ? 28 : 12, height: isScrubbing ? 28 : 12)
+                    .offset(x: fraction * width - (isScrubbing ? 14 : 6))
             }
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
