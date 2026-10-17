@@ -882,18 +882,13 @@ private struct PlayerLayout {
     /// The radius the corners should *look* like; the clip shape is applied before the scale, so
     /// the caller divides it by that scale.
     func videoCornerRadius(expansion: CGFloat) -> CGFloat {
-        // The visible inset curve is concentric with the glass card. A fixed 10 pt radius left
-        // the floating video's corners visibly squarer than its 26 pt container.
+        // The visible inset curve is concentric with the bar in both styles, so the video's corners
+        // follow the bar's edge rather than a fixed radius.
         let concentricRadius = min(
             dockedVideoFrame.height / 2,
             max(0, barCornerRadius - metrics.artworkPadding)
         )
-        // The full-width bar keeps its smaller radius, but its collapsed pill is the floating
-        // style's pill, so the video inside it follows the same concentric curve.
-        let dockedRadius = style == .floatingVideo
-            ? concentricRadius
-            : lerp(10, concentricRadius, compactness)
-        return lerp(dockedRadius, 0, expansion)
+        return lerp(concentricRadius, 0, expansion)
     }
 }
 
