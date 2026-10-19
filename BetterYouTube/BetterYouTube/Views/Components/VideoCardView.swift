@@ -7,6 +7,8 @@ struct FeedVideoCard: View {
     @State private var showsPlaylistPicker = false
     let video: Video
     var avatarURL: URL?
+    /// Off on the channel's own page, where the avatar would only open the page you are on.
+    var linksToChannel = true
     var onPlay: () -> Void
     var onNotInterested: (() -> Void)? = nil
 
@@ -29,10 +31,10 @@ struct FeedVideoCard: View {
             .buttonStyle(.plain)
 
             HStack(alignment: .top, spacing: 10) {
-                Button(action: onPlay) {
-                    HStack(alignment: .top, spacing: 10) {
-                        AvatarView(url: avatarURL, size: 36)
+                avatar
 
+                Button(action: onPlay) {
+                    HStack(alignment: .top, spacing: 0) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(video.title)
                                 .font(.subheadline.weight(.semibold))
@@ -87,6 +89,26 @@ struct FeedVideoCard: View {
         )) {
             Button("OK", role: .cancel) { saveError = nil }
         } message: { Text(saveError ?? "") }
+    }
+
+    /// The avatar opens the channel, like the YouTube app's; the rest of the card plays.
+    @ViewBuilder
+    private var avatar: some View {
+        if linksToChannel, !video.channelId.isEmpty {
+            NavigationLink(value: Channel(
+                id: video.channelId,
+                title: video.channelTitle,
+                description: "",
+                thumbnailURL: avatarURL
+            )) {
+                AvatarView(url: avatarURL, size: 36)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(video.channelTitle.isEmpty ? String(localized: "Channel") : video.channelTitle)
+            .accessibilityHint("Opens the channel")
+        } else {
+            AvatarView(url: avatarURL, size: 36)
+        }
     }
 
     private var metadataLine: String {

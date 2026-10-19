@@ -133,7 +133,7 @@ struct ChannelView: View {
         } else {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 440), spacing: 18)], spacing: 24) {
                 ForEach(viewModel.videos) { video in
-                    FeedVideoCard(video: video, onPlay: {
+                    FeedVideoCard(video: video, linksToChannel: false, onPlay: {
                         player.play(video, upNext: viewModel.videos.after(video))
                     })
                     .videoContextMenu(video)
