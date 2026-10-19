@@ -169,7 +169,14 @@ struct LocalPlayerSurface: UIViewRepresentable {
 
         func attach(_ view: LocalPlayerLayerView) {
             self.view = view
-            view.playerLayer.player = playback.player
+            // Made with the app already in the background — a streamed video's sound taking over
+            // as the app left — the layer stays empty until the app is back, as `background()`
+            // leaves it: a player showing on a layer is one iOS may pause there.
+            if UIApplication.shared.applicationState == .background {
+                isDetachedForBackground = true
+            } else {
+                view.playerLayer.player = playback.player
+            }
             if AVPictureInPictureController.isPictureInPictureSupported() {
                 pictureInPicture = AVPictureInPictureController(playerLayer: view.playerLayer)
                 pictureInPicture?.canStartPictureInPictureAutomaticallyFromInline = AutoPictureInPicturePreference.isEnabled

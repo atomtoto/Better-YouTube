@@ -77,8 +77,11 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   title, artwork, scrubber and transport on the lock screen and in Control Centre (on a Mac: the
   media widget in Control Centre and the keyboard's play/pause key). WebKit can't play once the
   app is away, so a streamed video's sound moves to the native player — YouTube's sound-only
-  stream, fetched in bounded ranges, which YouTube serves at full speed — and the queue goes on
-  the same way; back in the app, the embed takes the picture back at the same moment. Turned off
+  stream, handed to AVPlayer as an HLS playlist of its own pieces, read from the index YouTube
+  puts at its start. The player fetches only the piece it is at, in bounded ranges YouTube serves
+  at full speed, so the sound carries on within about a second of the lock, wherever the video
+  had got to — and the queue goes on the same way; back in the app, the embed takes the picture
+  back at the same moment. Turned off
   in Settings → Playback, the video pauses instead. Picture in Picture, off unless turned on
   there, moves a playing video to its window when you go to the Home Screen
 - **Settings** — Google sign-in, API key, library counts, what is left of the day's API quota,

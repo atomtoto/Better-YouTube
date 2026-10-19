@@ -53,9 +53,9 @@ final class LocalPlayback {
 
     private var audibleGroup: AVMediaSelectionGroup?
     private var legibleGroup: AVMediaSelectionGroup?
-    /// Feeds a YouTube stream to the player — see `RangedStreamLoader`. Kept here because the
-    /// asset only holds its delegate weakly.
-    private var streamLoader: RangedStreamLoader?
+    /// Feeds a YouTube stream to the player — see `RangedStreamLoader` and
+    /// `PlaylistStreamLoader`. Kept here because the asset only holds its delegate weakly.
+    private var streamLoader: NSObject?
 
     private var timeObserver: Any?
     private var statusObservation: NSKeyValueObservation?
@@ -108,8 +108,10 @@ final class LocalPlayback {
     /// Points the player at a file. Re-loading the file already playing is a no-op, so replaying a
     /// video from a list doesn't restart what is already on screen.
     /// `ranged` is for a stream the player fetches itself; a stream handed to an AirPlay
-    /// receiver — CarPlay's video — has to stay a plain URL the receiver can fetch.
-    func load(url: URL, ranged: Bool = true) {
+    /// receiver — CarPlay's video — has to stay a plain URL the receiver can fetch. With the
+    /// stream's `index`, the player is handed it as a playlist of its pieces instead, and starts
+    /// anywhere in it at once.
+    func load(url: URL, ranged: Bool = true, index: StreamIndex? = nil) {
         guard currentURL != url else { return }
         currentURL = url
         pendingSeek = nil
@@ -117,7 +119,15 @@ final class LocalPlayback {
         isSeeking = false
 
         let item: AVPlayerItem
-        if !url.isFileURL, ranged, let loader = RangedStreamLoader(url: url) {
+        let isPlaylist = index?.url == url
+        // A playlist only starts once the player may wait for its first piece: told to play at
+        // once, it stood at zero speed for good.
+        player.automaticallyWaitsToMinimizeStalling = isPlaylist
+        if let index, isPlaylist {
+            let loader = PlaylistStreamLoader(index: index)
+            streamLoader = loader
+            item = AVPlayerItem(asset: loader.asset)
+        } else if !url.isFileURL, ranged, let loader = RangedStreamLoader(url: url) {
             streamLoader = loader
             item = AVPlayerItem(asset: loader.asset)
         } else {
@@ -421,5 +431,174 @@ final class RangedStreamLoader: NSObject, AVAssetResourceLoaderDelegate, @unchec
         let loading: AVAssetResourceLoadingRequest
         var id: ObjectIdentifier { ObjectIdentifier(loading) }
         init(_ loading: AVAssetResourceLoadingRequest) { self.loading = loading }
+    }
+}
+
+/// Where each piece of a YouTube stream lies, read from the index YouTube puts at its start.
+///
+/// Played as one file, a stream has to be read from its first byte to wherever playback is to
+/// begin before any of it plays: AVFoundation only finds a piece of a fragmented MP4 by reading
+/// every piece before it. Twenty minutes into a video that was some 25 MB — and a phone just
+/// locked doesn't give the app the time for it, so the sound never came back. YouTube's streams
+/// carry their own index, a `sidx` box right after the header, listing every piece's size and
+/// length; with it the stream becomes an HLS playlist, and AVPlayer fetches the header and the
+/// one piece it needs. Each fetch is a bounded range, which YouTube serves at full speed.
+struct StreamIndex: Sendable, Equatable {
+    struct Segment: Sendable, Equatable {
+        let offset: Int64
+        let length: Int64
+        /// In seconds.
+        let duration: Double
+    }
+
+    let url: URL
+    /// The header — everything before the index — which the playlist names as its map.
+    let headerLength: Int64
+    let segments: [Segment]
+
+    /// The most of the stream's start read to find the index. Sound has a header of a few
+    /// kilobytes and an index of a few more, even for hours of it.
+    private static let firstRead: Int64 = 64 * 1024
+    private static let longestRead: Int64 = 4 * 1024 * 1024
+
+    static func load(_ url: URL, session: URLSession = .shared) async throws -> StreamIndex {
+        var length = firstRead
+        while true {
+            var request = URLRequest(url: url)
+            request.setValue("bytes=0-\(length - 1)", forHTTPHeaderField: "Range")
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
+            switch parse(data, url: url) {
+            case .index(let index):
+                return index
+            case .needs(let more) where more > length && more <= longestRead && Int64(data.count) >= length:
+                length = more
+            default:
+                throw URLError(.cannotParseResponse)
+            }
+        }
+    }
+
+    enum Parsed: Equatable {
+        case index(StreamIndex)
+        /// The index runs past what was read: read this many bytes from the start.
+        case needs(Int64)
+        case invalid
+    }
+
+    /// Walks the top-level boxes to the index and reads it.
+    static func parse(_ data: Data, url: URL) -> Parsed {
+        let bytes = [UInt8](data)
+        var offset = 0
+        while offset + 8 <= bytes.count {
+            var size = Int64(read(bytes, offset, 4))
+            let type = String(bytes: bytes[(offset + 4)..<(offset + 8)], encoding: .ascii) ?? ""
+            var header = 8
+            if size == 1 {
+                guard offset + 16 <= bytes.count else { return .needs(Int64(offset + 16)) }
+                size = Int64(read(bytes, offset + 8, 8))
+                header = 16
+            }
+            guard size >= Int64(header) else { return .invalid }
+            let end = Int64(offset) + size
+            if type == "sidx" {
+                guard end <= Int64(bytes.count) else { return .needs(end) }
+                return segments(bytes, box: offset + header, boxEnd: end, headerLength: Int64(offset), url: url)
+                    .map(Parsed.index) ?? .invalid
+            }
+            // Pieces of sound before any index: there is none to find.
+            if type == "moof" || type == "mdat" { return .invalid }
+            guard end <= Int64(Int.max) else { return .invalid }
+            offset = Int(end)
+        }
+        return .needs(Int64(offset + 8))
+    }
+
+    private static func segments(_ bytes: [UInt8], box start: Int, boxEnd: Int64,
+                                 headerLength: Int64, url: URL) -> StreamIndex? {
+        var cursor = start
+        func take(_ count: Int) -> UInt64? {
+            guard cursor + count <= Int(boxEnd) else { return nil }
+            defer { cursor += count }
+            return read(bytes, cursor, count)
+        }
+        guard let version = take(1), take(3) != nil, take(4) != nil,
+              let timescale = take(4), timescale > 0 else { return nil }
+        let wide = version == 0 ? 4 : 8
+        guard take(wide) != nil, let firstOffset = take(wide), take(2) != nil,
+              let count = take(2), count > 0 else { return nil }
+        var position = boxEnd + Int64(firstOffset)
+        var segments: [Segment] = []
+        for _ in 0..<count {
+            guard let reference = take(4), let duration = take(4), take(4) != nil else { return nil }
+            // A reference to another index rather than to sound: not a shape YouTube uses.
+            guard reference & 0x8000_0000 == 0 else { return nil }
+            let length = Int64(reference & 0x7FFF_FFFF)
+            segments.append(Segment(offset: position, length: length,
+                                    duration: Double(duration) / Double(timescale)))
+            position += length
+        }
+        return StreamIndex(url: url, headerLength: headerLength, segments: segments)
+    }
+
+    private static func read(_ bytes: [UInt8], _ offset: Int, _ count: Int) -> UInt64 {
+        bytes[offset..<(offset + count)].reduce(0) { $0 << 8 | UInt64($1) }
+    }
+
+    /// The stream as an HLS playlist of byte ranges of itself.
+    var playlist: String {
+        let target = Int((segments.map(\.duration).max() ?? 1).rounded(.up))
+        var lines = [
+            "#EXTM3U",
+            "#EXT-X-VERSION:7",
+            "#EXT-X-TARGETDURATION:\(max(target, 1))",
+            "#EXT-X-PLAYLIST-TYPE:VOD",
+            "#EXT-X-INDEPENDENT-SEGMENTS",
+            "#EXT-X-MAP:URI=\"\(url.absoluteString)\",BYTERANGE=\"\(headerLength)@0\"",
+        ]
+        for segment in segments {
+            lines.append("#EXTINF:\(String(format: "%.3f", segment.duration)),")
+            lines.append("#EXT-X-BYTERANGE:\(segment.length)@\(segment.offset)")
+            lines.append(url.absoluteString)
+        }
+        lines.append("#EXT-X-ENDLIST")
+        return lines.joined(separator: "\n") + "\n"
+    }
+}
+
+/// Hands AVPlayer a stream's playlist — see `StreamIndex` — under a scheme of the app's own.
+/// The pieces it lists are YouTube's own addresses, which AVPlayer fetches itself.
+final class PlaylistStreamLoader: NSObject, AVAssetResourceLoaderDelegate, @unchecked Sendable {
+    static let scheme = "betteryoutube-playlist"
+
+    let asset: AVURLAsset
+    private let playlist: Data
+    private let queue = DispatchQueue(label: "com.atomtoto.BetterYouTube.playlist")
+
+    init(index: StreamIndex) {
+        playlist = Data(index.playlist.utf8)
+        asset = AVURLAsset(url: URL(string: "\(Self.scheme)://stream/sound.m3u8")!)
+        super.init()
+        asset.resourceLoader.setDelegate(self, queue: queue)
+    }
+
+    func resourceLoader(_ resourceLoader: AVAssetResourceLoader,
+                        shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
+        if let information = loadingRequest.contentInformationRequest {
+            information.contentType = UTType.m3uPlaylist.identifier
+            information.contentLength = Int64(playlist.count)
+            information.isByteRangeAccessSupported = false
+        }
+        if let data = loadingRequest.dataRequest {
+            let start = min(Int(data.requestedOffset), playlist.count)
+            let end = data.requestsAllDataToEndOfResource
+                ? playlist.count
+                : min(playlist.count, start + data.requestedLength)
+            data.respond(with: playlist.subdata(in: start..<end))
+        }
+        loadingRequest.finishLoading()
+        return true
     }
 }

@@ -41,10 +41,13 @@ final class NowPlaying {
 
     /// Claims the audio session. Called when a video starts, not at launch: until something is
     /// playing there is no reason to interrupt whatever else the phone is doing.
+    ///
+    /// Claimed again every time rather than once: the embed plays through WebKit, which sets the
+    /// session up for its own playback and lets go of it when it stops — on the way to the
+    /// background, just as the native player needs it to carry the sound on.
     func begin() {
         wireCommandsIfNeeded()
         #if os(iOS)
-        guard !isSessionActive else { return }
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .moviePlayback)

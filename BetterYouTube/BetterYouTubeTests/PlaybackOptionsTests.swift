@@ -108,6 +108,50 @@ struct PlaybackOptionsTests {
     }
 }
 
+struct StreamIndexTests {
+    private let url = URL(string: "https://example.com/videoplayback?itag=140")!
+
+    /// A header, then an index of two pieces: 5 s in 100 bytes, then 4.5 s in 200.
+    private var stream: [UInt8] {
+        func box(_ type: String, _ body: [UInt8]) -> [UInt8] {
+            be(UInt64(8 + body.count), 4) + Array(type.utf8) + body
+        }
+        func be(_ value: UInt64, _ count: Int) -> [UInt8] {
+            (0..<count).map { UInt8(truncatingIfNeeded: value >> (8 * UInt64(count - 1 - $0))) }
+        }
+        let sidx = box("sidx", [0, 0, 0, 0] + be(1, 4) + be(1000, 4) + be(0, 4) + be(0, 4) + be(0, 2) + be(2, 2)
+            + be(100, 4) + be(5000, 4) + be(0x9000_0000, 4)
+            + be(200, 4) + be(4500, 4) + be(0x9000_0000, 4))
+        return box("ftyp", Array(repeating: 0, count: 8)) + box("moov", Array(repeating: 0, count: 8)) + sidx
+    }
+
+    @Test("A stream's index gives where each of its pieces lies")
+    func readsIndex() throws {
+        guard case .index(let index) = StreamIndex.parse(Data(stream), url: url) else {
+            Issue.record("No index read")
+            return
+        }
+        #expect(index.headerLength == 32)
+        // The pieces start right after the index, which ends at byte 88.
+        #expect(index.segments == [
+            StreamIndex.Segment(offset: 88, length: 100, duration: 5),
+            StreamIndex.Segment(offset: 188, length: 200, duration: 4.5),
+        ])
+        let playlist = index.playlist
+        #expect(playlist.contains("#EXT-X-TARGETDURATION:5\n"))
+        #expect(playlist.contains("#EXT-X-MAP:URI=\"\(url.absoluteString)\",BYTERANGE=\"32@0\""))
+        #expect(playlist.contains("#EXTINF:4.500,\n#EXT-X-BYTERANGE:200@188\n\(url.absoluteString)\n"))
+        #expect(playlist.hasSuffix("#EXT-X-ENDLIST\n"))
+    }
+
+    @Test("An index running past what was read asks for more, and a stream without one has none")
+    func incompleteOrMissingIndex() {
+        #expect(StreamIndex.parse(Data(stream.prefix(60)), url: url) == .needs(88))
+        let noIndex: [UInt8] = [0, 0, 0, 8] + Array("moof".utf8)
+        #expect(StreamIndex.parse(Data(noIndex), url: url) == .invalid)
+    }
+}
+
 #if os(iOS)
 @Suite(.serialized)
 @MainActor

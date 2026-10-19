@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import SwiftUI
 import WebKit
@@ -268,6 +269,7 @@ final class PlayerManager: ObservableObject {
     /// once the app is in the background, where WebKit can't play: on screen the embed plays.
     private var backgroundAudioTask: Task<Void, Never>?
     private var backgroundAudioURL: URL?
+    private var backgroundAudioIndex: StreamIndex?
     /// Set when the app went to the background before that sound was resolved: it takes over as
     /// soon as it arrives.
     private var backgroundAudioRequested = false
@@ -282,10 +284,16 @@ final class PlayerManager: ObservableObject {
     private var isInBackground = false
     /// Picture in Picture the app started by itself on the way out, put back when it returns.
     private var startedPictureInPictureOnLeaving = false
+    /// Whether the video was playing as the app began to leave. WebKit pauses the embed on the
+    /// way out, and on an iPhone its report of that can arrive before the app is told it is in
+    /// the background — which used to read as a video paused on purpose, and nothing carried on.
+    private var wasPlayingOnLeaving = false
     /// Whether the embed's video is in its Picture in Picture window, as WebKit reports it.
     private var isEmbedInPictureInPicture = false
     /// Keeps the app running while the sound moves from the embed to the file player.
     private var handoffTask: UIBackgroundTaskIdentifier = .invalid
+    /// Where the sound starts from in the file player, while the handoff is under way.
+    private var handoffStartPosition: Double?
     #endif
     #if os(macOS)
     /// The window the player took full screen, to give back when the video leaves it. A window
@@ -386,16 +394,22 @@ final class PlayerManager: ObservableObject {
         local.onProgress = { [weak self] elapsed, duration in
             guard let self, self.isLocal else { return }
             self.updatePlaybackProgress(elapsed: elapsed, duration: duration)
+            #if os(iOS)
+            // The sound is really coming out once the position moves past where it started: the
+            // app can be left to iOS's audio rules now. The player says it is playing as soon as
+            // it is asked, long before it has anything to play — ending the handoff there let iOS
+            // suspend the app while the stream was still loading, and the sound never came back.
+            if let start = self.handoffStartPosition, elapsed > start + 0.3,
+               self.local.player.timeControlStatus == .playing {
+                self.endHandoffTask()
+            }
+            #endif
         }
 
         local.onPlayingChanged = { [weak self] playing in
             guard let self, self.isLocal else { return }
             self.setPlaying(playing)
             if playing { self.setBuffering(false) }
-            #if os(iOS)
-            // The sound is really coming out: the app can be left to iOS's audio rules now.
-            if playing, self.local.player.timeControlStatus == .playing { self.endHandoffTask() }
-            #endif
         }
 
         local.onBufferingChanged = { [weak self] buffering in
@@ -420,6 +434,9 @@ final class PlayerManager: ObservableObject {
             self.local.pause()
             self.setBuffering(false)
             self.issue = .loadFailed(message)
+            #if os(iOS)
+            self.endHandoffTask()
+            #endif
         }
     }
 
@@ -602,17 +619,21 @@ final class PlayerManager: ObservableObject {
     }
 
     /// Resolves the video's sound alone ahead of time, so leaving the app can switch to it at
-    /// once. A sound-only stream is what YouTube still offers every video — the muxed ones are
-    /// gone for most — and it is all a locked phone needs.
+    /// once: the stream, and the index of its pieces — see `StreamIndex` — which lets the native
+    /// player start anywhere in it straight away. A sound-only stream is what YouTube still
+    /// offers every video — the muxed ones are gone for most — and it is all a locked phone needs.
     private func resolveBackgroundAudio(for videoID: String) {
         backgroundAudioTask?.cancel()
         backgroundAudioTask = Task { [weak self] in
             guard let resolveAudio = self?.resolveAudio,
-                  let url = try? await resolveAudio(videoID),
-                  !Task.isCancelled, let self,
+                  let url = try? await resolveAudio(videoID) else { return }
+            // Without its index the stream still plays, only slower to start.
+            let index = url.isFileURL ? nil : try? await StreamIndex.load(url)
+            guard !Task.isCancelled, let self,
                   self.currentVideo?.id == videoID, !self.isLocal else { return }
             self.backgroundAudioTask = nil
             self.backgroundAudioURL = url
+            self.backgroundAudioIndex = index
             if self.backgroundAudioRequested {
                 self.switchToBackgroundAudio(url, videoID: videoID)
             }
@@ -625,7 +646,9 @@ final class PlayerManager: ObservableObject {
         guard !isLocal, currentVideo?.id == videoID else { return }
         backgroundAudioRequested = false
         let position = progress.currentTime
-        if isShellLoaded { evaluate("pauseVideo()") }
+        // The embed lets go of its video altogether, and with it the sound WebKit may still hold
+        // the audio session for. Coming back loads it again where the sound has got to.
+        if isShellLoaded { evaluate("stopVideo()") }
         desiredVideoId = nil
         loadedVideoId = nil
         watchdog?.cancel()
@@ -637,7 +660,9 @@ final class PlayerManager: ObservableObject {
         source = .local(url)
         pendingSeekTime = position
         isRestoringPosition = false
-        local.load(url: url)
+        // WebKit's own playback can have taken the audio session over, or let go of it.
+        NowPlaying.shared.begin()
+        local.load(url: url, index: backgroundAudioIndex)
         local.setRate(preferredRate)
         local.seek(to: position)
         if audioShouldPlay { local.play() }
@@ -666,6 +691,7 @@ final class PlayerManager: ObservableObject {
         backgroundAudioTask?.cancel()
         backgroundAudioTask = nil
         backgroundAudioURL = nil
+        backgroundAudioIndex = nil
         backgroundAudioRequested = false
     }
 
@@ -1020,7 +1046,30 @@ final class PlayerManager: ObservableObject {
                 }
             }
         }
+        #if os(iOS)
+        lifecycleObservers.append(center.addObserver(
+            forName: AVAudioSession.interruptionNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            let info = note.userInfo
+            let ended = (info?[AVAudioSessionInterruptionTypeKey] as? UInt) == AVAudioSession.InterruptionType.ended.rawValue
+            let options = AVAudioSession.InterruptionOptions(rawValue: info?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0)
+            MainActor.assumeIsolated {
+                self?.audioSessionInterruptionChanged(ended: ended, shouldResume: options.contains(.shouldResume))
+            }
+        })
+        #endif
     }
+
+    #if os(iOS)
+    /// A call, an alarm, Siri — or WebKit's own playback on the way out — took the sound away,
+    /// and the native player stopped with it. Once iOS says it may, the sound comes back, as long
+    /// as it was meant to be playing.
+    private func audioSessionInterruptionChanged(ended: Bool, shouldResume: Bool) {
+        guard ended, shouldResume, isLocal, audioShouldPlay, !local.isPlaying else { return }
+        NowPlaying.shared.begin()
+        local.play()
+    }
+    #endif
 
     #if os(iOS)
 
@@ -1030,6 +1079,7 @@ final class PlayerManager: ObservableObject {
     /// downloaded one is moved by AVKit itself, on the way to the Home Screen only.
     private func appWillResignActive() {
         savePlaybackPosition()
+        wasPlayingOnLeaving = isPlaying
         guard currentVideo != nil, isPlaying, !isLocal, !usesNativeCarPlayPlayback,
               AutoPictureInPicturePreference.isEnabled, !isEmbedInPictureInPicture else { return }
         startedPictureInPictureOnLeaving = true
@@ -1041,12 +1091,16 @@ final class PlayerManager: ObservableObject {
     private func appDidEnterBackground() {
         isInBackground = true
         savePlaybackPosition()
-        guard currentVideo != nil, isPlaying, !usesNativeCarPlayPlayback,
+        let wasPlaying = isPlaying || wasPlayingOnLeaving
+        wasPlayingOnLeaving = false
+        guard currentVideo != nil, wasPlaying, !usesNativeCarPlayPlayback,
               !local.isInPictureInPicture, !isEmbedInPictureInPicture else { return }
         guard BackgroundPlaybackPreference.isEnabled else {
             pause()
             return
         }
+        // Whatever the embed has said since, the sound is to go on.
+        audioShouldPlay = true
         NowPlaying.shared.begin()
         // A file keeps playing without its picture — see `LocalPlayerSurface`.
         guard !isLocal else { return }
@@ -1128,9 +1182,11 @@ final class PlayerManager: ObservableObject {
         handoffTask = UIApplication.shared.beginBackgroundTask(withName: "Background playback") { [weak self] in
             MainActor.assumeIsolated { self?.endHandoffTask() }
         }
+        handoffStartPosition = progress.currentTime
     }
 
     private func endHandoffTask() {
+        handoffStartPosition = nil
         guard handoffTask != .invalid else { return }
         UIApplication.shared.endBackgroundTask(handoffTask)
         handoffTask = .invalid
