@@ -61,6 +61,9 @@ struct PlayerContainerView: View {
     @State private var floatingOnLeft = false
     @State private var horizontalDrag: CGFloat = 0
     @State private var expandedScrollOffset: CGFloat = 0
+    /// Full screen, the video zoomed to fill the screen — cropped at its edges — rather than
+    /// fitted inside it. Pinched in and out, as in the YouTube app, and kept for the session.
+    @State private var fillsScreen = false
     #if os(iOS)
     @State private var menuSwitchRequest = MiniPlayerMenuSwitchRequest()
     #endif
@@ -118,14 +121,14 @@ struct PlayerContainerView: View {
                 floatingOnLeft: floatingOnLeft,
                 horizontalDrag: horizontalDrag,
                 isFullScreen: player.isFullScreen,
+                fillsScreen: fillsScreen,
                 clearsSearchButton: clearsSearchButton
             )
             playerBody(in: layout)
                 .offset(y: barDragOffset)
         }
-        // Full screen means the whole screen: the geometry above has to measure past the notch
-        // and the home indicator too, so the video reaches both edges.
-        .ignoresSafeArea(.container, edges: player.isFullScreen ? .all : [])
+        // Full screen means the whole screen: the geometry above measures past the notch and
+        // the home indicator too — see `RootTabView`, where the safe area is set aside for it.
         .opacity(player.currentVideo == nil ? 0 : 1)
         .scaleEffect(player.currentVideo == nil ? 0.96 : 1, anchor: .bottom)
         .animation(.spring(response: 0.42, dampingFraction: 0.88), value: player.currentVideo?.id)
@@ -188,24 +191,31 @@ struct PlayerContainerView: View {
             //    through to the bar and expand the player.
             videoSurface
                 .frame(width: video.width, height: video.height)
-                .overlay {
-                    if player.isExpanded, !player.isSystemFullScreen {
-                        PlayerControlsOverlay(
-                            player: player,
-                            options: player.options,
-                            isFullScreen: player.isFullScreen,
-                            locksCollapse: $drag.isLocked
-                        )
-                        .opacity(chromeOpacity(expansion: expansion))
-                        .transition(.opacity)
-                    }
-                }
                 .clipShape(
                     RoundedRectangle(
                         cornerRadius: layout.videoCornerRadius(expansion: expansion) / max(scale, 0.01),
                         style: .continuous
                     )
                 )
+                // Full screen, the controls take the whole screen — its dim and its taps reach
+                // the bars beside the picture too — and keep their buttons to the fitted picture,
+                // clear of the notch, even when the video is zoomed to fill the screen.
+                .overlay {
+                    if player.isExpanded, !player.isSystemFullScreen {
+                        let controls = layout.controlsFrame
+                        PlayerControlsOverlay(
+                            player: player,
+                            options: player.options,
+                            isFullScreen: player.isFullScreen,
+                            locksCollapse: $drag.isLocked,
+                            fillsScreen: $fillsScreen,
+                            horizontalInset: layout.controlsHorizontalInset
+                        )
+                        .frame(width: controls.width, height: controls.height)
+                        .opacity(chromeOpacity(expansion: expansion))
+                        .transition(.opacity)
+                    }
+                }
                 // Full screen has nothing to collapse into, so only the controls' own gestures run.
                 .simultaneousGesture(
                     collapseDrag(travel: layout.collapseTravel).gesture,
@@ -700,6 +710,8 @@ private struct PlayerLayout {
     let horizontalDrag: CGFloat
     /// Set in landscape, where the video has the screen to itself.
     let isFullScreen: Bool
+    /// Full screen, the video zoomed to cover the screen rather than fitted inside it.
+    let fillsScreen: Bool
     /// Set while Search is a button of its own at the end of the tab bar's row.
     let clearsSearchButton: Bool
 
@@ -834,17 +846,33 @@ private struct PlayerLayout {
         #endif
     }
 
-    /// The biggest 16:9 the screen holds, centred in it — height-bound in landscape, so the
-    /// video grows to the full height and leaves black to either side rather than being cropped.
+    /// The video full screen: the biggest 16:9 the screen holds, centred in it — height-bound in
+    /// landscape, so the video grows to the full height and leaves black to either side — or,
+    /// zoomed to fill, the smallest 16:9 that covers the screen, cropped at its edges.
     private var fullScreenVideoFrame: CGRect {
-        let height = min(size.height, size.width * 9 / 16)
-        let width = height * 16 / 9
-        return CGRect(
-            x: (size.width - width) / 2,
-            y: (size.height - height) / 2,
-            width: width,
-            height: height
-        )
+        fillsScreen ? centred16by9(scale: max(size.width / 16, size.height / 9)) : fittedFrame
+    }
+
+    private var fittedFrame: CGRect {
+        centred16by9(scale: min(size.width / 16, size.height / 9))
+    }
+
+    private func centred16by9(scale: CGFloat) -> CGRect {
+        let width = 16 * scale
+        let height = 9 * scale
+        return CGRect(x: (size.width - width) / 2, y: (size.height - height) / 2,
+                      width: width, height: height)
+    }
+
+    /// Where the controls go: over the video, and full screen over the whole screen.
+    var controlsFrame: CGRect {
+        isFullScreen ? CGRect(origin: .zero, size: size) : expandedVideoFrame
+    }
+
+    /// Full screen, how far the controls' buttons stay from the sides: to the edges of the fitted
+    /// picture — the part of the screen it always covers, clear of the notch.
+    var controlsHorizontalInset: CGFloat {
+        isFullScreen ? max(0, (size.width - fittedFrame.width) / 2) : 0
     }
 
     /// How far the video travels between the bar and full screen — and therefore how far the

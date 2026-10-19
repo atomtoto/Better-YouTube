@@ -42,6 +42,15 @@ enum PlaybackIssue: Equatable {
     case noResponse
 }
 
+/// The player's web view. It never sees the screen's safe area: the player places it, and full
+/// screen with the video zoomed to fill, a web view that knew it lay under the notch moved its
+/// picture aside by the notch's width.
+final class PlayerWebView: WKWebView {
+    #if os(iOS)
+    override var safeAreaInsets: UIEdgeInsets { .zero }
+    #endif
+}
+
 /// Surfaces page-level load failures, which never reach the JavaScript bridge.
 final class PlayerNavigationBridge: NSObject, WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -323,13 +332,16 @@ final class PlayerManager: ObservableObject {
         document.addEventListener('leavepictureinpicture', reportPictureInPicture, true);
         """, injectionTime: .atDocumentStart, forMainFrameOnly: false))
 
-        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let webView = PlayerWebView(frame: .zero, configuration: configuration)
         // Black behind the page, so the letterboxing around a video that isn't the surface's
         // shape reads as part of the picture rather than as a gap. `underPageBackgroundColor`
         // is the one spelling both platforms share; the scroll view below is iOS's alone.
         webView.underPageBackgroundColor = .black
         #if os(iOS)
         webView.scrollView.isScrollEnabled = false
+        // The page fills the web view to its edges. Inset by the safe area, as a web view is by
+        // default, the video shrank inside its own frame full screen, short of the home indicator.
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.scrollView.backgroundColor = .black
         webView.backgroundColor = .black
         webView.isOpaque = false
@@ -1626,7 +1638,7 @@ final class PlayerManager: ObservableObject {
     <!DOCTYPE html>
     <html>
     <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+      <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
       <style>
         html, body { margin: 0; padding: 0; background: #000; height: 100%; overflow: hidden; }
         #frame { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }

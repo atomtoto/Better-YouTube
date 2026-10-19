@@ -39,6 +39,10 @@ struct RootTabView: View {
             // it rather than shoving it up the screen.
             PlayerContainerView()
                 .ignoresKeyboardInset()
+                // Full screen, the player takes the notch's side and the home indicator's strip
+                // too. Set aside here rather than inside the player: there it had no effect, and
+                // the video stopped short of the bottom with wider bars at its sides.
+                .ignoresSafeArea(.container, edges: player.isFullScreen ? .all : [])
         }
         .sheet(isPresented: $showsOnboarding) {
             OnboardingView {

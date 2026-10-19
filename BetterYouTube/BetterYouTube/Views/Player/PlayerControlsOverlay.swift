@@ -19,6 +19,12 @@ struct PlayerControlsOverlay: View {
     /// True while a touch on the scrubber or a hold to speed up is in progress, so the player's
     /// pull-down leaves that touch alone.
     @Binding var locksCollapse: Bool
+    /// Full screen, the video zoomed to fill the screen. A pinch out zooms it, a pinch in fits it
+    /// back, as in the YouTube app.
+    @Binding var fillsScreen: Bool
+    /// How far in from the sides the buttons sit, beyond their usual margin. Full screen, the
+    /// controls span the screen but keep their buttons over the fitted picture.
+    var horizontalInset: CGFloat = 0
 
     @AppStorage(HoldToSpeedUpPreference.storageKey) private var holdsToSpeedUp = true
     @AppStorage(SkipIntervalPreference.backKey) private var storedSkipBack = SkipIntervalPreference.defaultSeconds
@@ -32,6 +38,9 @@ struct PlayerControlsOverlay: View {
     @State private var isMenuOpen = false
     @State private var skipFeedback: SkipFeedback?
     @GestureState private var isHolding = false
+    /// When a hold to speed up last ended. The finger lifting from it also ends a tap, which
+    /// mustn't then hide or show the controls.
+    @State private var holdEndedAt: Date?
 
     private var skipBack: Int { SkipIntervalPreference.valid(storedSkipBack) }
     private var skipForward: Int { SkipIntervalPreference.valid(storedSkipForward) }
@@ -92,6 +101,7 @@ struct PlayerControlsOverlay: View {
                 hide()
                 player.beginSpeedingUp()
             } else {
+                holdEndedAt = .now
                 player.endSpeedingUp()
             }
         }
@@ -110,7 +120,11 @@ struct PlayerControlsOverlay: View {
 
     /// The picture itself, in two halves: a tap shows or hides the controls, a double tap skips
     /// back on the left and forward on the right, and holding the right speeds up. A Mac's
-    /// click plays and pauses instead, and its double click fills the window.
+    /// click plays and pauses instead, and its double click fills the window. Full screen, a
+    /// pinch zooms the video to fill the screen or fits it back.
+    ///
+    /// The hold runs alongside the right half's taps. Made to go first, it kept a quick tap
+    /// there from ever counting — which is why a tap on that side so often did nothing.
     private var touchSurface: some View {
         HStack(spacing: 0) {
             Color.clear
@@ -118,9 +132,21 @@ struct PlayerControlsOverlay: View {
                 .gesture(taps(skipping: -Double(skipBack)))
             Color.clear
                 .contentShape(Rectangle())
-                .gesture(hold.exclusively(before: taps(skipping: Double(skipForward))))
+                .gesture(taps(skipping: Double(skipForward)))
+                .simultaneousGesture(hold)
         }
+        .simultaneousGesture(zoom, including: isFullScreen ? .all : .subviews)
         .accessibilityHidden(true)
+    }
+
+    private var zoom: some Gesture {
+        MagnifyGesture()
+            .onEnded { value in
+                guard value.magnification > 1.15 || value.magnification < 0.87 else { return }
+                let fills = value.magnification > 1
+                guard fills != fillsScreen else { return }
+                withAnimation(.snappy) { fillsScreen = fills }
+            }
     }
 
     private func taps(skipping seconds: Double) -> some Gesture {
@@ -137,6 +163,7 @@ struct PlayerControlsOverlay: View {
                 player.togglePlayPause()
                 show()
                 #else
+                if let holdEndedAt, Date.now.timeIntervalSince(holdEndedAt) < 0.5 { return }
                 if isShown { hide() } else { show() }
                 #endif
             })
@@ -166,7 +193,7 @@ struct PlayerControlsOverlay: View {
                 Spacer(minLength: 0)
                 bottomBar
             }
-            .padding(.horizontal, isFullScreen ? 20 : 12)
+            .padding(.horizontal, (isFullScreen ? 20 : 12) + horizontalInset)
             .padding(.top, isFullScreen ? 16 : 8)
             .padding(.bottom, isFullScreen ? 18 : 2)
         }
@@ -450,7 +477,7 @@ struct PlayerControlsOverlay: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .glassEffect(.regular, in: Capsule())
-            .padding(.horizontal, 32)
+            .padding(.horizontal, 32 + horizontalInset)
             if feedback.seconds < 0 { Spacer() }
         }
     }

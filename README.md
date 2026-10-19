@@ -30,7 +30,7 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   half of the video plays it at 2× while held (Settings → Playback). A downloaded video gets the
   same controls. YouTube's own layer only shows through for an ad or its end-screen suggestions.
   Turning the phone on its side, or the full-screen button, plays the video full screen in the
-  same player — or in iOS's own, if Settings → Playback → Full-Screen Player says so — and turning
+  same player — a pinch zooms it to fill the screen, cropped at its edges, as in the YouTube app — or in iOS's own, if Settings → Playback → Full-Screen Player says so — and turning
   it back puts the player where it was. On a Mac, ⇧⌘F fills the window instead. On an iPad held
   landscape the player stands in two columns: the video with its details, and beside it up next
   and the comments. Autoplay of the next video can be turned off in Settings → Playback, and a
