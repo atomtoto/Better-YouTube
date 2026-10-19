@@ -86,7 +86,7 @@ struct PlayerContainerView: View {
     /// exactly that: portrait and every iPad layout are regular.
     ///
     /// A Mac has no counterpart: a window has no orientation, so full screen there is asked for
-    /// rather than inferred — see `PlayerManager.toggleFillsWindow`.
+    /// rather than inferred — see `PlayerManager.toggleFullScreen`.
     private var isLandscape: Bool { verticalSizeClass == .compact }
     #endif
 
@@ -199,9 +199,10 @@ struct PlayerContainerView: View {
                 )
                 // Full screen, the controls take the whole screen — its dim and its taps reach
                 // the bars beside the picture too — and keep their buttons to the fitted picture,
-                // clear of the notch, even when the video is zoomed to fill the screen.
+                // clear of the notch, even when the video is zoomed to fill the screen. YouTube's
+                // own controls and macOS's are in the video itself, and need none of these.
                 .overlay {
-                    if player.isExpanded, !player.isSystemFullScreen {
+                    if player.isExpanded, !player.isSystemFullScreen, player.controls == .app {
                         let controls = layout.controlsFrame
                         PlayerControlsOverlay(
                             player: player,
@@ -376,7 +377,15 @@ struct PlayerContainerView: View {
     @ViewBuilder
     private var videoSurface: some View {
         if player.isLocal {
+            #if os(macOS)
+            if player.controls == .system {
+                SystemLocalPlayerSurface(playback: player.local, isFullScreen: player.isFullScreen)
+            } else {
+                LocalPlayerSurface(playback: player.local)
+            }
+            #else
             LocalPlayerSurface(playback: player.local)
+            #endif
         } else if player.currentVideo != nil || player.hasWebView {
             PlayerSurface(webView: player.webView)
         } else {
@@ -539,8 +548,12 @@ struct PlayerActions: View {
                 Label("Open in YouTube", systemImage: "arrow.up.forward.app")
             }
         }
-        Button { player.startPictureInPicture() } label: {
-            Label("Picture in Picture", systemImage: "pip.enter")
+        // A downloaded file under macOS's player is AVKit's to put in Picture in Picture, with
+        // the button in its own controls; there is no asking it from here.
+        if !(player.isLocal && player.controls == .system) {
+            Button { player.startPictureInPicture() } label: {
+                Label("Picture in Picture", systemImage: "pip.enter")
+            }
         }
         Button(role: .destructive) {
             player.close()

@@ -1903,16 +1903,6 @@
         }
       }
     },
-    "Exit Fill Window" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quitter le remplissage de la fenêtre"
-          }
-        }
-      }
-    },
     "Exit Full Screen" : {
       "localizations" : {
         "fr" : {
@@ -1989,16 +1979,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Les fichiers arrivent dans le dossier Téléchargements de l’app, accessible depuis Téléchargements → « Afficher dans le Finder »."
-          }
-        }
-      }
-    },
-    "Fill Window" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remplir la fenêtre"
           }
         }
       }
@@ -2193,16 +2173,6 @@
         }
       }
     },
-    "Full-Screen Player" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lecteur plein écran"
-          }
-        }
-      }
-    },
     "Google Cloud Project" : {
       "localizations" : {
         "fr" : {
@@ -2353,6 +2323,16 @@
         }
       }
     },
+    "Hold the mouse button down on the video to play it at double speed until you let go, as on YouTube. Not available with macOS's player." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintiens le bouton de la souris enfoncé sur la vidéo pour la lire deux fois plus vite jusqu’à ce que tu le relâches, comme sur YouTube. Indisponible avec le lecteur de macOS."
+          }
+        }
+      }
+    },
     "Hold to Play at 2×" : {
       "localizations" : {
         "fr" : {
@@ -2379,6 +2359,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "La durée du saut des boutons du lecteur, d’un double toucher de chaque côté de la vidéo et des boutons de l’écran verrouillé."
+          }
+        }
+      }
+    },
+    "How far the player's skip buttons, the arrow keys and the Playback menu jump." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La durée du saut des boutons du lecteur, des touches fléchées et du menu Lecture."
           }
         }
       }
@@ -2419,6 +2409,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Importer depuis Google Takeout…"
+          }
+        }
+      }
+    },
+    "In full screen, iOS's player takes over, with the system's controls but without YouTube's captions." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En plein écran, le lecteur d’iOS prend le relais, avec les commandes du système mais sans les sous-titres de YouTube."
+          }
+        }
+      }
+    },
+    "In full screen, the video keeps this app's controls, with chapters, captions and the settings menu. Pinch out to fill the screen." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En plein écran, la vidéo garde les commandes de l’app, avec les chapitres, les sous-titres et le menu des réglages. Écarte les doigts pour remplir l’écran."
           }
         }
       }
@@ -4778,6 +4788,16 @@
         }
       }
     },
+    "Style" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Style"
+          }
+        }
+      }
+    },
     "Subscribe" : {
       "localizations" : {
         "fr" : {
@@ -5298,6 +5318,26 @@
         }
       }
     },
+    "This app's controls, with chapters on the progress bar and a menu for quality, captions, audio track and speed." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les commandes de l’app, avec les chapitres sur la barre de lecture et un menu pour la qualité, les sous-titres, la piste audio et la vitesse."
+          }
+        }
+      }
+    },
+    "This app's controls, with chapters on the progress bar and a menu for quality, captions, audio track and speed. Click the video to play or pause it, double-click it for full screen, and use YouTube's keyboard shortcuts." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les commandes de l’app, avec les chapitres sur la barre de lecture et un menu pour la qualité, les sous-titres, la piste audio et la vitesse. Clique sur la vidéo pour la lire ou la mettre en pause, double-clique dessus pour le plein écran, et utilise les raccourcis clavier de YouTube."
+          }
+        }
+      }
+    },
     "This channel has no public playlists." : {
       "localizations" : {
         "fr" : {
@@ -5695,16 +5735,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Utiliser ce service de téléchargement ?"
-          }
-        }
-      }
-    },
-    "Used when you turn the phone on its side. This app's player keeps its controls, chapters, captions and settings menu. iOS's player has the system's controls, without YouTube's captions." : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Utilisé quand tu tournes le téléphone. Le lecteur de l’app garde ses commandes, ses chapitres, ses sous-titres et son menu de réglages. Le lecteur d’iOS a les commandes du système, sans les sous-titres de YouTube."
           }
         }
       }
@@ -6139,6 +6169,16 @@
         }
       }
     },
+    "YouTube's Player" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecteur YouTube"
+          }
+        }
+      }
+    },
     "YouTube's home page came back without any videos. The session may have expired — sign in again from Settings." : {
       "localizations" : {
         "fr" : {
@@ -6155,6 +6195,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Le panneau de notifications de YouTube n’a pas pu être lu. Ouvre youtube.com depuis les Réglages, vérifie que la cloche ouvre bien tes notifications, puis réessaie."
+          }
+        }
+      }
+    },
+    "YouTube's own controls, menus and end screen, as on its website. Full screen still uses the player chosen below, and downloaded videos keep this app's player." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les commandes, les menus et l’écran de fin de YouTube, comme sur son site. Le plein écran utilise toujours le lecteur choisi ci-dessous, et les vidéos téléchargées gardent le lecteur de l’app."
+          }
+        }
+      }
+    },
+    "YouTube's own controls, menus, keyboard shortcuts and end screen, as on its website. Downloaded videos keep this app's player." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les commandes, les menus, les raccourcis clavier et l’écran de fin de YouTube, comme sur son site. Les vidéos téléchargées gardent le lecteur de l’app."
           }
         }
       }
@@ -6401,6 +6461,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "échec du chargement : %1$@ · vidéo %2$@"
+          }
+        }
+      }
+    },
+    "macOS Player" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecteur de macOS"
+          }
+        }
+      }
+    },
+    "macOS's own controls, as in Safari, with AirPlay, Picture in Picture and full screen. YouTube chooses the quality, and there's no menu for captions or audio tracks. Downloaded videos play in macOS's player too." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les commandes de macOS, comme dans Safari, avec AirPlay, Image dans l’image et le plein écran. YouTube choisit la qualité, et il n’y a pas de menu pour les sous-titres ni les pistes audio. Les vidéos téléchargées passent aussi dans le lecteur de macOS."
           }
         }
       }

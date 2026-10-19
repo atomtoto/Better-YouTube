@@ -29,9 +29,16 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   choices — quality, captions and their auto-translation, audio track and speed. Holding the right
   half of the video plays it at 2× while held (Settings → Playback). A downloaded video gets the
   same controls. YouTube's own layer only shows through for an ad or its end-screen suggestions.
+  On a Mac the same controls sit in one bar of glass along the bottom, shown while the pointer
+  moves over the video: a click plays or pauses, a double click goes full screen, and YouTube's
+  keyboard shortcuts work (Space or K, J and L or the arrows, F, Esc, C, 0–9). Settings → Playback
+  → Player can put YouTube's own player back instead — under the video on an iPhone or iPad, and
+  everywhere on a Mac — or, on a Mac, macOS's own controls on the video, as in Safari, with
+  downloads in AVKit's player.
   Turning the phone on its side, or the full-screen button, plays the video full screen in the
-  same player — a pinch zooms it to fill the screen, cropped at its edges, as in the YouTube app — or in iOS's own, if Settings → Playback → Full-Screen Player says so — and turning
-  it back puts the player where it was. On a Mac, ⇧⌘F fills the window instead. On an iPad held
+  same player — a pinch zooms it to fill the screen, cropped at its edges, as in the YouTube app — or in iOS's own, if Settings → Playback → Full Screen says so — and turning
+  it back puts the player where it was. On a Mac, the full-screen button, a double click, F or ⇧⌘F
+  take the window full screen with the video filling it, and Esc brings it back. On an iPad held
   landscape the player stands in two columns: the video with its details, and beside it up next
   and the comments. Autoplay of the next video can be turned off in Settings → Playback, and a
   sleep timer in the player's menu stops playback after a while or at the end of the video
@@ -615,7 +622,7 @@ Requirements: **macOS 26+**, Xcode 27+ for the full project.
 | --- | --- | --- |
 | Sections | Tab bar that minimizes on scroll | Source-list sidebar, ⌘1/⌘2/⌘3 |
 | Home's feed switcher | Segmented control at the top of the feed | In the window's toolbar, where a mode switcher belongs |
-| Player full screen | Turn the phone on its side | ⇧⌘F fills the window; the green button takes the window full screen |
+| Player full screen | Turn the phone on its side | A double click, F or ⇧⌘F takes the window full screen with the video filling it; Esc comes back |
 | Mini / expanded player | Tap the bar, flick it down | ⇧⌘P, or click the bar |
 | Transport | The docked bar, the lock screen — and on an iPad, the same **Playback** menu and shortcuts | The bar, the **Playback** menu, ⌘P / ⌥⌘← / ⌥⌘→ / ⇧⌘N |
 | Settings | A tab; panes that push | Its own window, the same panes as a source list, ⌘, |

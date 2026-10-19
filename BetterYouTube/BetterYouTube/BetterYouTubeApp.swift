@@ -278,8 +278,8 @@ struct PlayerCommands: Commands {
 
             #if os(macOS)
             // A phone or iPad goes full screen by turning it; a window has to be asked.
-            Button(player.isFullScreen ? "Exit Fill Window" : "Fill Window") {
-                player.toggleFillsWindow()
+            Button(player.isFullScreen || player.isSystemFullScreen ? "Exit Full Screen" : "Full Screen") {
+                player.toggleFullScreen()
             }
             .keyboardShortcut("f", modifiers: [.command, .shift])
             .disabled(player.currentVideo == nil)

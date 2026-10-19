@@ -139,7 +139,9 @@ final class PlayerManager: ObservableObject {
     @Published private(set) var isBarCompact = false
     /// True while the video fills the screen on its own, which is what turning the phone on its
     /// side does. The expanded player's chrome steps aside for it.
-    @Published private(set) var isFullScreen = false
+    @Published private(set) var isFullScreen = false {
+        didSet { if isFullScreen != oldValue { updateControls() } }
+    }
     /// True while *iOS* is the one showing the video full screen — its own full-screen
     /// presentation over the app, with the system's controls — rather than the app laying the
     /// video out edge to edge itself. `isFullScreen` is that fallback, and stays true underneath.
@@ -156,7 +158,15 @@ final class PlayerManager: ObservableObject {
     /// showing a silent black rectangle.
     @Published private(set) var issue: PlaybackIssue?
     /// Which of the two players is live. Watched by the container, which swaps the surface.
-    @Published private(set) var source: PlaybackSource = .embed
+    @Published private(set) var source: PlaybackSource = .embed {
+        didSet { if source != oldValue { updateControls() } }
+    }
+    /// Whose controls are over the video now — Settings → Playback → Player, as far as it can
+    /// apply. Full screen on an iPhone or an iPad is the Full-Screen Player's to decide, and
+    /// YouTube's controls can't drive a downloaded file, which keeps the app's.
+    @Published private(set) var controls = PlayerManager.controls(
+        chosen: .stored, isFullScreen: false, isLocal: false
+    )
     @Published private(set) var isAudioOnly = false
     @Published private(set) var isCarPlayVideoPlayback = false
     private(set) var isCarPlayConnected = false
@@ -276,8 +286,13 @@ final class PlayerManager: ObservableObject {
     private var isEmbedInPictureInPicture = false
     /// Keeps the app running while the sound moves from the embed to the file player.
     private var handoffTask: UIBackgroundTaskIdentifier = .invalid
-    private var lifecycleObservers: [NSObjectProtocol] = []
     #endif
+    #if os(macOS)
+    /// The window the player took full screen, to give back when the video leaves it. A window
+    /// that was full screen already stays so.
+    private weak var fullScreenWindow: NSWindow?
+    #endif
+    private var lifecycleObservers: [NSObjectProtocol] = []
 
     init(resolveAudio: @escaping @Sendable (String) async throws -> URL = {
         try await LocalDownloadResolver.shared.resolveAudioPlaybackURL(videoID: $0)
@@ -290,16 +305,12 @@ final class PlayerManager: ObservableObject {
         self.resolveVideo = resolveVideo
         self.downloadedMediaURL = downloadedMediaURL
         wireLocalPlayback()
-        #if os(iOS)
         observeAppLifecycle()
-        #endif
     }
 
-    #if os(iOS)
     isolated deinit {
         lifecycleObservers.forEach(NotificationCenter.default.removeObserver)
     }
-    #endif
 
     private func makeWebView() -> WKWebView {
         let configuration = WKWebViewConfiguration()
@@ -977,18 +988,30 @@ final class PlayerManager: ObservableObject {
         }
     }
 
-    #if os(iOS)
-    /// The app's own lifecycle notifications. The app runs on scenes, so the application
-    /// delegate's `applicationWillResignActive` and its siblings are never called — which is why
-    /// handing the sound over from there never happened.
+    /// What the player follows from outside: Settings → Playback → Player changing under a video,
+    /// and the app's own lifecycle. The app runs on scenes, so the application delegate's
+    /// `applicationWillResignActive` and its siblings are never called — which is why handing the
+    /// sound over from there never happened. On a Mac, the window leaving full screen by itself —
+    /// Esc, the green button — takes the video out of it too.
     private func observeAppLifecycle() {
         let center = NotificationCenter.default
-        let events: [(Notification.Name, @MainActor @Sendable (PlayerManager) -> Void)] = [
+        typealias Event = (Notification.Name, @MainActor @Sendable (PlayerManager) -> Void)
+        let settings: [Event] = [
+            (UserDefaults.didChangeNotification, { $0.updateControls() }),
+        ]
+        #if os(iOS)
+        let platform: [Event] = [
             (UIApplication.willResignActiveNotification, { $0.appWillResignActive() }),
             (UIApplication.didEnterBackgroundNotification, { $0.appDidEnterBackground() }),
             (UIApplication.willEnterForegroundNotification, { $0.appWillEnterForeground() }),
             (UIApplication.didBecomeActiveNotification, { $0.appDidBecomeActive() }),
         ]
+        #else
+        let platform: [Event] = [
+            (NSWindow.didExitFullScreenNotification, { $0.windowDidExitFullScreen() }),
+        ]
+        #endif
+        let events = settings + platform
         lifecycleObservers = events.map { name, action in
             center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated {
@@ -998,6 +1021,8 @@ final class PlayerManager: ObservableObject {
             }
         }
     }
+
+    #if os(iOS)
 
     /// The first sign of leaving: the Home Screen, the lock, the app switcher — or only Control
     /// Centre pulled down over the app. With Settings → Playback → Picture in Picture on, a
@@ -1164,7 +1189,8 @@ final class PlayerManager: ObservableObject {
     }
 
     /// The player's full-screen button. A phone turns to its side — the same full screen as
-    /// turning it by hand — and an iPad or a Mac fills its window instead.
+    /// turning it by hand. An iPad fills its window, and a Mac takes the window full screen with
+    /// the video filling it. macOS's player takes its video full screen itself, as Safari does.
     func toggleFullScreen() {
         guard currentVideo != nil else { return }
         #if os(iOS)
@@ -1175,16 +1201,24 @@ final class PlayerManager: ObservableObject {
             scene?.requestGeometryUpdate(.iOS(interfaceOrientations: isFullScreen ? .portrait : .landscapeRight)) { _ in }
             return
         }
+        #else
+        if controls == .system, !isLocal {
+            if isSystemFullScreen || wantsSystemFullScreen {
+                exitSystemFullScreen()
+            } else {
+                requestSystemFullScreen()
+            }
+            return
+        }
         #endif
         toggleFillsWindow()
     }
 
     /// What full screen is where a window has no orientation to react to — a Mac, an iPad: the
     /// app's own full screen, the video filling the window and the chrome stepping aside. On a
-    /// Mac that is from the Playback menu, or ⇧⌘F, as well as the player's button. The window
-    /// itself is already the thing the user zooms or takes full screen with the green button, and
-    /// stacking a second full-screen window inside that is one too many.
-    func toggleFillsWindow() {
+    /// Mac the window goes full screen with it, and comes back out when the video does — unless
+    /// it was full screen already.
+    private func toggleFillsWindow() {
         guard currentVideo != nil else { return }
         let fills = !isFullScreen
         withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) {
@@ -1206,7 +1240,58 @@ final class PlayerManager: ObservableObject {
         } else {
             exitSystemFullScreen()
         }
+        #else
+        setWindowFullScreen(fills)
         #endif
+    }
+
+    #if os(macOS)
+    private func setWindowFullScreen(_ fullScreen: Bool) {
+        if fullScreen {
+            // The window the video is in. Settings is a window too, and can be the main one.
+            let window = (hasWebView ? webView.window : nil) ?? Platform.mainWindow
+            guard let window, !window.styleMask.contains(.fullScreen) else { return }
+            fullScreenWindow = window
+            window.toggleFullScreen(nil)
+        } else if let window = fullScreenWindow {
+            fullScreenWindow = nil
+            if window.styleMask.contains(.fullScreen) { window.toggleFullScreen(nil) }
+        }
+    }
+
+    /// The window the video went full screen in left it by itself: Esc, the green button, a
+    /// swipe to another Space. The video leaves full screen with it.
+    private func windowDidExitFullScreen() {
+        guard let window = fullScreenWindow, !window.styleMask.contains(.fullScreen) else { return }
+        fullScreenWindow = nil
+        if isFullScreen { toggleFillsWindow() }
+    }
+    #endif
+
+    /// Whose controls go over the video: the one chosen in Settings, as far as it can apply.
+    static func controls(chosen: PlayerControlsPreference, isFullScreen: Bool,
+                         isLocal: Bool) -> PlayerControlsPreference {
+        #if os(iOS)
+        // Full screen is the Full-Screen Player's: the app's, or iOS's own over it.
+        if isFullScreen { return .app }
+        #endif
+        if isLocal, chosen == .youTube { return .app }
+        return chosen
+    }
+
+    /// Follows the setting, full screen and the player that is live, and tells the embed which
+    /// controls to show — YouTube's own, the system's, or none under the app's.
+    private func updateControls() {
+        let controls = Self.controls(chosen: .stored, isFullScreen: isFullScreen, isLocal: isLocal)
+        guard self.controls != controls else { return }
+        self.controls = controls
+        #if os(macOS)
+        // macOS's player has its own full screen; the app's would stack a second one on it.
+        if controls == .system, isFullScreen, !isLocal { toggleFillsWindow() }
+        if controls != .system, isSystemFullScreen { exitSystemFullScreen() }
+        #endif
+        guard isShellLoaded else { return }
+        call("setChrome(chrome)", ["chrome": controls.rawValue])
     }
 
     private func requestSystemFullScreen() {
@@ -1504,6 +1589,10 @@ final class PlayerManager: ObservableObject {
         case "fullscreen":
             setSystemFullScreen(event.state == 1)
 
+        case "fullScreenRequest":
+            // YouTube's own full-screen button, under YouTube's controls.
+            toggleFullScreen()
+
         case "state":
             // YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
             guard let state = event.state else { return }
@@ -1620,6 +1709,7 @@ final class PlayerManager: ObservableObject {
             .replacingOccurrences(of: "__START_SECONDS__", with: String(progress.currentTime))
             .replacingOccurrences(of: "__PLAYBACK_ID__", with: playbackID ?? "")
             .replacingOccurrences(of: "__AUTOPLAY__", with: String(embedStartsPlaying))
+            .replacingOccurrences(of: "__CHROME__", with: controls.rawValue)
 
         // The base URL matches the iframe's host, exactly as in the version that played fine.
         webView.loadHTMLString(html, baseURL: URL(string: "https://www.youtube-nocookie.com"))
@@ -1670,6 +1760,12 @@ final class PlayerManager: ObservableObject {
         var lastReport = '';
         var chapterCache = null;
         var controlsShown = false;
+        // Whose controls are over the video: 'app', the app's own, drawn over this page with
+        // YouTube's hidden underneath; 'youTube', YouTube's own, left showing; 'system', WebKit's
+        // own on the video element, as in Safari — a Mac's.
+        var chrome = '__CHROME__';
+        // Whether YouTube's layer is showing for an ad or its end screen.
+        var youTubeLayerShown = false;
 
         function post(message) {
           message.videoID = reportedVideoID || watchedVideo;
@@ -1702,7 +1798,7 @@ final class PlayerManager: ObservableObject {
           var nextFrame = frame.cloneNode(false);
           installHandshake(nextFrame);
           nextFrame.src = 'https://www.youtube-nocookie.com/embed/' + id +
-            '?enablejsapi=1&playsinline=1&rel=1&modestbranding=1&controls=0&start=' +
+            '?enablejsapi=1&playsinline=1&rel=1&modestbranding=1&controls=1&start=' +
             Math.floor(pendingStartSeconds);
           frame.replaceWith(nextFrame);
           frame = nextFrame;
@@ -1749,10 +1845,11 @@ final class PlayerManager: ObservableObject {
         // rather than leave the video where it is.
         function enterFullScreen(mayFallBack) {
           var video = videoElement();
-          if (video && typeof video.webkitEnterFullscreen === 'function') {
+          var enter = video && originalFullScreen(video, 'webkitEnterFullscreen');
+          if (enter) {
             watch(video);
             if (video.webkitDisplayingFullscreen) { return; }
-            try { video.webkitEnterFullscreen(); return; } catch (e) {}
+            try { enter.call(video); return; } catch (e) {}
           }
           // An embed we can't see into will never hand over its video element, so there is
           // nothing to wait for. One we can see into is still booting, and the app asks again
@@ -1789,8 +1886,10 @@ final class PlayerManager: ObservableObject {
         }
 
         // YouTube's own controls stay under the app's, hidden — except while they are the only way
-        // to do something: skipping an ad, or picking one of YouTube's suggestions at the end.
-        // Captions move up out of the way of the app's controls while those are showing.
+        // to do something: skipping an ad, or picking one of YouTube's suggestions at the end — or
+        // when they are the ones chosen. Captions move up out of the way of the app's controls
+        // while those are showing. Under the system's controls, the clicks go through YouTube's
+        // layer to the video element, whose controls they are.
         var embedStyle =
           'html:not(.by-youtube-layer) #player-controls,' +
           'html:not(.by-youtube-layer) #bottom-sheet-wrapper,' +
@@ -1804,17 +1903,83 @@ final class PlayerManager: ObservableObject {
           'html:not(.by-youtube-layer) .ytp-watermark { display: none !important; }' +
           '.ytp-caption-window-container { transition: transform 0.2s ease; }' +
           'html.by-controls-shown:not(.by-youtube-layer) .ytp-caption-window-container {' +
-          ' transform: translateY(-44px); }';
+          ' transform: translateY(-44px); }' +
+          'html.by-native-controls #movie_player * { pointer-events: none !important; }' +
+          'html.by-native-controls #movie_player video { pointer-events: auto !important; }';
 
         function prepareEmbed(doc, showsYouTubeLayer) {
+          youTubeLayerShown = showsYouTubeLayer;
           if (!doc.getElementById('by-style')) {
             var style = doc.createElement('style');
             style.id = 'by-style';
             style.textContent = embedStyle;
             (doc.head || doc.documentElement).appendChild(style);
           }
-          doc.documentElement.classList.toggle('by-youtube-layer', showsYouTubeLayer);
+          routeFullScreenToApp(doc);
+          // An ad or the end screen gets YouTube's layer whoever's controls are chosen: it is the
+          // only way to skip the ad or pick a suggestion.
+          var native = chrome === 'system' && !showsYouTubeLayer;
+          doc.documentElement.classList.toggle('by-youtube-layer', showsYouTubeLayer || chrome === 'youTube');
+          doc.documentElement.classList.toggle('by-native-controls', native);
           doc.documentElement.classList.toggle('by-controls-shown', controlsShown);
+          var video = doc.querySelector('video');
+          if (video) { setNativeControls(video, native); }
+        }
+
+        function setChrome(value) {
+          chrome = value;
+          var doc = embedDocument();
+          if (doc && doc.documentElement) { prepareEmbed(doc, youTubeLayerShown); }
+        }
+
+        // WebKit's controls on YouTube's video element. Their clicks stop at the video: YouTube
+        // listens for clicks on its player too, and would undo every play or pause.
+        function setNativeControls(video, on) {
+          if (video.controls !== on) { video.controls = on; }
+          if (!on || video.byNativeControls) { return; }
+          video.byNativeControls = true;
+          ['click', 'dblclick', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'contextmenu']
+            .forEach(function (type) {
+              video.addEventListener(type, function (event) {
+                if (video.controls) { event.stopPropagation(); }
+              });
+            });
+        }
+
+        // YouTube's own full-screen button, its double click and its F key ask for full screen
+        // here. With YouTube's controls chosen, the app's full screen is what they get — the phone
+        // turning, the Mac's window going full screen — rather than a second one of WebKit's.
+        // The originals stay at hand for the app's own requests: see `enterFullScreen`.
+        var fullScreenMethods = {
+          Element: ['requestFullscreen', 'webkitRequestFullscreen', 'webkitRequestFullScreen'],
+          HTMLVideoElement: ['webkitEnterFullscreen', 'webkitEnterFullScreen']
+        };
+
+        function routeFullScreenToApp(doc) {
+          var win = doc.defaultView;
+          if (!win || win.byOriginalFullScreen) { return; }
+          win.byOriginalFullScreen = {};
+          Object.keys(fullScreenMethods).forEach(function (type) {
+            var prototype = win[type] && win[type].prototype;
+            if (!prototype) { return; }
+            fullScreenMethods[type].forEach(function (name) {
+              var original = prototype[name];
+              if (typeof original !== 'function') { return; }
+              win.byOriginalFullScreen[name] = original;
+              prototype[name] = function () {
+                if (chrome !== 'youTube') { return original.apply(this, arguments); }
+                post({ type: 'fullScreenRequest' });
+                return win.Promise ? win.Promise.resolve() : undefined;
+              };
+            });
+          });
+        }
+
+        function originalFullScreen(video, name) {
+          var win = video.ownerDocument && video.ownerDocument.defaultView;
+          var original = win && win.byOriginalFullScreen && win.byOriginalFullScreen[name];
+          if (original) { return original; }
+          return typeof video[name] === 'function' ? video[name] : null;
         }
 
         function setControlsShown(shown) {
@@ -1969,7 +2134,7 @@ final class PlayerManager: ObservableObject {
           var player = moviePlayer();
           if (!player || typeof player.getAvailableQualityData !== 'function') { return; }
           var report = collectOptions(player);
-          prepareEmbed(player.ownerDocument, report.ad || report.ended);
+          prepareEmbed(player.ownerDocument, !!(report.ad || report.ended));
           var text = JSON.stringify(report);
           if (text === lastReport) { return; }
           lastReport = text;
@@ -2141,3 +2306,4 @@ final class PlayerManager: ObservableObject {
     </html>
     """
 }
+

@@ -154,25 +154,53 @@ private struct PlaybackSection: View {
     @AppStorage(HoldToSpeedUpPreference.storageKey) private var holdsToSpeedUp = true
     @AppStorage(SkipIntervalPreference.backKey) private var skipBack = SkipIntervalPreference.defaultSeconds
     @AppStorage(SkipIntervalPreference.forwardKey) private var skipForward = SkipIntervalPreference.defaultSeconds
+    @AppStorage(PlayerControlsPreference.storageKey) private var playerControls = PlayerControlsPreference.app
     #if os(iOS)
     @AppStorage(FullScreenPlayerPreference.storageKey) private var fullScreenPlayer = FullScreenPlayerPreference.app
     @AppStorage(BackgroundPlaybackPreference.storageKey) private var playsInBackground = true
     @AppStorage(AutoPictureInPicturePreference.storageKey) private var startsPictureInPicture = false
     #endif
 
+    /// Whether the app's own controls can still come up. On a Mac, macOS's player takes over
+    /// downloaded videos too, so nothing is left for the settings that only those controls use.
+    private var usesAppControls: Bool {
+        #if os(macOS)
+        playerControls != .system
+        #else
+        true
+        #endif
+    }
+
     var body: some View {
+        // Which player is the first thing to decide, so it comes first — each choice said in
+        // full under it, the way a choice that changes this much should be.
         Section {
-            Toggle("Autoplay", isOn: $autoplaysNext)
+            Picker("Player", selection: $playerControls) {
+                ForEach(PlayerControlsPreference.available) { player in
+                    Text(player.title).tag(player)
+                }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } header: {
+            Text("Player")
         } footer: {
-            Text("Plays the next video in the list when one ends. Turned off, YouTube's own suggestions stay on screen at the end instead. In a car, the queue always continues.")
+            Text(playerControls.summary)
         }
 
         #if os(iOS)
         Section {
-            Toggle("Background Playback", isOn: $playsInBackground)
-            Toggle("Picture in Picture", isOn: $startsPictureInPicture)
+            Picker("Full Screen", selection: $fullScreenPlayer) {
+                ForEach(FullScreenPlayerPreference.allCases) { player in
+                    Text(player.title).tag(player)
+                }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } header: {
+            Text("Full Screen")
         } footer: {
-            Text("Background Playback keeps the sound going when you lock the iPhone or leave the app; turned off, the video pauses. With Picture in Picture, a playing video moves to a small window over your other apps when you go to the Home Screen.")
+            Text(fullScreenPlayer.summary)
         }
         #endif
 
@@ -190,29 +218,41 @@ private struct PlaybackSection: View {
                 }
             }
         } footer: {
+            #if os(macOS)
+            Text("How far the player's skip buttons, the arrow keys and the Playback menu jump.")
+            #else
             Text("How far the player's skip buttons, a double tap on either side of the video and the lock screen's buttons jump.")
+            #endif
         }
 
         Section {
             Toggle("Hold to Play at 2×", isOn: $holdsToSpeedUp)
+                .disabled(!usesAppControls)
         } footer: {
+            #if os(macOS)
+            Text("Hold the mouse button down on the video to play it at double speed until you let go, as on YouTube. Not available with macOS's player.")
+            #else
             Text("Touch and hold the right half of the video to play it at double speed until you let go, as in the YouTube app.")
+            #endif
+        }
+
+        Section {
+            Toggle("Autoplay", isOn: $autoplaysNext)
+        } footer: {
+            Text("Plays the next video in the list when one ends. Turned off, YouTube's own suggestions stay on screen at the end instead. In a car, the queue always continues.")
         }
 
         #if os(iOS)
         Section {
-            Picker("Full-Screen Player", selection: $fullScreenPlayer) {
-                ForEach(FullScreenPlayerPreference.allCases) { player in
-                    Text(player.title).tag(player)
-                }
-            }
+            Toggle("Background Playback", isOn: $playsInBackground)
+            Toggle("Picture in Picture", isOn: $startsPictureInPicture)
         } footer: {
-            Text("Used when you turn the phone on its side. This app's player keeps its controls, chapters, captions and settings menu. iOS's player has the system's controls, without YouTube's captions.")
+            Text("Background Playback keeps the sound going when you lock the iPhone or leave the app; turned off, the video pauses. With Picture in Picture, a playing video moves to a small window over your other apps when you go to the Home Screen.")
         }
         #endif
 
         Section {
-            Picker("Mini Player", selection: $miniPlayerStyle) {
+            Picker("Style", selection: $miniPlayerStyle) {
                 ForEach(MiniPlayerStyle.allCases) { style in
                     Text(style.title).tag(style)
                 }
@@ -227,7 +267,7 @@ private struct PlaybackSection: View {
                 .pickerStyle(.segmented)
             }
         } header: {
-            Text("Player")
+            Text("Mini Player")
         } footer: {
             Text("Floating keeps a resizable 16:9 player in a bottom corner. Playback Bar shows the title and channel across the bottom. Long-press the mini player and choose Switch to change style.")
         }

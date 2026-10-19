@@ -174,7 +174,69 @@ enum DescriptionChapters {
         .union(CharacterSet(charactersIn: "-–—:|•·"))
 }
 
-/// Settings → Playback → Full-Screen Player: which player takes over when the phone is turned.
+/// Settings → Playback → Player: whose controls a video plays under.
+///
+/// On an iPhone or an iPad the choice is for the video under its details — full screen is the
+/// Full-Screen Player's to decide. On a Mac it holds everywhere, full screen included.
+enum PlayerControlsPreference: String, CaseIterable, Identifiable {
+    /// The app's own controls, with chapters and YouTube's settings menu — the default.
+    case app
+    /// YouTube's own player: its controls, menus and end screen, as on its website. It can't
+    /// play a downloaded file, which keeps the app's controls.
+    case youTube
+    /// macOS's own controls on the video, as in Safari, and AVKit's player for a downloaded
+    /// file. A Mac's only.
+    case system
+
+    static let storageKey = "player_controls"
+
+    /// The choices this platform has.
+    static var available: [PlayerControlsPreference] {
+        #if os(macOS)
+        allCases
+        #else
+        [.app, .youTube]
+        #endif
+    }
+
+    static var stored: PlayerControlsPreference {
+        let stored = UserDefaults.standard.string(forKey: storageKey).flatMap(Self.init(rawValue:)) ?? .app
+        return available.contains(stored) ? stored : .app
+    }
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .app: return String(localized: "This App's Player")
+        case .youTube: return String(localized: "YouTube's Player")
+        case .system: return String(localized: "macOS Player")
+        }
+    }
+
+    /// What the choice gives, said under it in Settings.
+    var summary: String {
+        #if os(macOS)
+        switch self {
+        case .app:
+            return String(localized: "This app's controls, with chapters on the progress bar and a menu for quality, captions, audio track and speed. Click the video to play or pause it, double-click it for full screen, and use YouTube's keyboard shortcuts.")
+        case .youTube:
+            return String(localized: "YouTube's own controls, menus, keyboard shortcuts and end screen, as on its website. Downloaded videos keep this app's player.")
+        case .system:
+            return String(localized: "macOS's own controls, as in Safari, with AirPlay, Picture in Picture and full screen. YouTube chooses the quality, and there's no menu for captions or audio tracks. Downloaded videos play in macOS's player too.")
+        }
+        #else
+        switch self {
+        case .app, .system:
+            return String(localized: "This app's controls, with chapters on the progress bar and a menu for quality, captions, audio track and speed.")
+        case .youTube:
+            return String(localized: "YouTube's own controls, menus and end screen, as on its website. Full screen still uses the player chosen below, and downloaded videos keep this app's player.")
+        }
+        #endif
+    }
+}
+
+/// Settings → Playback → Full Screen: which player takes over when the phone is turned.
 enum FullScreenPlayerPreference: String, CaseIterable, Identifiable {
     /// The app's own player, with its controls and menus — the default.
     case app
@@ -195,10 +257,21 @@ enum FullScreenPlayerPreference: String, CaseIterable, Identifiable {
         case .system: return String(localized: "iOS Player")
         }
     }
+
+    /// What the choice gives, said under it in Settings.
+    var summary: String {
+        switch self {
+        case .app:
+            return String(localized: "In full screen, the video keeps this app's controls, with chapters, captions and the settings menu. Pinch out to fill the screen.")
+        case .system:
+            return String(localized: "In full screen, iOS's player takes over, with the system's controls but without YouTube's captions.")
+        }
+    }
 }
 
-/// Settings → Playback → Hold to Speed Up: touching and holding the right half of the video plays
-/// it at double speed until the finger lifts, as in the YouTube app. On unless turned off.
+/// Settings → Playback → Hold to Speed Up: touching and holding the right half of the video — or,
+/// on a Mac, holding the mouse down on it — plays it at double speed until let go, as YouTube
+/// does. On unless turned off.
 enum HoldToSpeedUpPreference {
     static let storageKey = "hold_to_speed_up"
     static let rate: Double = 2

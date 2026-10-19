@@ -321,15 +321,15 @@ extension View {
         #endif
     }
 
-    /// Hides the status bar and the home indicator while the video has the screen. Neither
-    /// exists on a Mac.
+    /// Hides the status bar and the home indicator while the video has the screen — on a Mac,
+    /// the window's toolbar, which would otherwise stay across the top of the full-screen video.
     @ViewBuilder
     func systemChromeHidden(_ hidden: Bool) -> some View {
         #if os(iOS)
         statusBarHidden(hidden)
             .persistentSystemOverlays(hidden ? .hidden : .automatic)
         #else
-        self
+        toolbar(hidden ? .hidden : .automatic, for: .windowToolbar)
         #endif
     }
 

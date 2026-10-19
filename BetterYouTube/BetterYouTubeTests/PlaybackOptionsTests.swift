@@ -77,6 +77,35 @@ struct PlaybackOptionsTests {
         options.setSpeedingUp(false)
         #expect(options.rate == 1.25)
     }
+
+    @Test("The player chosen in Settings applies as far as it can")
+    func chosenControls() {
+        // YouTube's controls can't play a downloaded file, which keeps the app's.
+        #expect(PlayerManager.controls(chosen: .youTube, isFullScreen: false, isLocal: false) == .youTube)
+        #expect(PlayerManager.controls(chosen: .youTube, isFullScreen: false, isLocal: true) == .app)
+        #if os(iOS)
+        // Full screen is the Full-Screen Player's to decide.
+        #expect(PlayerManager.controls(chosen: .youTube, isFullScreen: true, isLocal: false) == .app)
+        #else
+        // A Mac keeps the choice full screen too, and macOS's player takes downloads as well.
+        #expect(PlayerManager.controls(chosen: .youTube, isFullScreen: true, isLocal: false) == .youTube)
+        #expect(PlayerManager.controls(chosen: .system, isFullScreen: true, isLocal: true) == .system)
+        #endif
+    }
+
+    @Test("A player this platform doesn't have falls back to the app's")
+    func unavailableControls() {
+        let key = PlayerControlsPreference.storageKey
+        defer { UserDefaults.standard.removeObject(forKey: key) }
+        UserDefaults.standard.removeObject(forKey: key)
+        #expect(PlayerControlsPreference.stored == .app)
+        UserDefaults.standard.set(PlayerControlsPreference.system.rawValue, forKey: key)
+        #if os(iOS)
+        #expect(PlayerControlsPreference.stored == .app)
+        #else
+        #expect(PlayerControlsPreference.stored == .system)
+        #endif
+    }
 }
 
 #if os(iOS)

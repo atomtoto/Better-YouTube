@@ -1,5 +1,8 @@
 import AVKit
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 /// The player's controls, drawn over the video: the same ones whichever player is behind it —
 /// YouTube's embed or a downloaded file — and whether the video sits under the header or fills
@@ -12,6 +15,10 @@ import SwiftUI
 ///
 /// While YouTube plays an ad or shows its end screen, its own layer is the one with something to
 /// tap — skip, or one of its suggestions — so the controls step aside and let the taps through.
+///
+/// A Mac gets the same controls laid out for a pointer and a keyboard: one bar of glass along the
+/// bottom, shown while the pointer moves over the video; a click to play or pause and a double
+/// click for full screen; and YouTube's keyboard shortcuts.
 struct PlayerControlsOverlay: View {
     @ObservedObject var player: PlayerManager
     @ObservedObject var options: PlaybackOptions
@@ -41,6 +48,15 @@ struct PlayerControlsOverlay: View {
     /// When a hold to speed up last ended. The finger lifting from it also ends a tap, which
     /// mustn't then hide or show the controls.
     @State private var holdEndedAt: Date?
+    #if os(macOS)
+    @FocusState private var hasKeyboardFocus: Bool
+    /// The pointer is over the video.
+    @State private var isHovering = false
+    /// The pointer is over the control bar, which keeps the controls up while it is.
+    @State private var isHoveringBar = false
+    /// The play or pause a click just did, shown for a moment in the middle of the picture.
+    @State private var playFeedback: PlayFeedback?
+    #endif
 
     private var skipBack: Int { SkipIntervalPreference.valid(storedSkipBack) }
     private var skipForward: Int { SkipIntervalPreference.valid(storedSkipForward) }
@@ -72,6 +88,15 @@ struct PlayerControlsOverlay: View {
                     .transition(.opacity)
                     .allowsHitTesting(false)
             }
+
+            #if os(macOS)
+            if let playFeedback {
+                playFeedbackView(playFeedback)
+                    .id(playFeedback.id)
+                    .transition(.opacity.combined(with: .scale(scale: 1.25)))
+                    .allowsHitTesting(false)
+            }
+            #endif
         }
         // White on the picture, whatever the app's appearance: glass and secondary text read as
         // they would in dark mode.
@@ -82,8 +107,21 @@ struct PlayerControlsOverlay: View {
         .animation(.snappy, value: options.isSpeedingUp)
         #if os(macOS)
         .onContinuousHover { phase in
-            if case .active = phase { show() } else { scheduleHide(after: .milliseconds(600)) }
+            switch phase {
+            case .active:
+                isHovering = true
+                show()
+            case .ended:
+                isHovering = false
+                scheduleHide(after: .milliseconds(600))
+            }
         }
+        // The keys go to the player while it is the thing in front — see `handleKey`.
+        .focusable()
+        .focused($hasKeyboardFocus)
+        .focusEffectDisabled()
+        .onKeyPress(phases: .down) { press in handleKey(press) }
+        .onAppear { hasKeyboardFocus = true }
         #endif
         .onChange(of: player.isPlaying, initial: true) { _, playing in
             // Paused from somewhere else — the lock screen, headphones, leaving the app — the
@@ -118,10 +156,32 @@ struct PlayerControlsOverlay: View {
 
     // MARK: - Touches on the picture
 
+    #if os(macOS)
+    /// The picture on a Mac, as on YouTube's website: a click plays or pauses at once, a double
+    /// click goes full screen — its two clicks playing and pausing back — and holding the button
+    /// down plays at double speed until it is let go. Full screen, a pinch on the trackpad zooms
+    /// the video to fill the screen or fits it back.
+    private var touchSurface: some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2) { player.toggleFullScreen() }
+            .simultaneousGesture(TapGesture().onEnded { click() })
+            .simultaneousGesture(hold)
+            .simultaneousGesture(zoom, including: isFullScreen ? .all : .subviews)
+            .accessibilityHidden(true)
+    }
+
+    private func click() {
+        hasKeyboardFocus = true
+        // The button coming up at the end of a hold isn't a click.
+        if isHolding || options.isSpeedingUp { return }
+        if let holdEndedAt, Date.now.timeIntervalSince(holdEndedAt) < 0.5 { return }
+        togglePlayPause(feedback: true)
+    }
+    #else
     /// The picture itself, in two halves: a tap shows or hides the controls, a double tap skips
-    /// back on the left and forward on the right, and holding the right speeds up. A Mac's
-    /// click plays and pauses instead, and its double click fills the window. Full screen, a
-    /// pinch zooms the video to fill the screen or fits it back.
+    /// back on the left and forward on the right, and holding the right speeds up. Full screen,
+    /// a pinch zooms the video to fill the screen or fits it back.
     ///
     /// The hold runs alongside the right half's taps. Made to go first, it kept a quick tap
     /// there from ever counting — which is why a tap on that side so often did nothing.
@@ -139,6 +199,16 @@ struct PlayerControlsOverlay: View {
         .accessibilityHidden(true)
     }
 
+    private func taps(skipping seconds: Double) -> some Gesture {
+        TapGesture(count: 2)
+            .onEnded { skip(by: seconds, feedback: true) }
+            .exclusively(before: TapGesture().onEnded {
+                if let holdEndedAt, Date.now.timeIntervalSince(holdEndedAt) < 0.5 { return }
+                if isShown { hide() } else { show() }
+            })
+    }
+    #endif
+
     private var zoom: some Gesture {
         MagnifyGesture()
             .onEnded { value in
@@ -147,26 +217,6 @@ struct PlayerControlsOverlay: View {
                 guard fills != fillsScreen else { return }
                 withAnimation(.snappy) { fillsScreen = fills }
             }
-    }
-
-    private func taps(skipping seconds: Double) -> some Gesture {
-        TapGesture(count: 2)
-            .onEnded {
-                #if os(macOS)
-                player.toggleFillsWindow()
-                #else
-                skip(by: seconds, feedback: true)
-                #endif
-            }
-            .exclusively(before: TapGesture().onEnded {
-                #if os(macOS)
-                player.togglePlayPause()
-                show()
-                #else
-                if let holdEndedAt, Date.now.timeIntervalSince(holdEndedAt) < 0.5 { return }
-                if isShown { hide() } else { show() }
-                #endif
-            })
     }
 
     private var hold: some Gesture {
@@ -180,6 +230,7 @@ struct PlayerControlsOverlay: View {
 
     // MARK: - The controls
 
+    #if os(iOS)
     private var chrome: some View {
         ZStack {
             // A dim over the picture, so white controls read on a white frame.
@@ -324,6 +375,189 @@ struct PlayerControlsOverlay: View {
             if ended { scheduleHide() } else { hideTask?.cancel() }
         }
     }
+    #else
+    /// A Mac's controls: the title up top while the video is full screen, and everything else in
+    /// one bar of glass along the bottom, as in QuickTime Player and on YouTube's website.
+    private var chrome: some View {
+        VStack(spacing: 0) {
+            if isFullScreen, let video = player.currentVideo {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(video.title)
+                        .font(.title3.weight(.semibold))
+                        .lineLimit(1)
+                    Text(video.channelTitle)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .glassEffect(.regular, in: .rect(cornerRadius: 18))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 32 + horizontalInset)
+                .padding(.top, 24)
+                .allowsHitTesting(false)
+            }
+
+            Spacer(minLength: 0)
+
+            controlBar
+                .padding(.horizontal, (isFullScreen ? 32 : 10) + horizontalInset)
+                .padding(.bottom, isFullScreen ? 28 : 10)
+        }
+    }
+
+    private var controlBar: some View {
+        VStack(spacing: 0) {
+            ChapterScrubber(
+                progress: player.progress,
+                chapters: options.chapters,
+                scrubTime: $scrubTime,
+                onSeek: { player.seek(to: $0) }
+            )
+
+            HStack(spacing: 2) {
+                barButton("gobackward.\(skipBack)", "Back \(skipBack) Seconds") {
+                    skip(by: -Double(skipBack), feedback: true)
+                }
+
+                Button {
+                    togglePlayPause(feedback: false)
+                } label: {
+                    Group {
+                        if player.isBuffering && !player.isPlaying {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                                .contentTransition(.symbolEffect(.replace))
+                        }
+                    }
+                    .font(.title2)
+                    .frame(width: 38, height: 34)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(player.isPlaying ? "Pause" : "Play")
+                .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
+
+                barButton("goforward.\(skipForward)", "Forward \(skipForward) Seconds") {
+                    skip(by: Double(skipForward), feedback: true)
+                }
+
+                PlayerTimeLabel(progress: player.progress, options: options, scrubTime: scrubTime)
+                    .padding(.leading, 8)
+
+                Spacer(minLength: 12)
+
+                if !options.captions.isEmpty {
+                    barButton(options.caption == nil ? "captions.bubble" : "captions.bubble.fill",
+                              options.caption == nil ? "Turn On Captions" : "Turn Off Captions") {
+                        player.toggleCaptions()
+                    }
+                }
+
+                if Self.supportsPictureInPicture {
+                    barButton("pip.enter", "Picture in Picture") {
+                        player.startPictureInPicture()
+                    }
+                }
+
+                settingsMenu
+                    .menuStyle(.button)
+                    .buttonStyle(.plain)
+                    .font(.title3)
+                    .frame(width: 34, height: 34)
+                    .help("Settings")
+
+                barButton(isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
+                          isFullScreen ? "Exit Full Screen" : "Full Screen") {
+                    player.toggleFullScreen()
+                }
+            }
+            .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
+        .frame(maxWidth: 880)
+        .glassEffect(.regular, in: .rect(cornerRadius: 22))
+        // Clicks between the buttons stay on the bar rather than pausing the video under it.
+        .contentShape(.rect(cornerRadius: 22))
+        .onHover { hovering in
+            isHoveringBar = hovering
+            if hovering { hideTask?.cancel() } else { scheduleHide() }
+        }
+        .onChange(of: scrubTime == nil) { _, ended in
+            if ended { scheduleHide() } else { hideTask?.cancel() }
+        }
+    }
+
+    private func barButton(_ symbol: String, _ label: LocalizedStringKey,
+                           action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.title3)
+                .frame(width: 34, height: 34)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(label)
+        .accessibilityLabel(label)
+    }
+
+    private func togglePlayPause(feedback: Bool) {
+        player.togglePlayPause()
+        show()
+        guard feedback else { return }
+        let shown = PlayFeedback(isPlaying: player.isPlaying)
+        withAnimation(.easeOut(duration: 0.12)) { playFeedback = shown }
+        Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            guard playFeedback?.id == shown.id else { return }
+            withAnimation(.easeIn(duration: 0.3)) { playFeedback = nil }
+        }
+    }
+
+    /// YouTube's keyboard shortcuts, for as long as the player is the thing in front: Space or K
+    /// plays and pauses, the arrows or J and L skip, F goes full screen and Esc comes back out,
+    /// C turns captions on or off, and a digit jumps to that tenth of the video. Anything with ⌘,
+    /// ⌃ or ⌥ is left to the menus.
+    private func handleKey(_ press: KeyPress) -> KeyPress.Result {
+        guard press.modifiers.isDisjoint(with: [.command, .control, .option]) else { return .ignored }
+        switch press.key {
+        case .space:
+            togglePlayPause(feedback: true)
+        case .leftArrow:
+            skip(by: -Double(skipBack), feedback: true)
+        case .rightArrow:
+            skip(by: Double(skipForward), feedback: true)
+        case .escape:
+            guard isFullScreen else { return .ignored }
+            player.toggleFullScreen()
+        default:
+            switch press.characters.lowercased() {
+            case "k":
+                togglePlayPause(feedback: true)
+            case "j":
+                skip(by: -Double(skipBack), feedback: true)
+            case "l":
+                skip(by: Double(skipForward), feedback: true)
+            case "f":
+                player.toggleFullScreen()
+            case "c":
+                guard !options.captions.isEmpty else { return .ignored }
+                player.toggleCaptions()
+            case let digit where digit.count == 1 && digit.first?.isWholeNumber == true:
+                guard let tenth = digit.first?.wholeNumberValue, player.progress.duration > 0 else { return .ignored }
+                player.seek(to: player.progress.duration * Double(tenth) / 10)
+                show()
+            default:
+                return .ignored
+            }
+        }
+        return .handled
+    }
+    #endif
 
     // MARK: - Settings
 
@@ -463,6 +697,17 @@ struct PlayerControlsOverlay: View {
         .accessibilityLabel("Playing at Double Speed")
     }
 
+    #if os(macOS)
+    private func playFeedbackView(_ feedback: PlayFeedback) -> some View {
+        Image(systemName: feedback.isPlaying ? "play.fill" : "pause.fill")
+            .font(.largeTitle)
+            .foregroundStyle(.white)
+            .frame(width: 72, height: 72)
+            .glassEffect(.regular, in: Circle())
+            .accessibilityHidden(true)
+    }
+    #endif
+
     private func skipFeedbackView(_ feedback: SkipFeedback) -> some View {
         HStack {
             if feedback.seconds > 0 { Spacer() }
@@ -512,10 +757,17 @@ struct PlayerControlsOverlay: View {
     private func scheduleHide(after delay: Duration = Self.hideDelay) {
         hideTask?.cancel()
         guard player.isPlaying, !voiceOverEnabled, !isMenuOpen, scrubTime == nil else { return }
+        #if os(macOS)
+        guard !isHoveringBar else { return }
+        #endif
         hideTask = Task {
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
             isShown = false
+            #if os(macOS)
+            // The pointer goes with the controls, as in every video player, until it moves.
+            if isHovering { NSCursor.setHiddenUntilMouseMoves(true) }
+            #endif
         }
     }
 }
@@ -525,6 +777,14 @@ private struct SkipFeedback: Equatable {
     let id = UUID()
     let seconds: Double
 }
+
+#if os(macOS)
+/// A click's play or pause, shown for a moment in the middle of the picture.
+private struct PlayFeedback: Equatable {
+    let id = UUID()
+    let isPlaying: Bool
+}
+#endif
 
 // MARK: - Time and scrubber
 
@@ -547,7 +807,11 @@ private struct PlayerTimeLabel: View {
                     .lineLimit(1)
             }
         }
+        #if os(macOS)
+        .font(.callout.weight(.medium))
+        #else
         .font(.footnote.weight(.medium))
+        #endif
         .foregroundStyle(.white)
         .accessibilityElement(children: .combine)
     }
@@ -562,6 +826,11 @@ private struct ChapterScrubber: View {
     let chapters: [VideoChapter]
     @Binding var scrubTime: Double?
     let onSeek: (Double) -> Void
+    #if os(macOS)
+    /// Where the pointer is over the bar, as a fraction of it: the time and chapter there are
+    /// shown above it, as on YouTube's website.
+    @State private var hoverFraction: Double?
+    #endif
 
     private static let gap: CGFloat = 2
 
@@ -572,16 +841,18 @@ private struct ChapterScrubber: View {
             let time = scrubTime ?? progress.currentTime
             let fraction = duration > 0 ? min(1, max(0, time / duration)) : 0
             let isScrubbing = scrubTime != nil
+            let pointedTime = pointedFraction.map { $0 * duration }
 
             ZStack(alignment: .leading) {
                 HStack(spacing: Self.gap) {
                     ForEach(segments(duration: duration), id: \.start) { segment in
                         segmentBar(segment, fraction: fraction, duration: duration,
-                                   highlighted: isScrubbing && segment.contains(time))
+                                   highlighted: (isScrubbing && segment.contains(time))
+                                       || (pointedTime.map(segment.contains) ?? false))
                             .frame(width: max(0, segment.width(in: width, duration: duration, gap: Self.gap)))
                     }
                 }
-                .frame(height: isScrubbing ? 6 : 4)
+                .frame(height: isScrubbing || pointedTime != nil ? 6 : 4)
 
                 // A plain dot at rest; held, it grows into a glass lens over the bar.
                 Circle()
@@ -591,6 +862,22 @@ private struct ChapterScrubber: View {
                     .offset(x: fraction * width - (isScrubbing ? 14 : 6))
             }
             .frame(maxHeight: .infinity)
+            #if os(macOS)
+            .overlay(alignment: .topLeading) {
+                if let hoverFraction, !isScrubbing, duration > 0 {
+                    hoverLabel(time: hoverFraction * duration)
+                        .fixedSize()
+                        .position(x: min(max(hoverFraction * width, 48), max(width - 48, 48)), y: -16)
+                        .allowsHitTesting(false)
+                }
+            }
+            .onContinuousHover { phase in
+                switch phase {
+                case .active(let location): hoverFraction = min(1, max(0, location.x / width))
+                case .ended: hoverFraction = nil
+                }
+            }
+            #endif
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -617,6 +904,34 @@ private struct ChapterScrubber: View {
             .accessibilityValue(Text(verbatim: PlaybackTimeFormatter.string(progress.currentTime)))
         }
     }
+
+    /// Where the pointer is, while it is over the bar — a Mac's only.
+    private var pointedFraction: Double? {
+        #if os(macOS)
+        hoverFraction
+        #else
+        nil
+        #endif
+    }
+
+    #if os(macOS)
+    private func hoverLabel(time: Double) -> some View {
+        HStack(spacing: 6) {
+            Text(verbatim: PlaybackTimeFormatter.string(time))
+                .monospacedDigit()
+            if let chapter = chapters.last(where: { $0.start <= time }), !chapter.title.isEmpty {
+                Text(chapter.title)
+                    .lineLimit(1)
+                    .frame(maxWidth: 220)
+            }
+        }
+        .font(.callout.weight(.medium))
+        .foregroundStyle(.white)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .glassEffect(.regular, in: Capsule())
+    }
+    #endif
 
     private struct Segment {
         let start: Double

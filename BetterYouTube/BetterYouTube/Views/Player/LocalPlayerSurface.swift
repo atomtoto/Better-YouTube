@@ -73,6 +73,34 @@ struct LocalPlayerSurface: NSViewRepresentable {
     }
 }
 
+/// A downloaded file under macOS's own player, when Settings → Playback → Player asks for it:
+/// AVKit's player view, with its inline controls under the details and its floating ones once
+/// the video fills the screen. Its full-screen button, Picture in Picture and AirPlay are AVKit's.
+struct SystemLocalPlayerSurface: NSViewRepresentable {
+    let playback: LocalPlayback
+    let isFullScreen: Bool
+
+    func makeNSView(context: Context) -> AVPlayerView {
+        let view = AVPlayerView()
+        view.player = playback.player
+        view.videoGravity = .resizeAspect
+        view.allowsPictureInPicturePlayback = true
+        view.showsFullScreenToggleButton = true
+        view.controlsStyle = isFullScreen ? .floating : .inline
+        return view
+    }
+
+    func updateNSView(_ view: AVPlayerView, context: Context) {
+        if view.player !== playback.player { view.player = playback.player }
+        let style: AVPlayerViewControlsStyle = isFullScreen ? .floating : .inline
+        if view.controlsStyle != style { view.controlsStyle = style }
+    }
+
+    static func dismantleNSView(_ view: AVPlayerView, coordinator: ()) {
+        view.player = nil
+    }
+}
+
 final class LocalPlayerLayerView: NSView {
     let playerLayer = AVPlayerLayer()
 
