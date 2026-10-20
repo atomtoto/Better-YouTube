@@ -79,9 +79,12 @@ search, and offline audio. See [Running on Apple Watch](#running-on-apple-watch)
   app is away, so a streamed video's sound moves to the native player — YouTube's sound-only
   stream, handed to AVPlayer as an HLS playlist of its own pieces, read from the index YouTube
   puts at its start. The player fetches only the piece it is at, in bounded ranges YouTube serves
-  at full speed, so the sound carries on within about a second of the lock, wherever the video
-  had got to — and the queue goes on the same way; back in the app, the embed takes the picture
-  back at the same moment. Turned off
+  at full speed, so the sound carries on within a second or two of the lock, wherever the video
+  had got to — and the queue goes on the same way. The sound starts in an audio session that
+  mixes with others, the one kind iOS lets an app start from the background once WebKit has
+  had the sound, and takes it for itself once it plays. Back in the app, the native player
+  carries the sound on while the embed loads back in, muted, and hands over once it plays.
+  A Picture in Picture window the lock closes hands the sound over the same way. Turned off
   in Settings → Playback, the video pauses instead. Picture in Picture, off unless turned on
   there, moves a playing video to its window when you go to the Home Screen
 - **Settings** — Google sign-in, API key, library counts, what is left of the day's API quota,

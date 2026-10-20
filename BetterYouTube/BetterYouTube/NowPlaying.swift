@@ -31,6 +31,9 @@ final class NowPlaying {
     private var hasWiredCommands = false
     #if os(iOS)
     private var isSessionActive = false
+    /// The session is mixing with other sound, as it starts from the background: until it takes
+    /// the sound back for itself, the lock screen and headphones don't drive it.
+    private(set) var isMixing = false
     #endif
     /// The artwork already fetched, so a pause and a resume don't re-download it.
     private var artworkVideoId: String?
@@ -42,22 +45,32 @@ final class NowPlaying {
     /// Claims the audio session. Called when a video starts, not at launch: until something is
     /// playing there is no reason to interrupt whatever else the phone is doing.
     ///
-    /// Claimed again every time rather than once: the embed plays through WebKit, which sets the
-    /// session up for its own playback and lets go of it when it stops — on the way to the
-    /// background, just as the native player needs it to carry the sound on.
-    func begin() {
+    /// Claimed again every time rather than once: the embed plays through WebKit, whose playback
+    /// takes the sound from the app's session while it lasts. Answers whether the session is
+    /// the app's now — from the background, iOS refuses it while WebKit still holds the sound.
+    ///
+    /// `mixing`, the session plays alongside other sound instead of taking it over — the one kind
+    /// iOS lets an app start from the background once WebKit has had the sound. See
+    /// `isMixing`.
+    @discardableResult
+    func begin(mixing: Bool = false) -> Bool {
         wireCommandsIfNeeded()
         #if os(iOS)
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .moviePlayback)
+            try session.setCategory(.playback, mode: .moviePlayback, options: mixing ? [.mixWithOthers] : [])
             try session.setActive(true)
             isSessionActive = true
+            isMixing = mixing
+            return true
         } catch {
             // Nothing to do but carry on: playback still works in the foreground, and saying so
-            // in the UI would be noise about a thing the listener can't act on.
-            isSessionActive = false
+            // in the UI would be noise about a thing the listener can't act on. A session already
+            // going stays as it was.
+            return false
         }
+        #else
+        return true
         #endif
     }
 

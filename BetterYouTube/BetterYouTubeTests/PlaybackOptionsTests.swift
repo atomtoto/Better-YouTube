@@ -177,6 +177,34 @@ struct BackgroundPlaybackTests {
         NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
         #expect(player.source == .embed)
         #expect(player.isPlaying)
+        // The native player carries the sound until the embed plays again; a pause ends that.
+        #expect(player.local.player.currentItem != nil)
+        player.pause()
+        #expect(player.local.player.currentItem == nil)
+    }
+
+    @Test("A Picture in Picture window the lock closes hands the sound to the native player")
+    func pictureInPictureClosedWhileAway() async throws {
+        UserDefaults.standard.removeObject(forKey: BackgroundPlaybackPreference.storageKey)
+        let audio = try audioFixture()
+        let player = PlayerManager(resolveAudio: { _ in audio }, downloadedMediaURL: { _ in nil })
+        defer {
+            NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
+            player.close()
+        }
+        player.play(video())
+        player.resume()
+        try await Task.sleep(for: .milliseconds(100))
+
+        // In its window, the video goes on by itself.
+        player.embedPictureInPictureDidChange(true)
+        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        #expect(player.source == .embed)
+
+        // The lock closes the window: the sound carries on alone.
+        player.embedPictureInPictureDidChange(false)
+        try await waitUntil { player.source == .local(audio) }
+        #expect(player.isPlaying)
     }
 
     @Test("With Background Playback off, leaving the app pauses instead")

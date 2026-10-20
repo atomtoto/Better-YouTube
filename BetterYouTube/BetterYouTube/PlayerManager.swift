@@ -182,8 +182,15 @@ final class PlayerManager: ObservableObject {
 
     /// Made on first use rather than at launch. Creating it — and the web content process
     /// behind it — was the largest single cost of starting the app, paid even when nothing
-    /// was ever played. The container asks for it once there is something to show.
-    private(set) lazy var webView: WKWebView = makeWebView()
+    /// was ever played. The container asks for it once there is something to show. Made again
+    /// only after WebKit got stuck — see `rebuildWebView`.
+    var webView: WKWebView {
+        if let currentWebView { return currentWebView }
+        let made = makeWebView()
+        currentWebView = made
+        return made
+    }
+    private var currentWebView: WKWebView?
     /// Whether `webView` exists yet. Once it does, its surface stays in the container for good,
     /// as it always has: the loading logic below counts on a surface that never goes away.
     private(set) var hasWebView = false
@@ -279,6 +286,15 @@ final class PlayerManager: ObservableObject {
     /// Whether the embed asks to start playing as it loads. Off only when a paused video comes
     /// back from the background.
     private var embedStartsPlaying = true
+    /// Whether the embed starts muted: coming back from the background, while the native player
+    /// still carries the sound.
+    private var embedStartsMuted = false
+    /// From the app's return until the embed plays again, the native player carrying the sound
+    /// in the meantime — see `finishReturnToEmbed`.
+    private var isReturningToEmbed = false
+    private var returnTimeout: Task<Void, Never>?
+    /// WebKit holds all of the page's media while the native player has the sound.
+    private var isEmbedMediaSuspended = false
     #if os(iOS)
     /// From the moment the app leaves the screen until it is back.
     private var isInBackground = false
@@ -290,6 +306,11 @@ final class PlayerManager: ObservableObject {
     private var wasPlayingOnLeaving = false
     /// Whether the embed's video is in its Picture in Picture window, as WebKit reports it.
     private var isEmbedInPictureInPicture = false
+    /// When the embed last stopped playing. The lock pauses a Picture in Picture window a moment
+    /// before closing it, which is how that pause is told from one made in the window.
+    private var embedPausedAt: Date?
+    /// The embed's Picture in Picture window closed with the app away — see `rebuildWebView`.
+    private var pictureInPictureEndedAway = false
     /// Keeps the app running while the sound moves from the embed to the file player.
     private var handoffTask: UIBackgroundTaskIdentifier = .invalid
     /// Where the sound starts from in the file player, while the handoff is under way.
@@ -401,6 +422,9 @@ final class PlayerManager: ObservableObject {
             // suspend the app while the stream was still loading, and the sound never came back.
             if let start = self.handoffStartPosition, elapsed > start + 0.3,
                self.local.player.timeControlStatus == .playing {
+                // Playing now, the app may take the sound for itself again — which is what puts
+                // it back in charge of the lock screen and headphones.
+                if NowPlaying.shared.isMixing { NowPlaying.shared.begin() }
                 self.endHandoffTask()
             }
             #endif
@@ -448,6 +472,7 @@ final class PlayerManager: ObservableObject {
     /// in a description — and wins over the position saved for the video.
     func play(_ video: Video, upNext queue: [Video] = [], audioOnly: Bool = false,
               carPlayVideo: Bool = false, startTime: TimeInterval? = nil) {
+        finishReturnToEmbed()
         savePlaybackPosition()
         audioStreamTask?.cancel()
         audioStreamTask = nil
@@ -646,9 +671,17 @@ final class PlayerManager: ObservableObject {
         guard !isLocal, currentVideo?.id == videoID else { return }
         backgroundAudioRequested = false
         let position = progress.currentTime
-        // The embed lets go of its video altogether, and with it the sound WebKit may still hold
-        // the audio session for. Coming back loads it again where the sound has got to.
-        if isShellLoaded { evaluate("stopVideo()") }
+        // The embed pauses, and WebKit keeps all of the page's media suspended until the app is
+        // back: the page lives on for a few seconds in the background, and YouTube's player,
+        // paused on the way out, took the sound straight back from the native player. Coming back
+        // loads the video again where the sound has got to. The video itself stays until then:
+        // taken away while the lock was closing its Picture in Picture window, it left WebKit's
+        // window for it behind, over the app, and nothing could be tapped.
+        if hasWebView {
+            webView.setAllMediaPlaybackSuspended(true)
+            isEmbedMediaSuspended = true
+        }
+        if isShellLoaded { evaluate("pauseVideo()") }
         desiredVideoId = nil
         loadedVideoId = nil
         watchdog?.cancel()
@@ -660,13 +693,37 @@ final class PlayerManager: ObservableObject {
         source = .local(url)
         pendingSeekTime = position
         isRestoringPosition = false
-        // WebKit's own playback can have taken the audio session over, or let go of it.
-        NowPlaying.shared.begin()
         local.load(url: url, index: backgroundAudioIndex)
         local.setRate(preferredRate)
         local.seek(to: position)
-        if audioShouldPlay { local.play() }
+        playBackgroundAudio()
         refreshNowPlaying()
+    }
+
+    /// Starts the sound on the native player. WebKit's playback interrupts the app's audio
+    /// session while it lasts, and from the background iOS won't let the app take the sound back
+    /// for itself — the session refuses to go active, "it would interrupt another app", or goes
+    /// active and the player still isn't allowed to play — even once WebKit has stopped. It does
+    /// let a session that mixes with other sound start, so the sound starts that way, and the
+    /// session takes it for itself once it plays — see `wireLocalPlayback`.
+    private func playBackgroundAudio() {
+        guard isBackgroundAudio, isLocal, audioShouldPlay else { return }
+        NowPlaying.shared.begin(mixing: true)
+        local.play()
+    }
+
+    /// The embed plays again, muted: it takes the sound over from the native player at the moment
+    /// that has got to. Also called to cut the return short — the app left again, a pause, another
+    /// video — and when the embed takes too long, so the sound never ends up playing twice.
+    private func finishReturnToEmbed() {
+        guard isReturningToEmbed else { return }
+        isReturningToEmbed = false
+        returnTimeout?.cancel()
+        returnTimeout = nil
+        let position = local.player.currentTime().seconds
+        local.stop()
+        if position.isFinite, position > 0 { seek(to: position) }
+        evaluate("unMute()")
     }
 
     /// A video started while the app is away — the next in the queue, or one asked for from the
@@ -721,6 +778,11 @@ final class PlayerManager: ObservableObject {
     /// Hands the desired video to the web view as soon as it is in a state to accept it.
     private func sync() {
         guard isSurfaceOnScreen, let desired = desiredVideoId, let playbackID else { return }
+        // The page's media was suspended while the sound played elsewhere; the embed plays again.
+        if isEmbedMediaSuspended {
+            isEmbedMediaSuspended = false
+            webView.setAllMediaPlaybackSuspended(false)
+        }
 
         if !isShellLoaded {
             guard !isLoadingShell else { return }
@@ -729,12 +791,14 @@ final class PlayerManager: ObservableObject {
             loadedPlaybackID = playbackID
             loadShell(initialVideoId: desired)
             embedStartsPlaying = true
+            embedStartsMuted = false
             startWatchdog()
         } else if loadedVideoId != desired || loadedPlaybackID != playbackID {
             loadedVideoId = desired
             loadedPlaybackID = playbackID
-            evaluate("setVideo('\(desired)', \(progress.currentTime), '\(playbackID)', \(embedStartsPlaying))")
+            evaluate("setVideo('\(desired)', \(progress.currentTime), '\(playbackID)', \(embedStartsPlaying), \(embedStartsMuted))")
             embedStartsPlaying = true
+            embedStartsMuted = false
         }
     }
 
@@ -816,6 +880,7 @@ final class PlayerManager: ObservableObject {
     }
 
     func pause() {
+        finishReturnToEmbed()
         audioShouldPlay = false
         savePlaybackPosition()
         if isLocal {
@@ -829,6 +894,7 @@ final class PlayerManager: ObservableObject {
 
     func seek(to seconds: Double) {
         guard seconds.isFinite else { return }
+        finishReturnToEmbed()
         let duration = progress.duration
         let target = max(0, min(seconds, duration > 0 ? duration : seconds))
         progress.currentTime = target
@@ -943,6 +1009,7 @@ final class PlayerManager: ObservableObject {
     }
 
     func close() {
+        finishReturnToEmbed()
         cancelSleepTimer()
         savePlaybackPosition()
         audioStreamTask?.cancel()
@@ -1065,6 +1132,11 @@ final class PlayerManager: ObservableObject {
     /// and the native player stopped with it. Once iOS says it may, the sound comes back, as long
     /// as it was meant to be playing.
     private func audioSessionInterruptionChanged(ended: Bool, shouldResume: Bool) {
+        // The embed taking the sound back, a moment before it says it plays: it takes over now.
+        if !ended, isReturningToEmbed {
+            finishReturnToEmbed()
+            return
+        }
         guard ended, shouldResume, isLocal, audioShouldPlay, !local.isPlaying else { return }
         NowPlaying.shared.begin()
         local.play()
@@ -1089,6 +1161,9 @@ final class PlayerManager: ObservableObject {
     /// Gone from the screen. Picture in Picture carries on by itself; otherwise the sound goes on
     /// in the background if Settings allow it, and stops if they don't.
     private func appDidEnterBackground() {
+        // Left again before the embed took the sound back: it takes it now, and hands it over
+        // below like any other time.
+        finishReturnToEmbed()
         isInBackground = true
         savePlaybackPosition()
         let wasPlaying = isPlaying || wasPlayingOnLeaving
@@ -1101,9 +1176,12 @@ final class PlayerManager: ObservableObject {
         }
         // Whatever the embed has said since, the sound is to go on.
         audioShouldPlay = true
-        NowPlaying.shared.begin()
-        // A file keeps playing without its picture — see `LocalPlayerSurface`.
-        guard !isLocal else { return }
+        // A file keeps playing without its picture — see `LocalPlayerSurface` — in the session it
+        // already plays in. A streamed video's sound starts its own — see `playBackgroundAudio`.
+        guard !isLocal else {
+            NowPlaying.shared.begin()
+            return
+        }
         if startedPictureInPictureOnLeaving {
             // WebKit reports its window a moment after it was asked for. Wait for it before
             // deciding the sound has to move.
@@ -1147,17 +1225,79 @@ final class PlayerManager: ObservableObject {
         isBackgroundAudio = false
         let shouldPlay = audioShouldPlay && isPlaying
         let position = progress.currentTime
-        local.stop()
+        // Playing, the sound carries on from the native player while the embed loads back in,
+        // muted, and the embed takes over once it plays — see `finishReturnToEmbed`. Stopping
+        // the sound first left a couple of seconds of silence while YouTube's player started.
+        if shouldPlay {
+            isReturningToEmbed = true
+            returnTimeout?.cancel()
+            returnTimeout = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(8))
+                guard !Task.isCancelled else { return }
+                self?.finishReturnToEmbed()
+            }
+        } else {
+            local.stop()
+        }
+        if pictureInPictureEndedAway {
+            pictureInPictureEndedAway = false
+            rebuildWebView()
+        }
         source = .embed
         pendingSeekTime = position
         isRestoringPosition = false
         rateAppliedPlaybackID = nil
         embedStartsPlaying = shouldPlay
+        embedStartsMuted = shouldPlay
         setPlaying(shouldPlay)
-        setBuffering(shouldPlay)
+        setBuffering(false)
         desiredVideoId = video.id
         loadedVideoId = nil
         sync()
+        // A Picture in Picture window the lock closed leaves WebKit's window for it behind, over
+        // the app, taking every tap. It goes now, and again once WebKit has settled.
+        removeLeftoverVideoWindows()
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            self?.removeLeftoverVideoWindows()
+        }
+    }
+
+    /// Puts the web view away and leaves a new one to be made, on a page of its own. A Picture in
+    /// Picture window the lock closed with the app away leaves WebKit stuck: its window stays
+    /// over the app, and Picture in Picture never starts again on that page. A new web view
+    /// starts clean, and loads the video once it is on screen.
+    private func rebuildWebView() {
+        guard let old = currentWebView else { return }
+        old.configuration.userContentController.removeScriptMessageHandler(forName: "player")
+        old.navigationDelegate = nil
+        old.stopLoading()
+        old.removeFromSuperview()
+        fullScreenObserver = nil
+        currentWebView = nil
+        pictureInPictureFrame = nil
+        isEmbedInPictureInPicture = false
+        isEmbedMediaSuspended = false
+        isShellLoaded = false
+        isLoadingShell = false
+        isSurfaceOnScreen = false
+    }
+
+    /// The window WebKit shows a video's Picture in Picture or full screen from, left behind
+    /// over the app once neither is up: the lock closes Picture in Picture with the app away,
+    /// and WebKit never puts that window away, even asked to close its presentations. It is
+    /// hidden, and the app's own window gets the taps and the keyboard back.
+    private func removeLeftoverVideoWindows() {
+        guard !isEmbedInPictureInPicture, !isSystemFullScreen else { return }
+        for scene in UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }) {
+            let appWindow = scene.windows.first { $0.windowLevel == .normal && !$0.isHidden }
+            for window in scene.windows where window !== appWindow && !window.isHidden
+                && window.windowLevel > .normal && window.windowLevel < .alert
+                && window.rootViewController.map({ type(of: $0) == UIViewController.self }) == true {
+                window.isHidden = true
+                appWindow?.makeKey()
+            }
+        }
     }
 
     /// Fully back. Picture in Picture the app started on the way out goes back into the player,
@@ -1173,8 +1313,19 @@ final class PlayerManager: ObservableObject {
     /// Reported by WebKit whenever the embed's video enters or leaves its Picture in Picture
     /// window.
     func embedPictureInPictureDidChange(_ active: Bool) {
+        let wasCarryingOn = isEmbedInPictureInPicture && isInBackground
         isEmbedInPictureInPicture = active
         if !active { startedPictureInPictureOnLeaving = false }
+        if !active, wasCarryingOn { pictureInPictureEndedAway = true }
+        // The window closed with the app still away: the lock, which pauses it a moment before
+        // closing it — or its own close button. Either way the sound carries on alone, as
+        // Background Playback says, unless it had been paused in the window before.
+        guard !active, wasCarryingOn, BackgroundPlaybackPreference.isEnabled,
+              currentVideo != nil, !isLocal, !usesNativeCarPlayPlayback else { return }
+        let pausedJustNow = embedPausedAt.map { Date.now.timeIntervalSince($0) < 1 } ?? false
+        guard isPlaying || pausedJustNow else { return }
+        audioShouldPlay = true
+        handOffToBackgroundAudio()
     }
 
     private func beginHandoffTask() {
@@ -1657,6 +1808,7 @@ final class PlayerManager: ObservableObject {
             // Replaying the same video reloads nothing, so there is no `ready` to wait for; the
             // moment it starts is the other chance to hand it over.
             if state == 1 {
+                finishReturnToEmbed()
                 playbackDidEnd = false
                 startFullScreenRequest()
             }
@@ -1688,6 +1840,9 @@ final class PlayerManager: ObservableObject {
     /// `@Published` value still redraws every view watching the player — several times a second.
     private func setPlaying(_ playing: Bool) {
         guard isPlaying != playing else { return }
+        #if os(iOS)
+        if !playing, !isLocal { embedPausedAt = .now }
+        #endif
         isPlaying = playing
         if !playing { savePlaybackPosition() }
         // The embed pausing or resuming on its own — an ad break, a tap on its own controls —
@@ -1765,6 +1920,7 @@ final class PlayerManager: ObservableObject {
             .replacingOccurrences(of: "__START_SECONDS__", with: String(progress.currentTime))
             .replacingOccurrences(of: "__PLAYBACK_ID__", with: playbackID ?? "")
             .replacingOccurrences(of: "__AUTOPLAY__", with: String(embedStartsPlaying))
+            .replacingOccurrences(of: "__MUTED__", with: String(embedStartsMuted))
             .replacingOccurrences(of: "__CHROME__", with: controls.rawValue)
 
         // The base URL matches the iframe's host, exactly as in the version that played fine.
@@ -1813,6 +1969,8 @@ final class PlayerManager: ObservableObject {
         // Whether the video starts as it loads. Off only for a paused video coming back from
         // the background.
         var startsPlaying = true;
+        // Whether the video starts muted, while the app's own player still carries the sound.
+        var startsMuted = false;
         var lastReport = '';
         var chapterCache = null;
         var controlsShown = false;
@@ -1837,9 +1995,10 @@ final class PlayerManager: ObservableObject {
           send({ event: 'command', func: func, args: args || [] });
         }
 
-        function setVideo(id, seconds, sessionID, autoplay) {
+        function setVideo(id, seconds, sessionID, autoplay, muted) {
           clearInterval(handshake);
           startsPlaying = autoplay !== false;
+          startsMuted = muted === true;
           watchedVideo = id;
           fullScreenVideo = null;
           reportedVideoID = null;
@@ -2282,7 +2441,10 @@ final class PlayerManager: ObservableObject {
             var attempts = 0;
             handshake = setInterval(function () {
               send({ event: 'listening', id: 'frame', channel: 'widget' });
-              if (attempts === 2 && startsPlaying) { command('playVideo'); }
+              if (attempts === 2 && startsPlaying) {
+                if (startsMuted) { command('mute'); }
+                command('playVideo');
+              }
               if (++attempts > 20) { clearInterval(handshake); }
             }, 250);
             post({ type: 'ready' });
@@ -2332,6 +2494,7 @@ final class PlayerManager: ObservableObject {
         });
 
         function resume() { command('playVideo'); }
+        function unMute() { startsMuted = false; command('unMute'); }
         // Not playing from this moment, before the embed confirms it.
         function pauseVideo() { playing = false; command('pauseVideo'); }
 
@@ -2356,7 +2519,7 @@ final class PlayerManager: ObservableObject {
           frame.src = 'about:blank';
         }
 
-        setVideo('__VIDEO_ID__', __START_SECONDS__, '__PLAYBACK_ID__', __AUTOPLAY__);
+        setVideo('__VIDEO_ID__', __START_SECONDS__, '__PLAYBACK_ID__', __AUTOPLAY__, __MUTED__);
       </script>
     </body>
     </html>
