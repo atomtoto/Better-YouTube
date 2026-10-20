@@ -287,12 +287,16 @@ private struct PassiveTap: UIGestureRecognizerRepresentable {
 /// `tabBarMinimizeBehavior` decides when the tab bar minimizes and restores on rules of its own —
 /// a flick upwards brings it back, a slow drag doesn't, not even all the way to the top — and no
 /// API reports the outcome. The tab bar's views show it, though: minimizing reveals the button it
-/// shrinks to, restoring reveals the full bar, and both happen as its animation starts. Watching
-/// those two is what lets the docked player move with it.
+/// shrinks to, restoring reveals the full bar, and both happen as its animation starts; the one
+/// it left is hidden once it gets there. A scroll that turns back halfway through the animation
+/// sends the tab bar back without revealing anything, since both are still showing — but the
+/// selection lens inside the full bar takes the shape it is heading for on that very frame.
+/// Watching those three is what lets the docked player move with it.
 ///
 /// They are UIKit's own views, found by class name. If an iOS update lays the tab bar out
 /// differently, or the tab bar isn't along the bottom, `isMinimized()` answers `nil` and the
-/// player falls back to following the scroll.
+/// player falls back to following the scroll. Without the lens, a turn back halfway is only
+/// caught once the tab bar gets there.
 @MainActor
 final class TabBarMinimizationWatcher {
     private let onChange: (Bool) -> Void
@@ -301,6 +305,9 @@ final class TabBarMinimizationWatcher {
     /// they are found again whenever they leave the window.
     private weak var fullBar: UIView?
     private weak var minimizedButton: UIView?
+    /// The glass behind the selected tab, in the full bar. It shrinks to the minimized button's
+    /// size as the tab bar starts minimizing, and grows back to the tab's as it starts restoring.
+    private weak var lens: UIView?
     private var observations: [NSKeyValueObservation] = []
     /// Looking for the tab bar walks the whole window, so a search that came up empty waits a
     /// moment before it is tried again — `isMinimized()` is asked on every frame of a scroll.
@@ -331,25 +338,49 @@ final class TabBarMinimizationWatcher {
 
         self.fullBar = fullBar
         self.minimizedButton = minimizedButton
-        minimized = fullBar.isHidden
-        // Each view is shown as the tab bar starts moving towards it, and the other is hidden
-        // only once it gets there, so it is the one appearing that says where it is going.
+        lens = fullBar.subviews.first(where: { Self.isView($0, named: "_UILiquidLensView") })
+        minimized = state(appearing: nil) ?? fullBar.isHidden
         observations = [
-            minimizedButton.layer.observe(\.isHidden) { [weak self] layer, _ in
-                guard !layer.isHidden else { return }
-                MainActor.assumeIsolated { self?.update(minimized: true) }
+            minimizedButton.layer.observe(\.isHidden) { [weak self] _, _ in
+                MainActor.assumeIsolated { self?.refresh(appearing: true) }
             },
-            fullBar.layer.observe(\.isHidden) { [weak self] layer, _ in
-                guard !layer.isHidden else { return }
-                MainActor.assumeIsolated { self?.update(minimized: false) }
+            fullBar.layer.observe(\.isHidden) { [weak self] _, _ in
+                MainActor.assumeIsolated { self?.refresh(appearing: false) }
             },
         ]
+        if let lens {
+            observations.append(lens.layer.observe(\.bounds) { [weak self] _, _ in
+                MainActor.assumeIsolated { self?.refresh(appearing: nil) }
+            })
+        }
     }
 
-    private func update(minimized: Bool) {
-        guard self.minimized != minimized else { return }
+    /// `appearing` is the state whose view was just shown or hidden, if that is what changed:
+    /// `true` for the minimized button, `false` for the full bar.
+    private func refresh(appearing: Bool?) {
+        guard let minimized = state(appearing: appearing), self.minimized != minimized else { return }
         self.minimized = minimized
         onChange(minimized)
+    }
+
+    /// Where the tab bar is, or is heading.
+    private func state(appearing: Bool?) -> Bool? {
+        guard let fullBar, let minimizedButton else { return nil }
+        switch (fullBar.isHidden, minimizedButton.isHidden) {
+        case (false, true): return false
+        case (true, false): return true
+        case (false, false):
+            // On its way from one to the other, which may have just turned around. The lens only
+            // counts here: when the tab bar is settled, it swells under the finger and moves
+            // between tabs, which is no minimizing at all.
+            if let lens, lens.superview === fullBar, !lens.isHidden {
+                return lens.bounds.width < minimizedButton.bounds.width + 1
+            }
+            // Without the lens, the view that was just shown is where it is going.
+            return appearing
+        case (true, true):
+            return nil
+        }
     }
 
     /// The app's tab bar, if it runs along the bottom of its window — the only place it
