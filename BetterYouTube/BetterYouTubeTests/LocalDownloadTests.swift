@@ -120,16 +120,52 @@ struct LocalDownloadQueueTests {
         try FileManager.default.createDirectory(at: store.paths.folder(for: video.id), withIntermediateDirectories: true)
         try videoData.prefix(1024).write(to: store.paths.componentURL(for: video.id, audio: false))
         let reopened = DownloadStore(root: store.paths.root)
+        // The link of the last attempt is short-lived: the resume asks the service where the
+        // media is again, and keeps the bytes already on the disk.
+        let resolves = OSAllocatedUnfairLock(initialState: 0)
         let manager = DownloadManager(store: reopened, configuration: .ephemeral, chunkSize: 1024) { _, _, _ in
-            Issue.record("Resume must use the saved byte offset")
-            throw DownloadError.noMedia
+            resolves.withLock { count in count += 1 }
+            return ResolvedMedia(url: server.url("video.mp4"), byteCount: Int64(videoData.count),
+                                 audioURL: server.url("audio.m4a"), audioByteCount: Int64(audioData.count),
+                                 usesByteRanges: true)
         }
         manager.resume(video.id)
         try await waitUntil { reopened.isDownloaded(video.id) || isFailed(reopened.state(for: video.id)) }
         #expect(reopened.isDownloaded(video.id), "\(String(describing: reopened.state(for: video.id)))")
         try await DownloadMediaAssembler.validate(reopened.paths.mediaURL(for: video.id))
+        #expect(resolves.withLock { $0 } == 1)
         #expect(server.ranges.first == "bytes=1024-\(videoData.count - 1)")
         #expect(server.ranges.count > 3)
+        manager.removeAll()
+    }
+
+    @Test func retryKeepsWhatWasAlreadyFetched() async throws {
+        let server = try await FixtureHTTPServer.start()
+        defer { server.stop() }
+        let store = makeStore()
+        defer { try? FileManager.default.removeItem(at: store.paths.root) }
+        let video = testVideo()
+        let videoData = try Data(contentsOf: fixture("video.mp4"))
+        let audioData = try Data(contentsOf: fixture("audio.m4a"))
+        var record = DownloadRecord(video: video, state: .failed("The link had expired"), quality: .medium)
+        record.mediaURL = server.url("video.mp4")
+        record.transfer = DownloadTransfer(audioURL: server.url("audio.m4a"), wifiOnly: false,
+                                           usesByteRanges: true, videoByteCount: Int64(videoData.count),
+                                           audioByteCount: Int64(audioData.count), offset: 1024)
+        store.upsert(record)
+        try FileManager.default.createDirectory(at: store.paths.folder(for: video.id), withIntermediateDirectories: true)
+        try videoData.prefix(1024).write(to: store.paths.componentURL(for: video.id, audio: false))
+        let reopened = DownloadStore(root: store.paths.root)
+        let manager = DownloadManager(store: reopened, configuration: .ephemeral, chunkSize: 1024) { _, _, _ in
+            ResolvedMedia(url: server.url("video.mp4"), byteCount: Int64(videoData.count),
+                          audioURL: server.url("audio.m4a"), audioByteCount: Int64(audioData.count),
+                          usesByteRanges: true)
+        }
+        manager.retry(video.id)
+        try await waitUntil { reopened.isDownloaded(video.id) || isFailed(reopened.state(for: video.id)) }
+        #expect(reopened.isDownloaded(video.id), "\(String(describing: reopened.state(for: video.id)))")
+        // The bytes already on the disk were kept: the transfer picked up where it had stopped.
+        #expect(server.ranges.first == "bytes=1024-\(videoData.count - 1)")
         manager.removeAll()
     }
 

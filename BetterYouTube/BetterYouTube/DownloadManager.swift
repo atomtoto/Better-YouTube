@@ -69,16 +69,19 @@ final class DownloadManager: ObservableObject {
         pump()
     }
 
-    /// Explicit retry discards expired media links and partial tracks before resolving again.
+    /// Explicit retry: the service is asked where the media is again, and the bytes already
+    /// fetched are kept.
+    ///
+    /// The links the service hands out are short-lived, so a download that failed is usually
+    /// one whose link had expired. Throwing the bytes away with it would mean fetching the
+    /// whole file again for the sake of the last minute of it.
     func retry(_ videoId: String) {
         guard let record = store.record(for: videoId), !record.state.isActive else { return }
-        clearPartialFiles(videoId)
         retries[videoId] = nil
         store.update(videoId) {
             $0.state = .queued
-            $0.transfer = nil
-            $0.receivedBytes = 0
-            $0.totalBytes = 0
+            $0.receivedBytes = record.transfer?.offset ?? 0
+            $0.totalBytes = record.transfer?.currentByteCount ?? 0
         }
         pump()
     }
@@ -153,15 +156,25 @@ final class DownloadManager: ObservableObject {
         let videoFile = store.paths.componentURL(for: id, audio: false)
         let audioFile = store.paths.componentURL(for: id, audio: true)
         if let transfer = record.transfer, transfer.usesByteRanges == true,
-           let offset = transfer.offset, let total = transfer.currentByteCount, let url = record.mediaURL,
-           offset >= 0, offset <= total,
-           Self.size(of: store.paths.componentURL(for: id, audio: transfer.downloadingAudio)) == offset {
-            if offset == total {
-                componentFinished(id, generation: generation)
-            } else {
-                beginTransfer(id, url: url, wifiOnly: transfer.wifiOnly)
+           let offset = transfer.offset, let total = transfer.currentByteCount,
+           offset >= 0, offset <= total {
+            let component = store.paths.componentURL(for: id, audio: transfer.downloadingAudio)
+            let size = Self.size(of: component)
+            if size >= offset {
+                // A crash between writing a chunk and saving its offset leaves the file
+                // longer than the offset. The extra bytes are cut back: they belong to a
+                // chunk the app never counted.
+                if size > total { truncate(component, to: total) }
+                if offset == total {
+                    componentFinished(id, generation: generation)
+                } else {
+                    // The link the service gave is short-lived, and a download that comes
+                    // back to life tomorrow finds a dead one. A fresh link is asked for, and
+                    // the bytes already on the disk are kept.
+                    resolveAndBegin(id, generation: generation, record: record, resuming: true)
+                }
+                return
             }
-            return
         }
         if record.transfer?.usesByteRanges != true, record.transfer?.audioURL != nil,
            FileManager.default.fileExists(atPath: videoFile.path),
@@ -175,13 +188,17 @@ final class DownloadManager: ObservableObject {
             return
         }
 
-        clearPartialFiles(id)
-        store.update(id) {
-            $0.state = .resolving
-            $0.transfer = nil
-            $0.receivedBytes = 0
-            $0.totalBytes = 0
-        }
+        resolveAndBegin(id, generation: generation, record: record, resuming: false)
+    }
+
+    /// Asks the service where the media is, and starts fetching it.
+    ///
+    /// `resuming` says the bytes already on the disk are still good: the transfer's offset
+    /// and the partial file are kept, and only what is missing is fetched. The link the
+    /// service gave last time is never reused — those links are short-lived, and a download
+    /// that comes back to life tomorrow would find a dead one.
+    private func resolveAndBegin(_ id: String, generation: UUID, record: DownloadRecord, resuming: Bool) {
+        store.update(id) { $0.state = .resolving }
         let source = DownloadSettings.shared.snapshot
         let resolver = resolve
         beginBackgroundWork(id)
@@ -192,19 +209,60 @@ final class DownloadManager: ObservableObject {
                 guard let self, self.generations[id] == generation else { return }
                 self.work[id] = nil
                 self.endBackgroundWork(id)
-                self.store.update(id) {
-                    $0.transfer = DownloadTransfer(audioURL: media.audioURL, wifiOnly: source.wifiOnly,
-                                                   usesByteRanges: media.usesByteRanges,
-                                                   videoByteCount: media.byteCount, audioByteCount: media.audioByteCount,
-                                                   offset: media.usesByteRanges ? 0 : nil)
-                    $0.mediaURL = media.url
+                let transfer = self.store.record(for: id)?.transfer
+                if resuming, let transfer, transfer.usesByteRanges == true {
+                    // The media may be another file: if it weighs another amount, or no
+                    // longer comes in two tracks, the bytes on the disk belong to something
+                    // else, and the transfer starts over.
+                    let expected = transfer.downloadingAudio ? media.audioByteCount : media.byteCount
+                    let stillTwoTracks = !transfer.downloadingAudio || media.audioURL != nil
+                    let sameSize = expected == nil || transfer.currentByteCount == nil
+                        || expected == transfer.currentByteCount
+                    if !stillTwoTracks || !sameSize {
+                        self.resetTransfer(id, media: media, source: source)
+                        self.beginTransfer(id, url: media.url, byteCount: media.byteCount, wifiOnly: source.wifiOnly)
+                        return
+                    }
+                    // The link for the track being fetched, and for the one that comes after
+                    // it: both are short-lived, and both are asked for again.
+                    let url = transfer.downloadingAudio ? (media.audioURL ?? media.url) : media.url
+                    self.store.update(id) { entry in
+                        entry.mediaURL = media.url
+                        if let audioURL = media.audioURL { entry.transfer?.audioURL = audioURL }
+                    }
+                    let remaining = max(0, (transfer.currentByteCount ?? 0) - (transfer.offset ?? 0))
+                    self.beginTransfer(id, url: url, byteCount: remaining, wifiOnly: source.wifiOnly)
+                    return
                 }
+                self.resetTransfer(id, media: media, source: source)
                 self.beginTransfer(id, url: media.url, byteCount: media.byteCount, wifiOnly: source.wifiOnly)
             } catch {
                 guard let self, self.generations[id] == generation else { return }
                 self.fail(id, error: error)
             }
         }
+    }
+
+    /// Puts the record back to the start of a transfer: nothing fetched, nothing on the disk.
+    private func resetTransfer(_ id: String, media: ResolvedMedia, source: DownloadSourceSnapshot) {
+        clearPartialFiles(id)
+        store.update(id) {
+            $0.transfer = DownloadTransfer(audioURL: media.audioURL, wifiOnly: source.wifiOnly,
+                                           usesByteRanges: media.usesByteRanges,
+                                           videoByteCount: media.byteCount, audioByteCount: media.audioByteCount,
+                                           offset: media.usesByteRanges ? 0 : nil)
+            $0.mediaURL = media.url
+            $0.receivedBytes = 0
+            $0.totalBytes = 0
+        }
+    }
+
+    /// Cuts a partial file back to the length the transfer says it should be.
+    private func truncate(_ url: URL, to size: Int64) {
+        guard Self.size(of: url) > size else { return }
+        guard let handle = try? FileHandle(forWritingTo: url) else { return }
+        defer { try? handle.close() }
+        try? handle.truncate(atOffset: UInt64(size))
     }
 
     private func beginTransfer(_ id: String, url: URL, byteCount: Int64? = nil, wifiOnly: Bool) {
