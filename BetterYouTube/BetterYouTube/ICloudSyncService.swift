@@ -72,13 +72,19 @@ final class ICloudSyncService: ObservableObject {
     }
 
     /// Dependencies make the offline/reset path testable without an Apple account or entitlement.
+    ///
+    /// `demoSuspended` says whether a demo is running. It is a parameter rather than a read of
+    /// `UserDefaults.standard` because everything else here is injected: a test that builds a
+    /// service of its own must not have the app's own defaults decide whether it works. The
+    /// app's own service passes the demo's real state.
     init(library: LibraryStore, playbackPositions: PlaybackPositionStore, defaults: UserDefaults, fileURL: URL,
-         cloudKitAvailable: @escaping () -> Bool) {
+         cloudKitAvailable: @escaping () -> Bool, demoSuspended: Bool = DemoMode.isRunning) {
         self.library = library
         self.playbackPositions = playbackPositions
         self.defaults = defaults
         self.fileURL = fileURL
         self.cloudKitAvailable = cloudKitAvailable
+        isSuspended = demoSuspended
         isEnabled = defaults.object(forKey: Self.enabledKey) as? Bool ?? true
         if let data = try? Data(contentsOf: fileURL) {
             do {
@@ -129,7 +135,7 @@ final class ICloudSyncService: ObservableObject {
 
     /// Set while a demo runs. Its library is not this device's: none of it may reach iCloud, and
     /// nothing from iCloud may land in it. The on/off choice in Settings is left as it was.
-    private(set) var isSuspended = DemoMode.isRunning
+    private(set) var isSuspended: Bool
 
     func suspendForDemo() {
         guard !isSuspended else { return }

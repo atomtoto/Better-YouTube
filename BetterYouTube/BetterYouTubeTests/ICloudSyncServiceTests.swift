@@ -37,7 +37,7 @@ struct ICloudSyncServiceTests {
 
         func service() -> ICloudSyncService {
             ICloudSyncService(library: library, playbackPositions: playbackPositions, defaults: defaults, fileURL: cacheURL,
-                              cloudKitAvailable: { false })
+                              cloudKitAvailable: { false }, demoSuspended: false)
         }
 
         func cache() throws -> CacheSnapshot {
@@ -80,7 +80,7 @@ struct ICloudSyncServiceTests {
                                         fileURL: fixture.cacheURL, cloudKitAvailable: {
             entitlementChecks += 1
             return false
-        })
+        }, demoSuspended: false)
 
         await service.start()
         await service.syncNow()
@@ -116,7 +116,7 @@ struct ICloudSyncServiceTests {
 
         let relaunchedLibrary = LibraryStore(fileURL: fixture.libraryURL)
         let relaunched = ICloudSyncService(library: relaunchedLibrary, playbackPositions: PlaybackPositionStore(fileURL: fixture.positionsURL), defaults: fixture.defaults,
-                                           fileURL: fixture.cacheURL, cloudKitAvailable: { false })
+                                           fileURL: fixture.cacheURL, cloudKitAvailable: { false }, demoSuspended: false)
         await relaunched.syncNow()
         #expect(!relaunched.isEnabled)
         #expect(relaunchedLibrary.syncEntries == entries)
@@ -146,7 +146,7 @@ struct ICloudSyncServiceTests {
                                         fileURL: fixture.cacheURL, cloudKitAvailable: {
             entitlementChecks += 1
             return false
-        })
+        }, demoSuspended: false)
         // Settings' status line is decided at launch; the reset itself must not ask again.
         let checksAtLaunch = entitlementChecks
 
