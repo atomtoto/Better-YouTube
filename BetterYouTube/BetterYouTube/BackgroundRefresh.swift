@@ -25,9 +25,27 @@ enum BackgroundRefresh {
     /// The system's refresh task, shared by the work and the expiration handler that may cut it
     /// short. BackgroundTasks documents its task objects as safe to complete from any thread,
     /// which their class can't declare.
-    private struct RefreshTask: @unchecked Sendable {
+    private final class RefreshTask: @unchecked Sendable {
         let task: BGAppRefreshTask
+        private let lock = NSLock()
+        private var isCompleted = false
+
         init(_ task: BGAppRefreshTask) { self.task = task }
+
+        /// Completes the task, once.
+        ///
+        /// The system allows exactly one completion, and two callers can arrive: the expiration
+        /// handler cuts the work short, the work then finishes anyway and completes the task a
+        /// second time. The system logs that as an error and blames the app for the background
+        /// work, so the second one is dropped here.
+        func complete(success: Bool) {
+            lock.lock()
+            let alreadyCompleted = isCompleted
+            isCompleted = true
+            lock.unlock()
+            guard !alreadyCompleted else { return }
+            task.setTaskCompleted(success: success)
+        }
     }
 
     /// Must run before the app finishes launching.
@@ -54,12 +72,14 @@ enum BackgroundRefresh {
         let refresh = RefreshTask(task)
         let work = Task {
             await checkForNewVideos()
-            refresh.task.setTaskCompleted(success: true)
+            refresh.complete(success: true)
         }
 
         refresh.task.expirationHandler = {
+            // Cancelling the task stops the work where it stands — the check below watches for
+            // it — and the task is completed here, once, whichever of the two gets there first.
             work.cancel()
-            refresh.task.setTaskCompleted(success: false)
+            refresh.complete(success: false)
         }
     }
 
@@ -103,6 +123,10 @@ enum BackgroundRefresh {
     static func checkForNewVideos(force: Bool = false) async {
         // The demo's channels are a snapshot: nothing new comes of them, and its inbox is filled.
         guard !DemoMode.isRunning else { return }
+        // The system's expiration handler cancels the work when the app runs out of time. The
+        // check below is the only thing that stops mid-way, so it has to be looked at between
+        // the steps: the work is not worth finishing once it has been cut short.
+        guard !Task.isCancelled else { return }
         let (mode, isSignedIn, hasKey, isDue) = await MainActor.run {
             (NotificationStore.shared.mode, GoogleAuthService.shared.isSignedIn,
              APIKeyStore.shared.hasKey, NotificationStore.shared.isUploadCheckDue)
@@ -121,6 +145,7 @@ enum BackgroundRefresh {
             NotificationStore.shared.channelsToCheck(subscriptions: subscriptions)
         }
         guard !channelIDs.isEmpty else { return }
+        guard !Task.isCancelled else { return }
 
         guard let videos = try? await YouTubeAPIService.shared.videos(
             fromChannels: channelIDs,
@@ -134,9 +159,11 @@ enum BackgroundRefresh {
             return NotificationStore.shared.ingest(videos)
         }
         guard !fresh.isEmpty else { return }
+        guard !Task.isCancelled else { return }
 
         // Cap the burst so a quiet week doesn't turn into a wall of banners.
         for video in fresh.prefix(5) {
+            guard !Task.isCancelled else { return }
             await NotificationService.shared.post(for: video)
         }
         await NotificationService.shared.updateBadge()
