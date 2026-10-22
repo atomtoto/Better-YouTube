@@ -6274,6 +6274,16 @@
         }
       }
     },
+    "Your sign-in couldn't be saved on this device, so it wouldn't survive a restart. Check that the app is allowed to use the keychain, then sign in again." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta connexion n’a pas pu être enregistrée sur cet appareil : elle ne survivrait pas à un redémarrage. Vérifie que l’app a le droit d’utiliser le trousseau, puis connecte-toi à nouveau."
+          }
+        }
+      }
+    },
     "Your subscriptions, playlists and likes leave Library until you sign in again. Favorites, history and downloads aren't affected." : {
       "localizations" : {
         "fr" : {

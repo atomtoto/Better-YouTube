@@ -17,13 +17,28 @@ import Security
 /// Every item is `AfterFirstUnlock`: the app has to be able to refresh a token from a background
 /// task, which runs with the device locked.
 enum Keychain {
-    static func save(_ data: Data, service: String, account: String) {
-        delete(service: service, account: account)
+    /// Writes the secret, and says whether it made it in.
+    ///
+    /// `errSecSuccess` when it did; anything else means the secret is not stored, and the caller
+    /// has to know. A sign-in that pretends to have worked leaves the app signed out for the
+    /// next launch, with nothing said.
+    ///
+    /// The item that is already there is updated rather than deleted and added again: a delete
+    /// that succeeds followed by an add that fails leaves nothing behind — the secret is gone,
+    /// and the app doesn't know.
+    @discardableResult
+    static func save(_ data: Data, service: String, account: String) -> OSStatus {
+        let update = SecItemUpdate(query(service: service, account: account) as CFDictionary,
+                                   [kSecValueData as String: data,
+                                    kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock] as CFDictionary)
+        if update == errSecSuccess { return update }
+        // There was nothing to update: the secret is new to this device.
+        guard update == errSecItemNotFound else { return update }
 
         var attributes = query(service: service, account: account)
         attributes[kSecValueData as String] = data
         attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(attributes as CFDictionary, nil)
+        return SecItemAdd(attributes as CFDictionary, nil)
     }
 
     static func load(service: String, account: String) -> Data? {
@@ -63,12 +78,13 @@ extension Keychain {
     ///
     /// An empty string deletes the item rather than storing nothing: "no token" and "an empty
     /// token" are the same thing to every caller, and only one of them leaves the keychain clean.
-    static func saveText(_ text: String, service: String, account: String) {
+    @discardableResult
+    static func saveText(_ text: String, service: String, account: String) -> OSStatus {
         guard !text.isEmpty else {
             delete(service: service, account: account)
-            return
+            return errSecSuccess
         }
-        save(Data(text.utf8), service: service, account: account)
+        return save(Data(text.utf8), service: service, account: account)
     }
 
     static func loadText(service: String, account: String) -> String? {

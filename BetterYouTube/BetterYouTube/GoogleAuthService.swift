@@ -22,6 +22,8 @@ enum AuthError: LocalizedError {
     case exchangeFailed(String)
     /// Google rejected the credentials themselves (expired or revoked refresh token).
     case tokenRejected(String)
+    /// Google signed you in, but the credentials couldn't be kept on this device.
+    case credentialsNotStored
 
     var errorDescription: String? {
         switch self {
@@ -57,6 +59,8 @@ enum AuthError: LocalizedError {
             return message
         case .tokenRejected(let message):
             return message
+        case .credentialsNotStored:
+            return String(localized: "Your sign-in couldn't be saved on this device, so it wouldn't survive a restart. Check that the app is allowed to use the keychain, then sign in again.")
         }
     }
 }
@@ -89,9 +93,13 @@ enum KeychainStore {
     private static let service = "com.atomtoto.BetterYouTube.oauth"
     private static let account = "google"
 
-    static func save(_ tokens: OAuthTokens) {
-        guard let data = try? JSONEncoder().encode(tokens) else { return }
-        Keychain.save(data, service: service, account: account)
+    /// Whether the tokens are now in the keychain. A sign-in that isn't stored isn't a sign-in:
+    /// the app would look signed in until the next launch, and then be signed out with nothing
+    /// said, so the caller has to be told.
+    @discardableResult
+    static func save(_ tokens: OAuthTokens) -> Bool {
+        guard let data = try? JSONEncoder().encode(tokens) else { return false }
+        return Keychain.save(data, service: service, account: account) == errSecSuccess
     }
 
     static func load() -> OAuthTokens? {
@@ -211,12 +219,20 @@ final class GoogleAuthService: ObservableObject {
     /// the token was issued — an update that added write access, say — the token is dropped and the
     /// user signs in once more. Without this the app would look signed in and refuse every write.
     private func discardTokensGrantedForAnotherScope() {
-        guard tokens != nil else { return }
+        guard let tokens else { return }
         // Membership, not equality: Google returns the granted scopes as a list, and hands back
         // more than was asked for often enough (`openid`, a profile scope) that comparing the
         // whole string would throw away a perfectly good sign-in on every launch.
-        let granted = UserDefaults.standard.string(forKey: Self.grantedScopeKey)
-        let holdsScope = granted?.split(separator: " ").contains { $0 == Self.scope } ?? false
+        //
+        // The token itself is the authority; the copy in the defaults is only a fallback for a
+        // token stored before the scope was recorded in it. A copy that has gone missing — a
+        // reset, an update, a defaults that were cleared — says nothing about the token.
+        let granted = tokens.grantedScope ?? UserDefaults.standard.string(forKey: Self.grantedScopeKey)
+        // Nothing says which scope the token carries. Signing out on that would throw away a
+        // sign-in that may well be good; the scope is asked again by the first call that needs
+        // it, where a refusal can be explained.
+        guard let granted else { return }
+        let holdsScope = granted.split(separator: " ").contains { $0 == Self.scope }
         guard !holdsScope else { return }
         signOut()
     }
@@ -301,7 +317,9 @@ final class GoogleAuthService: ObservableObject {
         // where the reason can still be explained.
         guard tokens.grants(Self.scope) else { throw AuthError.scopeDeclined }
 
-        KeychainStore.save(tokens)
+        // The credentials have to be in the keychain before the app calls itself signed in: a
+        // sign-in that isn't stored is a sign-in that ends at the next launch, silently.
+        guard KeychainStore.save(tokens) else { throw AuthError.credentialsNotStored }
         UserDefaults.standard.set(tokens.grantedScope, forKey: Self.grantedScopeKey)
         // What Library kept from last time may be another account's.
         AccountLibraryCache.shared.clearAccount()
@@ -372,6 +390,9 @@ final class GoogleAuthService: ObservableObject {
             // leave out the scope too, which doesn't mean the grant shrank.
             if refreshed.refreshToken == nil { refreshed.refreshToken = refreshToken }
             if refreshed.grantedScope == nil { refreshed.grantedScope = tokens?.grantedScope }
+            // A write that fails leaves the item that was already there — the refresh token
+            // included — so the sign-in survives the next launch all the same. There is nothing
+            // to report, and nothing to throw away.
             KeychainStore.save(refreshed)
             tokens = refreshed
             return refreshed.accessToken
