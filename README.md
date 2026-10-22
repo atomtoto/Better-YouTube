@@ -88,4 +88,6 @@ xcodebuild test -project BetterYouTube.xcodeproj -scheme BetterYouTube -destinat
 - `scripts/build-demo-catalog.py` rebuilds the demo catalogue.
 - There is no CI: build and test on a Mac.
 
+Conventions, design decisions and on-device checks are in [DEVELOPMENT.md](DEVELOPMENT.md).
+
 Unofficial client; not affiliated with YouTube or Google.
