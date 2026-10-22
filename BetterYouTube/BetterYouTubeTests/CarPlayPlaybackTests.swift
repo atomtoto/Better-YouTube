@@ -25,9 +25,14 @@ struct CarPlayPlaybackTests {
         player.setLandscape(true)
         #expect(!player.isFullScreen)
         player.setCarPlayConnected(false)
+        // The car is gone: the phone takes the video back, and the queue with it.
+        #expect(!player.isAudioOnly)
+        #expect(player.isExpanded)
+        #expect(player.source == .local(file))
+        #expect(player.upNext == [second])
         player.playNext()
         #expect(player.currentVideo?.id == second.id)
-        #expect(player.isAudioOnly)
+        #expect(!player.isAudioOnly)
         #expect(player.source == .local(file))
         #expect(player.upNext.isEmpty)
         player.setLandscape(false)
@@ -71,6 +76,11 @@ struct CarPlayPlaybackTests {
         #expect(player.source == .local(file))
         #expect(player.isCarPlayVideoPlayback)
         #expect(!player.isFullScreen)
+        player.setCarPlayConnected(false)
+        // The car is gone: the phone is a phone again, with its own player.
+        #expect(!player.isCarPlayVideoPlayback)
+        #expect(!player.isAudioOnly)
+        #expect(player.isExpanded)
     }
 
     @Test("Video streams use native playback and unavailable video falls back to audio")

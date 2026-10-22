@@ -173,6 +173,9 @@ final class PlayerManager: ObservableObject {
     private(set) var isCarPlayConnected = false
     private var carPlaySupportsVideo = false
     private var carPlayPrefersVideo = false
+    /// The car went while the app was out of sight: the sound is still on the native player,
+    /// and the phone has yet to take the picture back.
+    private var carPlayStreamPendingPicture = false
     private var usesNativeCarPlayPlayback: Bool { isAudioOnly || isCarPlayVideoPlayback }
     private var audioStreamTask: Task<Void, Never>?
     private var audioShouldPlay = true
@@ -536,7 +539,11 @@ final class PlayerManager: ObservableObject {
     func setCarPlayConnected(_ connected: Bool, supportsVideo: Bool = false) {
         isCarPlayConnected = connected
         carPlaySupportsVideo = connected && supportsVideo
-        guard connected, let video = currentVideo else { return }
+        guard connected else {
+            carPlayDisconnected()
+            return
+        }
+        guard let video = currentVideo else { return }
         guard !usesNativeCarPlayPlayback || carPlayPrefersVideo != supportsVideo else { return }
         let wasAudioOnly = isAudioOnly
         let shouldPlay = isPlaying
@@ -555,6 +562,31 @@ final class PlayerManager: ObservableObject {
             startCarPlayStream(video.id)
         }
         refreshNowPlaying()
+    }
+
+    /// The car is gone: the phone takes the video back.
+    ///
+    /// CarPlay's shape — the phone's player collapsed, no picture, an audio-only entry on the
+    /// lock screen — belongs to the car. Left as it was, the phone kept that shape long after
+    /// the car had gone, and the video was nowhere to be seen.
+    private func carPlayDisconnected() {
+        isAudioOnly = false
+        isCarPlayVideoPlayback = false
+        carPlayPrefersVideo = false
+        guard let video = currentVideo else { return }
+        // The sound stays where it is while the app is out of sight: taking the video back
+        // means loading the embed, and the car may have gone while the phone was locked. The
+        // picture comes back when the app is on screen.
+        #if os(iOS)
+        guard !isInBackground else {
+            carPlayStreamPendingPicture = true
+            refreshNowPlaying()
+            return
+        }
+        #endif
+        // The phone's own player takes it from here: the file if it is on the disk, the embed
+        // otherwise, at the moment the sound had reached.
+        play(video, upNext: upNext, startTime: progress.currentTime)
     }
 
     private func startCarPlayStream(_ videoID: String) {
@@ -1017,6 +1049,7 @@ final class PlayerManager: ObservableObject {
         isAudioOnly = false
         isCarPlayVideoPlayback = false
         carPlayPrefersVideo = false
+        carPlayStreamPendingPicture = false
         playbackID = nil
         desiredVideoId = nil
         loadedVideoId = nil
@@ -1209,6 +1242,13 @@ final class PlayerManager: ObservableObject {
         let wasWaitingForSound = backgroundAudioRequested
         backgroundAudioRequested = false
         guard let video = currentVideo, !usesNativeCarPlayPlayback else { return }
+        if carPlayStreamPendingPicture {
+            // The car went while the app was out of sight. The sound is still on the native
+            // player; the phone takes the picture back now that it is on screen.
+            carPlayStreamPendingPicture = false
+            play(video, upNext: upNext, startTime: progress.currentTime)
+            return
+        }
         guard isBackgroundAudio else {
             guard wasWaitingForSound, !isLocal else { return }
             if desiredVideoId == nil {
