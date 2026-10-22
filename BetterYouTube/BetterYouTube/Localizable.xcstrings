@@ -3564,7 +3564,14 @@
       }
     },
     "Opens the channel" : {
-
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre la chaîne"
+          }
+        }
+      }
     },
     "Opens your channel" : {
       "localizations" : {
