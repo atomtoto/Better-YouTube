@@ -284,8 +284,14 @@ final class ICloudSyncService: ObservableObject {
                     modifiedAt: max(Date(), previous.modifiedAt.addingTimeInterval(0.001)),
                     changeID: UUID().uuidString, value: value)])
             } else if let value {
+                // The first time this device publishes a preference. It carries no date of its
+                // own on purpose: it is only a default until the user changes it, and a default
+                // must never beat a real choice made on another device. Two devices publishing
+                // one at the same moment do tie on the date, so the change ID orders them —
+                // and it has to be a different one on each device, or the tie is not broken at
+                // all and the two keep whatever they happened to fetch last.
                 recordLocalChanges([CloudSyncEntry(key: id, modifiedAt: .distantPast,
-                                                   changeID: "legacy", value: value)])
+                                                   changeID: UUID().uuidString, value: value)])
             }
         }
     }
