@@ -153,6 +153,35 @@ struct YouTubeAPIServiceTests {
         }
     }
 
+    @Test("a sign-in that couldn't be renewed is not mistaken for no sign-in")
+    func renewalFailed() async throws {
+        let service = YouTubeAPIService(
+            credentials: { .init(accessToken: nil, apiKey: "", renewalFailed: true) },
+            recordSpend: { _, _ in }
+        )
+        do {
+            _ = try await service.myPlaylists()
+            Issue.record("expected the sign-in to be unreachable")
+        } catch APIError.signInUnreachable {
+            // Expected.
+        }
+        // A public call goes ahead on the key alone.
+        let stub = StubAPI(renewalFailed: true)
+        stub.respond(to: "videos") { _ in Fixture.videos(["x"]) }
+        _ = try await stub.service.video(id: "x")
+        #expect(stub.requests.count == 1)
+    }
+
+    @Test("Google's token errors read as a sentence, not as JSON")
+    func tokenFailureMessage() {
+        let body = Data(#"{"error": "invalid_grant", "error_description": "Bad Request"}"#.utf8)
+        let message = GoogleAuthService.tokenFailureMessage(body, status: 400)
+        #expect(message.contains("Bad Request"))
+        #expect(message.contains("invalid_grant"))
+        #expect(!message.contains("{"))
+        #expect(!GoogleAuthService.tokenFailureMessage(Data("<html>".utf8), status: 503).contains("<html>"))
+    }
+
     @Test("a 404 is told apart from other failures")
     func notFound() async throws {
         let stub = StubAPI()
@@ -271,7 +300,7 @@ final class StubAPI: @unchecked Sendable {
     private var recordedRequests: [StubRequest] = []
     private var recordedCharges: [Charge] = []
 
-    init(apiKey: String = "test-\(UUID().uuidString)") {
+    init(apiKey: String = "test-\(UUID().uuidString)", renewalFailed: Bool = false) {
         self.apiKey = apiKey
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
@@ -279,7 +308,7 @@ final class StubAPI: @unchecked Sendable {
         let box = WeakBox()
         service = YouTubeAPIService(
             session: URLSession(configuration: configuration),
-            credentials: { .init(accessToken: nil, apiKey: routeKey) },
+            credentials: { .init(accessToken: nil, apiKey: routeKey, renewalFailed: renewalFailed) },
             recordSpend: { units, endpoint in box.stub?.record(Charge(units: units, endpoint: endpoint)) }
         )
         box.stub = self

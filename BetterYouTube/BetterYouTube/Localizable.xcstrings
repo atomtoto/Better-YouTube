@@ -1,6 +1,56 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Google couldn't be reached to renew your sign-in. You're still signed in — check your connection and try again." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de joindre Google pour renouveler ta connexion. Tu es toujours connecté — vérifie le réseau et réessaie."
+          }
+        }
+      }
+    },
+    "Google refused the sign-in (%@)." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google a refusé la connexion (%@)."
+          }
+        }
+      }
+    },
+    "Google refused the sign-in: %@ (%@)." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google a refusé la connexion : %1$@ (%2$@)."
+          }
+        }
+      }
+    },
+    "Google refused the sign-in: %@." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google a refusé la connexion : %@."
+          }
+        }
+      }
+    },
+    "Google's sign-in service answered with status %lld. Try again in a moment." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le service de connexion de Google a répondu avec le statut %lld. Réessaie dans un instant."
+          }
+        }
+      }
+    },
     "·" : {
       "localizations" : {
         "fr" : {
@@ -5706,16 +5756,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aujourd’hui"
-          }
-        }
-      }
-    },
-    "Token request failed." : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La demande de jeton a échoué."
           }
         }
       }

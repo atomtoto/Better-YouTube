@@ -492,8 +492,8 @@ final class GoogleAuthService: ObservableObject {
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? String(localized: "Token request failed.")
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let message = Self.tokenFailureMessage(data, status: status)
             // 400/401 means Google rejected the grant itself, not a transient problem.
             throw (400...401).contains(status)
                 ? AuthError.tokenRejected(message)
@@ -507,6 +507,32 @@ final class GoogleAuthService: ObservableObject {
             expiresAt: Date().addingTimeInterval(TimeInterval(decoded.expiresIn)),
             grantedScope: decoded.scope
         )
+    }
+
+    /// What the token endpoint said went wrong, in a sentence. Its error body is JSON — a code in
+    /// `error`, usually a sentence in `error_description` — and the body used to be shown as it
+    /// came, braces and quotes included.
+    nonisolated static func tokenFailureMessage(_ data: Data, status: Int) -> String {
+        struct Failure: Decodable {
+            let error: String?
+            let errorDescription: String?
+
+            enum CodingKeys: String, CodingKey {
+                case error
+                case errorDescription = "error_description"
+            }
+        }
+        let failure = try? JSONDecoder().decode(Failure.self, from: data)
+        switch (failure?.errorDescription, failure?.error) {
+        case let (description?, code?) where !description.isEmpty:
+            return String(localized: "Google refused the sign-in: \(description) (\(code)).")
+        case let (description?, nil) where !description.isEmpty:
+            return String(localized: "Google refused the sign-in: \(description).")
+        case let (_, code?):
+            return String(localized: "Google refused the sign-in (\(code)).")
+        default:
+            return String(localized: "Google's sign-in service answered with status \(status). Try again in a moment.")
+        }
     }
 
     // MARK: PKCE helpers

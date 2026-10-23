@@ -3,6 +3,9 @@ import Foundation
 enum APIError: LocalizedError {
     case missingCredentials
     case notSignedIn
+    /// Signed in, but Google couldn't be reached to renew the sign-in. Nothing is lost; the
+    /// next request tries again.
+    case signInUnreachable
     /// The sign-in predates the permission being asked for; only a fresh consent can widen it.
     case insufficientScope
     /// The resource is gone — a playlist deleted from YouTube, say.
@@ -19,6 +22,8 @@ enum APIError: LocalizedError {
             return String(localized: "Add a YouTube Data API key in Settings, or sign in with Google, to load content.")
         case .notSignedIn:
             return String(localized: "Sign in with Google in Settings to see your subscriptions, playlists and likes.")
+        case .signInUnreachable:
+            return String(localized: "Google couldn't be reached to renew your sign-in. You're still signed in — check your connection and try again.")
         case .insufficientScope:
             return String(localized: "This sign-in doesn't allow changes to your YouTube account. Sign in again from Settings and allow access to YouTube.")
         case .notFound:
@@ -136,6 +141,9 @@ actor YouTubeAPIService {
     struct Credentials: Sendable {
         var accessToken: String?
         var apiKey: String
+        /// Signed in, but the access token couldn't be renewed just now — no network, or Google
+        /// having a bad moment. The sign-in is still there, which is not what "no token" says.
+        var renewalFailed = false
     }
 
     /// The account and key the app is set up with.
@@ -144,8 +152,11 @@ actor YouTubeAPIService {
         // token to go out at all, and no real one is ever spent on them.
         if DemoMode.isRunning { return Credentials(accessToken: DemoServer.accessToken, apiKey: "") }
         let token = await GoogleAuthService.shared.accessToken()
+        // A refresh Google refused signs the account out on the way, so still being signed in
+        // without a token can only mean the refresh never got an answer.
+        let renewalFailed = token == nil ? await GoogleAuthService.shared.isSignedIn : false
         let key = await MainActor.run { APIKeyStore.shared.apiKey }
-        return Credentials(accessToken: token, apiKey: key)
+        return Credentials(accessToken: token, apiKey: key, renewalFailed: renewalFailed)
     }
 
     private let baseURL = URL(string: "https://www.googleapis.com/youtube/v3/")!
@@ -259,9 +270,12 @@ actor YouTubeAPIService {
     ) async throws -> URLRequest {
         let credentials = await credentials()
         let token = credentials.accessToken
-        if requiresAuth && token == nil { throw APIError.notSignedIn }
-
         let key = credentials.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Only where the account was needed: a public call with a key of its own goes ahead.
+        if token == nil, credentials.renewalFailed, requiresAuth || key.isEmpty {
+            throw APIError.signInUnreachable
+        }
+        if requiresAuth && token == nil { throw APIError.notSignedIn }
         if token == nil && key.isEmpty { throw APIError.missingCredentials }
 
         guard var components = URLComponents(
