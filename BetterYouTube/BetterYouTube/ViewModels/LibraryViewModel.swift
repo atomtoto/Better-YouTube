@@ -213,8 +213,9 @@ struct AccountLibraryCache: Sendable {
     static let shared = AccountLibraryCache()
 
     enum Item: String, CaseIterable, Sendable {
-        // The Google account's, through the Data API.
-        case account, subscriptions, likedVideos, ownedPlaylists
+        // The Google account's, through the Data API. Home's two feeds go with them: signed in
+        // they are read from the account, and either way they are dropped when it changes.
+        case account, subscriptions, likedVideos, ownedPlaylists, homeFeeds
         // youtube.com's.
         case webPlaylists, watchLater
 

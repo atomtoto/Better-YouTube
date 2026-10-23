@@ -34,9 +34,12 @@ final class HomeViewModel: ObservableObject {
     private(set) var hasPickedFeed = false
 
     private let service: YouTubeAPIService
+    /// None during a demo, whose feeds are not the user's.
+    private let cache: AccountLibraryCache?
     /// When the feed was last filled, and for which sign-in state. Every tab switch re-runs the
     /// view's `.task`, and one refresh reads a hundred channels — so a recent feed is shown
-    /// again rather than bought again. Pulling down forces it.
+    /// again rather than bought again. Pulling down forces it. Kept on disk with the feeds, so
+    /// that opening the app again doesn't buy them again either.
     private var lastLoaded: Date?
     private var lastLoadedSignedIn = false
     private var lastLoadedYouTube: Date?
@@ -45,9 +48,25 @@ final class HomeViewModel: ObservableObject {
     private var excludedYouTubeIDs: Set<String> = []
     private static let reloadInterval: TimeInterval = 15 * 60
 
-    init(service: YouTubeAPIService = .shared) {
+    init(service: YouTubeAPIService = .shared,
+         cache: AccountLibraryCache? = DemoMode.isRunning ? nil : .shared,
+         now: Date = Date()) {
         self.service = service
+        self.cache = cache
+        guard let snapshot: HomeFeedSnapshot = cache?.load(.homeFeeds),
+              now.timeIntervalSince(snapshot.savedAt) >= 0,
+              now.timeIntervalSince(snapshot.savedAt) < Self.cacheLifetime,
+              snapshot.signedIn == GoogleAuthService.shared.isSignedIn else { return }
+        recommended = snapshot.recommended
+        subscriptionVideos = snapshot.subscriptionVideos
+        avatars = snapshot.avatars
+        ChannelAvatarCache.shared.setAvatarURLs(snapshot.avatars)
+        lastLoaded = snapshot.savedAt
+        lastLoadedSignedIn = snapshot.signedIn
     }
+
+    /// How old a saved feed may be and still be worth showing while the new one loads.
+    private static let cacheLifetime: TimeInterval = 24 * 60 * 60
 
     var videos: [Video] {
         switch feed {
@@ -199,6 +218,11 @@ final class HomeViewModel: ObservableObject {
 
         isLoading = true
         errorMessage = nil
+        // What is on screen belongs to the other sign-in state, and nothing below may keep it.
+        if lastLoadedSignedIn != isSignedIn {
+            recommended = []
+            subscriptionVideos = []
+        }
 
         let affinity = Self.channelAffinity(library: library)
         var subscriptions: [Channel] = []
@@ -230,6 +254,18 @@ final class HomeViewModel: ObservableObject {
         lastLoaded = Date()
         lastLoadedSignedIn = isSignedIn
         isLoading = false
+        saveFeeds(signedIn: isSignedIn)
+    }
+
+    /// Only a complete load is kept, and only for the sign-in it was made under: one that ended
+    /// while this was loading has already cleared the cache, and must not find it refilled.
+    private func saveFeeds(signedIn: Bool) {
+        guard let cache, errorMessage == nil, GoogleAuthService.shared.isSignedIn == signedIn,
+              let lastLoaded, !(recommended.isEmpty && subscriptionVideos.isEmpty) else { return }
+        let channels = Set((recommended + subscriptionVideos).map(\.channelId))
+        cache.save(HomeFeedSnapshot(recommended: recommended, subscriptionVideos: subscriptionVideos,
+                                    avatars: avatars.filter { channels.contains($0.key) },
+                                    signedIn: signedIn, savedAt: lastLoaded), as: .homeFeeds)
     }
 
     // MARK: - "For You"
@@ -257,8 +293,11 @@ final class HomeViewModel: ObservableObject {
         let fromYouTube = await youTubeResult.filter { !watched.contains($0.id) }
 
         var seen = Set<String>()
-        recommended = Self.weave(fromChannels, fromYouTube)
+        let woven = Self.weave(fromChannels, fromYouTube)
             .filter { seen.insert($0.id).inserted }
+        // Both halves come back empty when nothing could be read — offline, say — and the feed
+        // on screen, saved from last time, is better than none.
+        if !woven.isEmpty || recommended.isEmpty { recommended = woven }
     }
 
     /// YouTube's own ranking, narrowed to what this account watches: one `videos.list` chart
@@ -386,4 +425,14 @@ final class HomeViewModel: ObservableObject {
         avatars = known
         ChannelAvatarCache.shared.setAvatarURLs(known)
     }
+}
+
+/// Home's two feeds as last loaded, so the app opens on them rather than paying for them again.
+struct HomeFeedSnapshot: Codable {
+    let recommended: [Video]
+    let subscriptionVideos: [Video]
+    let avatars: [String: URL]
+    /// The sign-in state they were loaded under: a signed-out feed is no stand-in for a signed-in one.
+    let signedIn: Bool
+    let savedAt: Date
 }
