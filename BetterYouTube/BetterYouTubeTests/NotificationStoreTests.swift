@@ -70,6 +70,23 @@ struct NotificationStoreTests {
         #expect(store.channelsToCheck(subscriptions: ["UCa"]).isEmpty)
     }
 
+    @Test("a notification removed from the inbox is not imported from YouTube again")
+    func removedNotificationsStayRemoved() {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("notifications-\(UUID().uuidString).json")
+        let store = NotificationStore(fileURL: url)
+        #expect(store.absorbYouTubeNotifications([video("a"), video("b"), video("c")]) == 3)
+
+        store.remove(at: IndexSet(integer: store.items.firstIndex { $0.id == "b" }!))
+        #expect(store.absorbYouTubeNotifications([video("a"), video("b"), video("c")]) == 0)
+        #expect(Set(store.items.map(\.id)) == ["a", "c"])
+
+        store.clear()
+        let relaunched = NotificationStore(fileURL: url)
+        #expect(relaunched.absorbYouTubeNotifications([video("a"), video("b"), video("c"), video("d")]) == 1)
+        #expect(relaunched.items.map(\.id) == ["d"])
+    }
+
     @Test("the ledger survives a relaunch in order")
     func ledgerPersists() {
         let url = FileManager.default.temporaryDirectory

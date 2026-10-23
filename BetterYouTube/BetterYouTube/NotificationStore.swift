@@ -77,6 +77,9 @@ final class NotificationStore: ObservableObject {
     /// included. A forgotten ID that is still in a channel's latest uploads reads as new on the
     /// next check, and was announced a second time.
     private var seenOrder: [String] = []
+    /// Videos removed from the inbox, oldest first. YouTube's own inbox keeps them for weeks,
+    /// and the next import would put each one straight back without this.
+    private var dismissedOrder: [String] = []
     /// Channels whose uploads have been read at least once. The first read of a channel only
     /// records what it already has — otherwise turning the bell on for it, or a check that
     /// reaches it for the first time, would announce its back catalogue as new.
@@ -86,6 +89,7 @@ final class NotificationStore: ObservableObject {
     private var hasBootstrapped = false
 
     private static let seenLimit = 2_000
+    private static let dismissedLimit = 1_000
     /// A channel read for the first time still announces what it uploaded within this window:
     /// that is news, where the rest of its latest uploads are not.
     private static let freshUploadWindow: TimeInterval = 24 * 60 * 60
@@ -99,6 +103,8 @@ final class NotificationStore: ObservableObject {
         var seenVideoIds: [String]
         var hasBootstrapped: Bool
         var knownChannels: Set<String>?
+        /// Oldest first. Absent from files written before removals were remembered.
+        var dismissedVideoIds: [String]?
     }
 
     private var fileURL: URL
@@ -119,6 +125,7 @@ final class NotificationStore: ObservableObject {
         items = []
         seenOrder = []
         seenVideoIds = []
+        dismissedOrder = []
         hasBootstrapped = false
         knownChannels = []
         lastYouTubeImport = nil
@@ -136,6 +143,7 @@ final class NotificationStore: ObservableObject {
         items = snapshot.items
         seenOrder = snapshot.seenVideoIds
         seenVideoIds = Set(snapshot.seenVideoIds)
+        dismissedOrder = snapshot.dismissedVideoIds ?? []
         hasBootstrapped = snapshot.hasBootstrapped
         knownChannels = snapshot.knownChannels ?? []
         // Last: its observer saves, and by now everything it saves is what was read.
@@ -302,29 +310,36 @@ final class NotificationStore: ObservableObject {
             channelOptIns.formUnion(channels)
             if enableNotifications, mode == .off { mode = .selected }
 
-            // YouTube has already shown you these, so they land in the inbox read, and counted as
-            // seen — announcing them again as banners would be the app shouting yesterday's news.
-            let known = Set(items.map(\.id))
-            let imported = videos
-                .filter { !known.contains($0.id) }
-                .map { video -> NotificationItem in
-                    var item = NotificationItem(video: video)
-                    item.isRead = true
-                    return item
-                }
-
-            items.append(contentsOf: imported)
-            items.sort { $0.date > $1.date }
-            if items.count > 100 { items.removeLast(items.count - 100) }
-
-            markSeen(videos.map(\.id))
-            hasBootstrapped = true
-            persist()
-
-            return YouTubeImport(notifications: imported.count, channels: channels.count)
+            let imported = absorbYouTubeNotifications(videos)
+            return YouTubeImport(notifications: imported, channels: channels.count)
         } catch {
             return YouTubeImport(failure: error.localizedDescription)
         }
+    }
+
+    /// Adds what YouTube's inbox holds to this one, and returns how many were new here.
+    ///
+    /// YouTube has already shown you these, so they land in the inbox read, and counted as seen —
+    /// announcing them again as banners would be the app shouting yesterday's news. The ones you
+    /// removed stay removed: YouTube still lists them, and the check runs every quarter of an hour.
+    func absorbYouTubeNotifications(_ videos: [Video]) -> Int {
+        let skipped = Set(items.map(\.id)).union(dismissedOrder)
+        let imported = videos
+            .filter { !skipped.contains($0.id) }
+            .map { video -> NotificationItem in
+                var item = NotificationItem(video: video)
+                item.isRead = true
+                return item
+            }
+
+        items.append(contentsOf: imported)
+        items.sort { $0.date > $1.date }
+        if items.count > 100 { items.removeLast(items.count - 100) }
+
+        markSeen(videos.map(\.id))
+        hasBootstrapped = true
+        persist()
+        return imported.count
     }
 
     func markRead(_ item: NotificationItem) {
@@ -339,13 +354,24 @@ final class NotificationStore: ObservableObject {
     }
 
     func remove(at offsets: IndexSet) {
+        markDismissed(offsets.map { items[$0].videoId })
         items.remove(atOffsets: offsets)
         persist()
     }
 
     func clear() {
+        markDismissed(items.map(\.videoId))
         items.removeAll()
         persist()
+    }
+
+    private func markDismissed(_ ids: [String]) {
+        let batch = Set(ids)
+        dismissedOrder.removeAll { batch.contains($0) }
+        dismissedOrder.append(contentsOf: ids)
+        if dismissedOrder.count > Self.dismissedLimit {
+            dismissedOrder.removeFirst(dismissedOrder.count - Self.dismissedLimit)
+        }
     }
 
     /// The inbox, the opt-ins, the ledger of what has been seen — all of it. For the reset in
@@ -356,6 +382,7 @@ final class NotificationStore: ObservableObject {
         channelOptIns = []
         seenVideoIds = []
         seenOrder = []
+        dismissedOrder = []
         knownChannels = []
         hasBootstrapped = false
         mode = .off
@@ -373,7 +400,8 @@ final class NotificationStore: ObservableObject {
             items: items,
             seenVideoIds: seenOrder,
             hasBootstrapped: hasBootstrapped,
-            knownChannels: knownChannels
+            knownChannels: knownChannels,
+            dismissedVideoIds: dismissedOrder
         )
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         try? FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(),
