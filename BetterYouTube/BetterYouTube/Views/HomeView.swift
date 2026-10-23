@@ -8,6 +8,7 @@ struct HomeView: View {
     @EnvironmentObject private var webSession: YouTubeWebSession
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var youTubeNavigation = YouTubeWebNavigationModel()
+    @ObservedObject private var positions = PlaybackPositionStore.shared
 
     @State private var showsNotifications = false
     @State private var recommendationError: String?
@@ -176,6 +177,7 @@ struct HomeView: View {
         ScrollView {
             LazyVStack(spacing: 24) {
                 feedPickerInContent
+                continueWatching
 
                 if isLoadingCurrentFeed && viewModel.videos.isEmpty {
                     placeholderFeed
@@ -210,6 +212,50 @@ struct HomeView: View {
         }
         .scrollIndicators(.hidden)
         .minimizesPlayerBarOnScroll()
+    }
+
+    /// What was left part-way through, most recently watched first: the list Library's Continue
+    /// Watching opens, from the positions every device shares. Above whichever feed is showing,
+    /// and with no network as well — it needs none to be read.
+    @ViewBuilder
+    private var continueWatching: some View {
+        let unfinished = positions.resumable(library.history)
+        if !unfinished.isEmpty {
+            let shelf = Array(unfinished.prefix(10))
+            VStack(alignment: .leading, spacing: 10) {
+                NavigationLink {
+                    VideoListView(title: "Continue Watching", videos: unfinished)
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Continue Watching")
+                        Image(systemName: "chevron.forward")
+                            .foregroundStyle(.secondary)
+                            .imageScale(.small)
+                    }
+                    .font(.title3.weight(.semibold))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, Theme.Spacing.gutter)
+
+                ScrollView(.horizontal) {
+                    LazyHStack(alignment: .top, spacing: 12) {
+                        ForEach(shelf) { video in
+                            Button {
+                                player.play(video, upNext: shelf.after(video))
+                            } label: {
+                                ContinueWatchingCard(video: video)
+                            }
+                            .buttonStyle(.plain)
+                            .videoContextMenu(video)
+                        }
+                    }
+                    .scrollTargetLayout()
+                }
+                .contentMargins(.horizontal, Theme.Spacing.gutter, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollIndicators(.hidden)
+            }
+        }
     }
 
     private var isLoadingCurrentFeed: Bool {
@@ -292,6 +338,43 @@ struct HomeView: View {
         }
         .padding(.horizontal, Theme.Spacing.gutter)
         .redacted(reason: .placeholder)
+    }
+}
+
+/// One video on the Continue Watching shelf: its picture with how far it got, and its title.
+private struct ContinueWatchingCard: View {
+    let video: Video
+
+    @EnvironmentObject private var downloads: DownloadStore
+    @ObservedObject private var positions = PlaybackPositionStore.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ArtworkView(
+                url: downloads.artworkURL(for: video),
+                duration: video.duration,
+                progress: positions.watchedFraction(for: video.id)
+            )
+            .aspectRatio(16.0 / 9.0, contentMode: .fit)
+            .downloadedBadge(video, downloads: downloads)
+
+            Text(video.title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.primary)
+                .lineLimit(2, reservesSpace: true)
+                .multilineTextAlignment(.leading)
+            Text(video.channelTitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        // Two and a part of the next on a phone, so the shelf shows it scrolls; more on a wider
+        // screen.
+        .containerRelativeFrame(.horizontal) { length, _ in
+            let columns = max(2, (length / 260).rounded(.down))
+            return (length - 12 * columns) / (columns + 0.3)
+        }
+        .contentShape(Rectangle())
     }
 }
 
