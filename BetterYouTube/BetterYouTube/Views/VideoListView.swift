@@ -76,11 +76,9 @@ struct SubscriptionsView: View {
         return channels.filter { $0.title.localizedStandardContains(query) }
     }
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
-    ]
+    /// As many columns as the width holds: three on a phone, more on an iPad or a Mac window,
+    /// rather than three that leave a wide screen mostly gaps.
+    private let columns = [GridItem(.adaptive(minimum: 100, maximum: 140), spacing: 16)]
 
     var body: some View {
         Group {

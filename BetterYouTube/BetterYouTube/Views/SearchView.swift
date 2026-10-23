@@ -135,25 +135,35 @@ struct SearchView: View {
                 List {
                     Section {
                         ForEach(recents.terms, id: \.self) { term in
-                            Button {
-                                viewModel.search(term: term)
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "clock.arrow.circlepath")
-                                        .foregroundStyle(.secondary)
-                                    Text(term)
-                                        .foregroundStyle(.primary)
-                                    Spacer()
-                                    Button {
-                                        viewModel.query = term
-                                        isFieldFocused = true
-                                    } label: {
-                                        Image(systemName: "arrow.up.left")
-                                            .font(.footnote)
-                                            .foregroundStyle(.tertiary)
+                            // Two buttons side by side rather than one inside the other: nested,
+                            // a tap on the arrow could run the search — 100 quota units — instead
+                            // of putting the text back in the field. A plain style is what lets
+                            // each keep its own part of a list row.
+                            HStack(spacing: 12) {
+                                Button {
+                                    viewModel.search(term: term)
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "clock.arrow.circlepath")
+                                            .foregroundStyle(.secondary)
+                                        Text(term)
+                                            .foregroundStyle(.primary)
+                                        Spacer(minLength: 0)
                                     }
-                                    .buttonStyle(.plain)
+                                    .contentShape(Rectangle())
                                 }
+
+                                Button {
+                                    viewModel.query = term
+                                    isFieldFocused = true
+                                } label: {
+                                    Image(systemName: "arrow.up.left")
+                                        .font(.footnote)
+                                        .foregroundStyle(.tertiary)
+                                        .frame(minWidth: 44, minHeight: 44)
+                                        .contentShape(Rectangle())
+                                }
+                                .accessibilityLabel(Text("Edit “\(term)”"))
                             }
                             .buttonStyle(.plain)
                             .swipeActions {

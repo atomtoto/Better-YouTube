@@ -102,7 +102,7 @@ struct NotificationsView: View {
                             Label("Clear All", systemImage: "trash")
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Label("More", systemImage: "ellipsis.circle")
                     }
                     .disabled(store.items.isEmpty)
                 }

@@ -62,18 +62,23 @@ struct FeedVideoCard: View {
                     )
                 } label: {
                     #if os(macOS)
-                    Image(systemName: "chevron.down.circle.fill")
+                    Label("More", systemImage: "chevron.down.circle.fill")
+                        .labelStyle(.iconOnly)
                         .font(.system(size: 23))
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(.tint)
                         .frame(width: 42, height: 42)
                         .contentShape(Rectangle())
                     #else
-                    Image(systemName: "ellipsis")
+                    Label("More", systemImage: "ellipsis")
+                        .labelStyle(.iconOnly)
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.secondary)
-                        .frame(width: 28, height: 28)
+                        // The glyph keeps its place in the 28 points it always had; the finger
+                        // gets the 44 a touch target needs, reaching into the space around it.
+                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
+                        .padding(-8)
                     #endif
                 }
                 #if os(macOS)

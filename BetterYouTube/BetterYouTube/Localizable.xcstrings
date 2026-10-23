@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Edit “%@”" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier « %@ »"
+          }
+        }
+      }
+    },
     "Google couldn't be reached to renew your sign-in. You're still signed in — check your connection and try again." : {
       "localizations" : {
         "fr" : {
