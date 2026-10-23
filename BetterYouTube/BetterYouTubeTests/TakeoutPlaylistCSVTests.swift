@@ -17,6 +17,21 @@ struct TakeoutPlaylistCSVTests {
         #expect(rows.allSatisfy { $0.addedAt != nil })
     }
 
+    @Test("an older export's dates, written with a space and UTC, are read too")
+    func olderExport() {
+        let csv = """
+        Video Id,Time Added
+        aaaaaaaaaaa,2021-01-05 09:30:00 UTC
+        dQw4w9WgXcQ,2021-03-14 10:25:01 UTC
+        """
+        let rows = TakeoutPlaylistCSV.rows(in: csv)
+        #expect(rows.map(\.addedAt) == [
+            Date(timeIntervalSince1970: 1_609_839_000),
+            Date(timeIntervalSince1970: 1_615_717_501)
+        ])
+        #expect(TakeoutPlaylistCSV.mostRecentlyAdded(in: rows, limit: 1) == ["dQw4w9WgXcQ"])
+    }
+
     /// A byte-order mark, CRLF endings, quoting and stray spaces all arrive in real exports.
     @Test("the mess a real export arrives in")
     func messyExport() {

@@ -208,9 +208,21 @@ enum TakeoutPlaylistCSV {
 
             guard isVideoID(field), seen.insert(field).inserted else { continue }
             let stamp = fields.count > 1 ? Self.unwrap(fields[1]) : ""
-            rows.append(Row(id: field, addedAt: YTDateParser.parse(stamp.isEmpty ? nil : stamp)))
+            rows.append(Row(id: field, addedAt: stamp.isEmpty ? nil : Self.date(stamp)))
         }
         return rows
+    }
+
+    /// Recent exports stamp in ISO 8601. Older ones wrote "2021-03-14 10:25:01 UTC", and a file
+    /// whose dates don't all read is taken from the top rather than by date.
+    private static let olderStamp = Date.ParseStrategy(
+        format: "\(year: .defaultDigits)-\(month: .twoDigits)-\(day: .twoDigits) \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits):\(second: .twoDigits) UTC",
+        locale: Locale(identifier: "en_US_POSIX"),
+        timeZone: .gmt
+    )
+
+    private static func date(_ stamp: String) -> Date? {
+        YTDateParser.parse(stamp) ?? (try? olderStamp.parse(stamp))
     }
 
     /// Strips the quoting, spacing and byte-order mark a CSV field can arrive wrapped in.
