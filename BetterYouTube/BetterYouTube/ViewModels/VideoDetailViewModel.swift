@@ -37,16 +37,43 @@ final class VideoDetailViewModel: ObservableObject {
     /// details doesn't quietly undo the tap that was made while it was in flight.
     private var likeCountAdjustment = 0
 
+    /// When everything was last read in full, and with which sign-in state the rating was.
+    private var loadedAt: Date?
+    private var ratingReadSignedIn: Bool?
+    /// How long details read in full are shown again as they are, rather than read again.
+    private static let reuseInterval: TimeInterval = 15 * 60
+
     init(video: Video, service: YouTubeAPIService = .shared) {
         self.video = video
         self.service = service
         self.channelAvatarURL = ChannelAvatarCache.shared.avatarURL(for: video.channelId)
     }
 
+    /// The details of the video playing, kept while it plays.
+    ///
+    /// The expanded player mounts its details only while it is open, so every expand — and every
+    /// return from full screen — used to start them over: four requests, the comments back to their
+    /// first page, the replies you had opened closed again.
+    static func forVideo(_ video: Video) -> VideoDetailViewModel {
+        if let current, current.video.id == video.id { return current }
+        let model = VideoDetailViewModel(video: video)
+        current = model
+        return model
+    }
+
+    private static var current: VideoDetailViewModel?
+
     var isLiked: Bool { rating == .like }
     var isDisliked: Bool { rating == .dislike }
 
+    /// Reads everything the first time, and again after a failure or a quarter of an hour.
+    /// Coming back to details read just now only checks the like, should the account have
+    /// signed in or out meanwhile.
     func loadAll() async {
+        if let loadedAt, Date().timeIntervalSince(loadedAt) < Self.reuseInterval {
+            if ratingReadSignedIn != GoogleAuthService.shared.isSignedIn { await loadRating() }
+            return
+        }
         async let details: Void = refreshDetails()
         async let comments: Void = loadComments()
         async let ratingState: Void = loadRating()
@@ -55,6 +82,9 @@ final class VideoDetailViewModel: ObservableObject {
         if channel == nil && !video.channelId.isEmpty {
             await loadChannel()
         }
+        // A collapse halfway through cancels the reads, and an error leaves something unread.
+        let complete = !Task.isCancelled && errorMessage == nil && commentsError == nil
+        loadedAt = complete ? Date() : nil
     }
 
     // MARK: - Channel
@@ -91,6 +121,7 @@ final class VideoDetailViewModel: ObservableObject {
     /// Reads back what the account has rated this video (1 unit). Signed out there is nothing
     /// to read: the button stays hollow and says so when tapped.
     func loadRating() async {
+        ratingReadSignedIn = GoogleAuthService.shared.isSignedIn
         guard GoogleAuthService.shared.isSignedIn else {
             rating = .unspecified
             return

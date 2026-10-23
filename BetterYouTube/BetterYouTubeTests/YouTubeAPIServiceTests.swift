@@ -261,6 +261,31 @@ struct YouTubeAPIServiceTests {
         #expect(stub.requests.count == 2)
     }
 
+    // MARK: The player's details
+
+    @Test("details already read are shown again as they are when the player reopens")
+    @MainActor
+    func playerDetailsAreReused() async throws {
+        let stub = StubAPI()
+        stub.respond(to: "videos") { _ in Fixture.videos(["x"]) }
+        stub.respond(to: "commentThreads") { _ in Fixture.json(["items": []]) }
+        stub.respond(to: "channels") { _ in Fixture.json(["items": []]) }
+        let video = Video(id: "x", title: "Video x", channelId: "UC1", channelTitle: "Channel",
+                          description: "", thumbnailURL: nil, publishedAt: nil)
+
+        let details = VideoDetailViewModel(video: video, service: stub.service)
+        await details.loadAll()
+        let firstRead = stub.requests.count
+        #expect(firstRead > 0)
+        await details.loadAll()
+        #expect(stub.requests.count == firstRead)
+
+        #expect(VideoDetailViewModel.forVideo(video) === VideoDetailViewModel.forVideo(video))
+        let other = Video(id: "y", title: "Video y", channelId: "UC1", channelTitle: "Channel",
+                          description: "", thumbnailURL: nil, publishedAt: nil)
+        #expect(VideoDetailViewModel.forVideo(other).video.id == "y")
+    }
+
     // MARK: YouTube's suggestions
 
     @Test("YouTube's suggestion list is read from the second element")

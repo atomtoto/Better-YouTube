@@ -37,7 +37,7 @@ struct PlayerDetailsView: View {
     init(video: Video, sideBySide: SideBySide? = nil) {
         self.video = video
         self.sideBySide = sideBySide
-        _viewModel = StateObject(wrappedValue: VideoDetailViewModel(video: video))
+        _viewModel = StateObject(wrappedValue: VideoDetailViewModel.forVideo(video))
     }
 
     /// Prefer the enriched copy (view/like counts, full description) once it arrives.
