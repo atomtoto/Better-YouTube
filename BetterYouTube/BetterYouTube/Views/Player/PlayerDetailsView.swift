@@ -384,6 +384,10 @@ struct PlayerDetailsView: View {
                 .padding(.vertical, 2)
             }
             .scrollIndicators(.hidden)
+            // The row runs out to the edges, so the pills scroll off there rather than vanishing
+            // at the gutter, and still starts in line with the rest of the details.
+            .contentMargins(.horizontal, Theme.Spacing.gutter, for: .scrollContent)
+            .padding(.horizontal, -Theme.Spacing.gutter)
 
             // Nearly always "sign in with Google", which is the one thing worth saying here.
             if let ratingError = viewModel.ratingError {

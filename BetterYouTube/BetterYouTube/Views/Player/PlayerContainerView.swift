@@ -1124,17 +1124,13 @@ private struct MiniPlayerBarShape: Shape {
 }
 #endif
 
-/// The played fraction, using the original size with rounded ends.
+/// The played fraction, drawn as the thumbnails draw a video left part-way through.
 private struct MiniProgressLine: View {
     @ObservedObject var progress: PlaybackProgress
 
     var body: some View {
-        GeometryReader { proxy in
-            Capsule()
-                .fill(Color.accentColor)
-                .frame(width: proxy.size.width * progress.fraction)
-                .frame(maxHeight: .infinity, alignment: .bottom)
-        }
-        .frame(height: 2.5)
+        ProgressView(value: progress.fraction)
+            .progressViewStyle(.playbackLine)
+            .accessibilityHidden(true)
     }
 }

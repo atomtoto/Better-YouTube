@@ -53,8 +53,26 @@ struct ExternalLinkLabel: View {
     }
 }
 
+/// How far a video has played, drawn the same way wherever it shows: an accent line along the
+/// foot of whatever holds it, rounded at its end, with the holder's own shape clipping its start.
+struct PlaybackLineProgressViewStyle: ProgressViewStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        GeometryReader { proxy in
+            Capsule()
+                .fill(Color.accentColor)
+                .frame(width: proxy.size.width * (configuration.fractionCompleted ?? 0))
+                .frame(maxHeight: .infinity, alignment: .bottom)
+        }
+        .frame(height: 2.5)
+    }
+}
+
+extension ProgressViewStyle where Self == PlaybackLineProgressViewStyle {
+    static var playbackLine: Self { .init() }
+}
+
 /// 16:9 artwork with a rounded, continuous corner, an optional duration badge, and — for a video
-/// left part-way through — how far it got, along the foot of the picture as YouTube draws it.
+/// left part-way through — how far it got, along the foot of the picture as the mini player draws it.
 struct ArtworkView: View {
     let url: URL?
     var duration: String?
@@ -99,16 +117,11 @@ struct ArtworkView: View {
                     .glassEffect(.regular, in: Capsule())
                     .environment(\.colorScheme, .dark)
                     .padding(6)
-                    // Sits above the progress line rather than on it.
-                    .padding(.bottom, progress == nil ? 0 : 6)
             }
 
             if let progress {
                 ProgressView(value: progress)
-                    .progressViewStyle(.linear)
-                    .tint(.red)
-                    .padding(.horizontal, 6)
-                    .padding(.bottom, 5)
+                    .progressViewStyle(.playbackLine)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                     .accessibilityLabel("Watched")
                     .accessibilityValue(Text(progress, format: .percent.precision(.fractionLength(0))))
