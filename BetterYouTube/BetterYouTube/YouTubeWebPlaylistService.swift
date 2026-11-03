@@ -102,7 +102,7 @@ final class YouTubeWebPlaylistService {
 
     // Arguments are passed by WebKit, never interpolated into executable JavaScript.
     static let authenticationScript = #"""
-    if (location.origin !== 'https://www.youtube.com' || !window.ytcfg?.get('LOGGED_IN'))
+    if (!/^https:\/\/(www|m)\.youtube\.com$/.test(location.origin) || !window.ytcfg?.get('LOGGED_IN'))
         throw new Error('Sign in to youtube.com from Settings to access your playlists.');
     const context = ytcfg.get('INNERTUBE_CONTEXT');
     if (!context?.client) throw new Error('YouTube session is not ready. Please retry.');

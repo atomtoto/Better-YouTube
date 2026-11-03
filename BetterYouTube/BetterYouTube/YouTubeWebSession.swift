@@ -74,10 +74,14 @@ final class YouTubeWebSession: ObservableObject {
     @Published private(set) var isSignedIn = false
     @Published private(set) var hasCheckedSession = false
     @Published private(set) var feedGeneration = UUID()
+    /// The channel youtube.com is signed in as, once a home page has been read. `nil` until then,
+    /// and whenever the page wouldn't say.
+    @Published private(set) var activeChannel: ActiveChannel?
     let feedCache = YouTubeHomeCache()
 
     func invalidateFeed() {
         YouTubeFeedReader.playlists.invalidatePlaylistPage()
+        activeChannel = nil
         feedGeneration = UUID()
         feedCache.clear()
         AccountLibraryCache.shared.clearWebSession()
@@ -171,6 +175,51 @@ final class YouTubeWebSession: ObservableObject {
         isSignedIn = false
     }
 
+    /// Asks the page whose channel it is showing, from inside it: YouTube's own account menu
+    /// names the active channel, brand accounts included, and nothing in the cookies does.
+    ///
+    /// A different channel than the last one read means the account was switched on a page —
+    /// what was read under the old one is someone else's, so it goes.
+    func readActiveChannel(in webView: WKWebView) async {
+        let generation = feedGeneration
+        guard isSignedIn, webView.url?.host?.hasSuffix("youtube.com") == true,
+              let result = try? await webView.callAsyncJavaScript(
+                  YouTubeWebPlaylistService.authenticationScript + Self.activeChannelScript,
+                  arguments: [:], in: nil, contentWorld: .page
+              ) as? String,
+              let channel = try? JSONDecoder().decode(ActiveChannel.self, from: Data(result.utf8)),
+              isSignedIn, generation == feedGeneration else { return }
+        if let previous = activeChannel, !previous.isSame(as: channel) { invalidateFeed() }
+        activeChannel = channel
+    }
+
+    /// The active account in `account/account_menu`: its header, or the selected row of the
+    /// switcher. The only channel link in that menu is "Your channel", so a single `UC…` id in it
+    /// is the active channel's; more than one and the handle has to do.
+    private static let activeChannelScript = #"""
+    const response = await request('account/account_menu', {});
+    const text = v => typeof v === 'string' ? v : (v?.simpleText || (v?.runs || []).map(r => r.text).join(''));
+    const seen = new WeakSet();
+    const ids = new Set();
+    let header = null, selected = null;
+    (function walk(v) {
+        if (!v || typeof v !== 'object' || seen.has(v)) return;
+        seen.add(v);
+        header = header || v.activeAccountHeaderRenderer || null;
+        if (!selected && v.accountItem?.isSelected) selected = v.accountItem;
+        const id = v.browseEndpoint?.browseId;
+        if (typeof id === 'string' && /^UC[A-Za-z0-9_-]{22}$/.test(id)) ids.add(id);
+        Object.values(v).forEach(walk);
+    })(response);
+    const account = header || selected;
+    if (!account) return null;
+    return JSON.stringify({
+        id: ids.size === 1 ? [...ids][0] : null,
+        handle: text(account.channelHandle) || null,
+        name: text(account.accountName) || null
+    });
+    """#
+
     /// The video id in a YouTube URL, if it is a watch link.
     static func videoId(in url: URL) -> String? {
         if url.host?.contains("youtu.be") == true {
@@ -188,6 +237,35 @@ final class YouTubeWebSession: ObservableObject {
         candidate.count == 11 && candidate.allSatisfy {
             $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_"
         }
+    }
+}
+
+/// The channel a youtube.com page is signed in as.
+struct ActiveChannel: Codable, Equatable {
+    let id: String?
+    let handle: String?
+    let name: String?
+
+    /// What the account goes by on screen: its handle, else its name.
+    var displayName: String? { handle ?? name }
+
+    /// Whether this is a channel other than `channel`. Only says so when there is something to
+    /// compare — the id, or failing that both handles; a name is no proof either way.
+    func differs(from channel: Channel) -> Bool {
+        if let id { return id != channel.id }
+        guard let mine = Self.normalized(handle), let theirs = Self.normalized(channel.handle) else { return false }
+        return mine != theirs
+    }
+
+    func isSame(as other: ActiveChannel) -> Bool {
+        if let id, let otherID = other.id { return id == otherID }
+        return Self.normalized(handle) == Self.normalized(other.handle) && name == other.name
+    }
+
+    private static func normalized(_ handle: String?) -> String? {
+        guard let trimmed = handle?.trimmingCharacters(in: .whitespaces).lowercased(),
+              !trimmed.isEmpty else { return nil }
+        return trimmed.hasPrefix("@") ? trimmed : "@" + trimmed
     }
 }
 
@@ -266,6 +344,8 @@ final class YouTubeFeedReader {
         if webView.url?.host?.contains("consent.") == true {
             throw YouTubeFeedIssue.consentNeeded
         }
+        // Before the first cards: Home turns to YouTube's page instead when it's the wrong one.
+        if !isNotifications { await YouTubeWebSession.shared.readActiveChannel(in: webView) }
 
         var ids: [String] = []
         var seen = Set<String>()

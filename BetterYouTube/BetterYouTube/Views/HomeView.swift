@@ -12,11 +12,23 @@ struct HomeView: View {
 
     @State private var showsNotifications = false
     @State private var recommendationError: String?
+    /// The channel the Google sign-in is for: the one youtube.com should be showing too.
+    @State private var googleChannel: Channel?
 
     /// YouTube's page in place of the app's cards: only on its own segment, and only when
-    /// Settings asks for that rendering.
+    /// Settings asks for that rendering — or when youtube.com is on the wrong channel, since the
+    /// page is where you switch it.
     private var showsYouTubePage: Bool {
-        viewModel.feed == .youTube && webSession.rendering == .youTubePage
+        viewModel.feed == .youTube && (webSession.rendering == .youTubePage || wrongChannel != nil)
+    }
+
+    /// youtube.com signed in as a channel other than the Google sign-in's, so the home feed is
+    /// someone else's recommendations.
+    private var wrongChannel: (web: ActiveChannel, google: Channel)? {
+        guard viewModel.feed == .youTube, auth.isSignedIn,
+              let web = webSession.activeChannel, let google = googleChannel,
+              web.differs(from: google) else { return nil }
+        return (web, google)
     }
 
     var body: some View {
@@ -25,6 +37,7 @@ struct HomeView: View {
                 // The page scrolls itself, so the picker sits above it rather than inside it.
                 VStack(spacing: 12) {
                     feedPickerInContent
+                    wrongChannelNotice
                     YouTubeWebFeedView(navigation: youTubeNavigation)
                 }
                 .padding(.top, 12)
@@ -53,6 +66,7 @@ struct HomeView: View {
                     }
                     .pickerStyle(.menu)
                     .fixedSize()
+                    .disabled(wrongChannel != nil)
                 }
             }
 
@@ -100,7 +114,13 @@ struct HomeView: View {
         .onChange(of: webSession.feedGeneration) { _, _ in
             viewModel.adoptDefaultFeed(webSignedIn: webSession.isSignedIn)
         }
-        .task(id: "\(viewModel.feed.rawValue)-\(webSession.rendering.rawValue)-\(webSession.hasCheckedSession)-\(webSession.isSignedIn)-\(webSession.feedGeneration)-\(auth.isSignedIn)") {
+        .task(id: "\(auth.isSignedIn)-\(webSession.activeChannel != nil)") {
+            guard auth.isSignedIn else { googleChannel = nil; return }
+            // Only once there is a youtube.com channel to compare it with.
+            guard webSession.activeChannel != nil, googleChannel == nil else { return }
+            googleChannel = try? await YouTubeAPIService.shared.myChannel()
+        }
+        .task(id: "\(viewModel.feed.rawValue)-\(webSession.rendering.rawValue)-\(webSession.hasCheckedSession)-\(webSession.isSignedIn)-\(webSession.feedGeneration)-\(auth.isSignedIn)-\(wrongChannel != nil)") {
             guard webSession.hasCheckedSession else { return }
             if viewModel.feed == .youTube {
                 if !showsYouTubePage { await viewModel.loadYouTubeFeed() }
@@ -156,6 +176,29 @@ struct HomeView: View {
                 .accessibilityLabel("Back")
             }
             feedPicker
+        }
+    }
+
+    /// Why YouTube's page is showing when Settings asked for cards, and what to do about it.
+    @ViewBuilder
+    private var wrongChannelNotice: some View {
+        if let wrongChannel {
+            let expected = wrongChannel.google.handle ?? wrongChannel.google.title
+            let current = wrongChannel.web.displayName ?? String(localized: "another channel")
+            GroupBox {
+                Text("youtube.com is showing the home feed of \(current), not of \(expected), the channel you signed in with Google. Open the menu under your profile picture on the page, choose Switch account, then pick \(expected).")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } label: {
+                Label {
+                    Text("Wrong YouTube Channel")
+                } icon: {
+                    Image(systemName: "person.crop.circle.badge.exclamationmark")
+                        .foregroundStyle(.orange)
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.gutter)
         }
     }
 

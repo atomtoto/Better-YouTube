@@ -6630,6 +6630,36 @@
           }
         }
       }
+    },
+    "another channel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "une autre chaîne"
+          }
+        }
+      }
+    },
+    "Wrong YouTube Channel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mauvaise chaîne YouTube"
+          }
+        }
+      }
+    },
+    "youtube.com is showing the home feed of %@, not of %@, the channel you signed in with Google. Open the menu under your profile picture on the page, choose Switch account, then pick %@." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "youtube.com affiche le flux d’accueil de %1$@, et non celui de %2$@, la chaîne de ta connexion Google. Ouvre le menu de ta photo de profil sur la page, choisis Changer de compte, puis sélectionne %3$@."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

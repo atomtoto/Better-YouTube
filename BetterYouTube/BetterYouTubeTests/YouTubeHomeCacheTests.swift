@@ -69,3 +69,28 @@ struct YouTubeHomeCacheTests {
         #expect(later.recommended.isEmpty)
     }
 }
+
+struct ActiveChannelTests {
+    private let google = Channel(id: "UCaaaaaaaaaaaaaaaaaaaaaa", title: "Mine", description: "",
+                                 thumbnailURL: nil, handle: "@Mine")
+
+    @Test("The channel id decides when youtube.com gives one")
+    func comparesIDs() {
+        #expect(!ActiveChannel(id: google.id, handle: "@other", name: nil).differs(from: google))
+        #expect(ActiveChannel(id: "UCbbbbbbbbbbbbbbbbbbbbbb", handle: "@mine", name: nil).differs(from: google))
+    }
+
+    @Test("Without an id, handles are compared regardless of case and @")
+    func comparesHandles() {
+        #expect(!ActiveChannel(id: nil, handle: "mine", name: nil).differs(from: google))
+        #expect(ActiveChannel(id: nil, handle: "@someone", name: "Mine").differs(from: google))
+    }
+
+    @Test("Nothing to compare is not a mismatch")
+    func staysQuietWhenUnsure() {
+        #expect(!ActiveChannel(id: nil, handle: nil, name: "Someone").differs(from: google))
+        var noHandle = google
+        noHandle.handle = nil
+        #expect(!ActiveChannel(id: nil, handle: "@someone", name: nil).differs(from: noHandle))
+    }
+}

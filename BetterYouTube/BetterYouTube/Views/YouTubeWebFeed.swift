@@ -213,6 +213,13 @@ private struct YouTubeWebPage {
             Task { @MainActor in await PlayerManager.shared.open(videoId: videoId) }
         }
 
+        /// Switching channel happens on this page, from YouTube's own account menu, and ends in a
+        /// fresh load of it: each load says again which channel it is.
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            guard interceptsVideoTaps else { return }
+            Task { await YouTubeWebSession.shared.readActiveChannel(in: webView) }
+        }
+
         // Account links can request a new window. A representable has no browser window to
         // create, so load that request in the visible web view instead of leaving it blank.
         func webView(

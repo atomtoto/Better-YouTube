@@ -35,6 +35,8 @@ struct Channel: Identifiable, Codable, Equatable, Hashable, Sendable {
     let thumbnailURL: URL?
     var subscriberCount: Int?
     var videoCount: Int?
+    /// `@handle`, where the API gave one: only `channels.list` does.
+    var handle: String? = nil
 }
 
 /// A video as it sits inside a playlist.
@@ -142,6 +144,8 @@ struct YTResourceId: Decodable {
 
 struct YTSnippet: Decodable {
     let title: String?
+    /// A channel's `@handle`.
+    let customUrl: String?
     let categoryId: String?
     let description: String?
     let channelId: String?
@@ -304,6 +308,7 @@ extension Channel {
         self.thumbnailURL = resource.snippet?.thumbnails?.bestURL
         self.subscriberCount = resource.statistics?.subscriberCount.flatMap { Int($0) }
         self.videoCount = resource.statistics?.videoCount.flatMap { Int($0) }
+        self.handle = resource.snippet?.customUrl
     }
 
     init?(searchItem: YTSearchItem) {
