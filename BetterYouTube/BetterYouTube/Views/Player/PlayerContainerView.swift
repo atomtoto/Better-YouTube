@@ -54,6 +54,9 @@ struct PlayerContainerView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var downloads: DownloadStore
     @EnvironmentObject private var downloadManager: DownloadManager
+    /// The screen's safe area. Full screen, the player is laid out over all of it and sees none,
+    /// so it is measured outside — see `RootTabView`.
+    private let screenSafeArea: EdgeInsets
     /// The pull-down that shrinks the expanded player back into the bar.
     @State private var drag = PlayerDragState()
     /// The separate flick that expands or dismisses the docked bar.
@@ -80,9 +83,23 @@ struct PlayerContainerView: View {
     #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @AppStorage(SearchTabPreference.storageKey) private var searchInTabBar = false
+    @AppStorage(FullScreenControlsPlacement.storageKey) private var controlsPlacement = FullScreenControlsPlacement.clearOfCamera
     #endif
 
     private let metrics = PlayerMetrics()
+
+    init(screenSafeArea: EdgeInsets = EdgeInsets()) {
+        self.screenSafeArea = screenSafeArea
+    }
+
+    /// Whether Settings brings the full-screen controls close to the sides, beside the camera.
+    private var controlsReachEdges: Bool {
+        #if os(iOS)
+        controlsPlacement == .nearEdges
+        #else
+        false
+        #endif
+    }
 
     #if os(iOS)
     /// The phone on its side, which is what puts the video full screen. A compact height is
@@ -126,7 +143,9 @@ struct PlayerContainerView: View {
                 isFullScreen: player.isFullScreen,
                 fillsScreen: fillsScreen,
                 pinchMagnification: pinchMagnification,
-                clearsSearchButton: clearsSearchButton
+                clearsSearchButton: clearsSearchButton,
+                screenSafeArea: screenSafeArea,
+                controlsReachEdges: controlsReachEdges
             )
             playerBody(in: layout)
                 .offset(y: barDragOffset)
@@ -205,8 +224,8 @@ struct PlayerContainerView: View {
                 // and before the controls, which stay where they are.
                 .scaleEffect(layout.videoZoom)
                 // Full screen, the controls take the whole screen — its dim and its taps reach
-                // the bars beside the picture too — and keep their buttons to the fitted picture,
-                // clear of the notch, even when the video is zoomed to fill the screen. YouTube's
+                // the bars beside the picture too — with their buttons out by its sides, clear of
+                // the camera, whether or not the video is zoomed to fill the screen. YouTube's
                 // own controls and macOS's are in the video itself, and need none of these.
                 .overlay {
                     if player.isExpanded, !player.isSystemFullScreen, player.controls == .app {
@@ -219,7 +238,8 @@ struct PlayerContainerView: View {
                             fillsScreen: $fillsScreen,
                             pinchMagnification: $pinchMagnification,
                             fillZoom: layout.fillZoom,
-                            horizontalInset: layout.controlsHorizontalInset
+                            horizontalInset: layout.controlsHorizontalInset,
+                            fullScreenMargins: layout.controlsMargins
                         )
                         .frame(width: controls.width, height: controls.height)
                         .opacity(chromeOpacity(expansion: expansion))
@@ -738,6 +758,10 @@ private struct PlayerLayout {
     let pinchMagnification: CGFloat?
     /// Set while Search is a button of its own at the end of the tab bar's row.
     let clearsSearchButton: Bool
+    /// The screen's own safe area, which the player's geometry doesn't see full screen.
+    let screenSafeArea: EdgeInsets
+    /// Full screen, the controls come close to the sides of the screen, beside the camera.
+    let controlsReachEdges: Bool
 
     /// How far the pill stops short of the trailing edge, on top of the usual inset.
     private func trailingClearance(at compactness: CGFloat) -> CGFloat {
@@ -919,10 +943,29 @@ private struct PlayerLayout {
         isFullScreen ? CGRect(origin: .zero, size: size) : expandedVideoFrame
     }
 
-    /// Full screen, how far the controls' buttons stay from the sides: to the edges of the fitted
-    /// picture — the part of the screen it always covers, clear of the notch.
+    /// Full screen, how far in from the sides what sits halfway up the picture stays — a double
+    /// tap's skip — and a Mac's controls: to the edges of the fitted picture, the part of the
+    /// screen it always covers, clear of the camera.
     var controlsHorizontalInset: CGFloat {
         isFullScreen ? max(0, (size.width - fittedFrame.width) / 2) : 0
+    }
+
+    /// Full screen on a phone or an iPad, how far the title, the buttons and the progress bar
+    /// stay from the sides of the screen, whether or not the video fills it: just clear of the
+    /// camera, at the edge of the safe area — or, when Settings asks, close to the sides, beside
+    /// the camera, which sits halfway up the side, away from them.
+    var controlsMargins: EdgeInsets {
+        // Far enough in that the title clears the screen's rounded corners.
+        let nearEdge: CGFloat = 24
+        if controlsReachEdges {
+            return EdgeInsets(top: 0, leading: nearEdge, bottom: 0, trailing: nearEdge)
+        }
+        return EdgeInsets(
+            top: 0,
+            leading: max(nearEdge, screenSafeArea.leading),
+            bottom: 0,
+            trailing: max(nearEdge, screenSafeArea.trailing)
+        )
     }
 
     /// How far the video travels between the bar and full screen — and therefore how far the

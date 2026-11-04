@@ -269,6 +269,28 @@ enum FullScreenPlayerPreference: String, CaseIterable, Identifiable {
     }
 }
 
+/// Settings → Playback → Full Screen → Controls: how close to the sides of the screen this app's
+/// full-screen controls — the title, the buttons and the progress bar — come, whether or not the
+/// video fills the screen.
+enum FullScreenControlsPlacement: String, CaseIterable, Identifiable {
+    /// Just clear of the camera, at the edge of iOS's safe area, as in iOS's own player — the
+    /// default.
+    case clearOfCamera
+    /// Closer still, beside the camera, which sits halfway up the side, away from them.
+    case nearEdges
+
+    static let storageKey = "full_screen_controls_placement"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .clearOfCamera: return String(localized: "Clear of the Camera")
+        case .nearEdges: return String(localized: "Near the Edges")
+        }
+    }
+}
+
 /// Settings → Playback → Hold to Speed Up: touching and holding the right half of the video — or,
 /// on a Mac, holding the mouse down on it — plays it at double speed until let go, as YouTube
 /// does. On unless turned off.

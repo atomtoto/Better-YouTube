@@ -12,6 +12,9 @@ struct RootTabView: View {
     /// its field away, and a search survives switching sections on a Mac.
     @StateObject private var search = SearchViewModel()
     @State private var showsOnboarding = false
+    /// The screen's safe area — the camera's side and the home indicator's strip. The player,
+    /// laid out over all of it in full screen, has no other way to know where they are.
+    @State private var screenSafeArea = EdgeInsets()
     @AppStorage(OnboardingProgress.startedKey) private var hasStartedOnboarding = false
     @AppStorage(OnboardingProgress.completedKey) private var hasCompletedOnboarding = false
     #if os(iOS)
@@ -37,13 +40,14 @@ struct RootTabView: View {
             // Lives above every tab so playback survives navigation and tab switches. It keeps
             // its place when the keyboard comes up — in Search, that means the keyboard covers
             // it rather than shoving it up the screen.
-            PlayerContainerView()
+            PlayerContainerView(screenSafeArea: screenSafeArea)
                 .ignoresKeyboardInset()
                 // Full screen, the player takes the notch's side and the home indicator's strip
                 // too. Set aside here rather than inside the player: there it had no effect, and
                 // the video stopped short of the bottom with wider bars at its sides.
                 .ignoresSafeArea(.container, edges: player.isFullScreen ? .all : [])
         }
+        .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { screenSafeArea = $0 }
         .sheet(isPresented: $showsOnboarding) {
             OnboardingView {
                 hasCompletedOnboarding = true

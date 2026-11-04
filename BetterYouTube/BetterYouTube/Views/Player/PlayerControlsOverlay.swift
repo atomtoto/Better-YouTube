@@ -33,9 +33,12 @@ struct PlayerControlsOverlay: View {
     @Binding var pinchMagnification: CGFloat?
     /// How much the video is scaled up when it fills the screen.
     var fillZoom: CGFloat = 1
-    /// How far in from the sides the buttons sit, beyond their usual margin. Full screen, the
-    /// controls span the screen but keep their buttons over the fitted picture.
+    /// Full screen, how far in from the sides the fitted picture starts: where a double tap's
+    /// skip shows, and a Mac's controls sit.
     var horizontalInset: CGFloat = 0
+    /// Full screen on a phone or an iPad, how far the title, the buttons and the progress bar
+    /// stay from the sides of the screen.
+    var fullScreenMargins = EdgeInsets()
 
     @AppStorage(HoldToSpeedUpPreference.storageKey) private var holdsToSpeedUp = true
     @AppStorage(SkipIntervalPreference.backKey) private var storedSkipBack = SkipIntervalPreference.defaultSeconds
@@ -268,7 +271,8 @@ struct PlayerControlsOverlay: View {
                 Spacer(minLength: 0)
                 bottomBar
             }
-            .padding(.horizontal, (isFullScreen ? 20 : 12) + horizontalInset)
+            .padding(.leading, isFullScreen ? fullScreenMargins.leading : 12)
+            .padding(.trailing, isFullScreen ? fullScreenMargins.trailing : 12)
             .padding(.top, isFullScreen ? 16 : 8)
             .padding(.bottom, isFullScreen ? 18 : 2)
         }
@@ -321,16 +325,17 @@ struct PlayerControlsOverlay: View {
         }
     }
 
-    /// Back, play or pause, forward — in the middle of the picture, as in every video player.
+    /// Back, play or pause, forward — in the middle of the picture, as in every video player, and
+    /// bigger full screen, where there is the room.
     private var transport: some View {
         GlassEffectContainer {
-            HStack(spacing: 28) {
+            HStack(spacing: isFullScreen ? 40 : 28) {
                 Button {
                     skip(by: -Double(skipBack))
                 } label: {
                     Image(systemName: "gobackward.\(skipBack)")
-                        .font(.title3)
-                        .padding(4)
+                        .font(isFullScreen ? .title : .title3)
+                        .padding(isFullScreen ? 6 : 4)
                 }
                 .accessibilityLabel("Back \(skipBack) Seconds")
 
@@ -346,9 +351,9 @@ struct PlayerControlsOverlay: View {
                                 .contentTransition(.symbolEffect(.replace))
                         }
                     }
-                    .font(.title)
-                    .frame(width: 36, height: 36)
-                    .padding(8)
+                    .font(isFullScreen ? .largeTitle : .title)
+                    .frame(width: isFullScreen ? 46 : 36, height: isFullScreen ? 46 : 36)
+                    .padding(isFullScreen ? 10 : 8)
                 }
                 .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
 
@@ -356,8 +361,8 @@ struct PlayerControlsOverlay: View {
                     skip(by: Double(skipForward))
                 } label: {
                     Image(systemName: "goforward.\(skipForward)")
-                        .font(.title3)
-                        .padding(4)
+                        .font(isFullScreen ? .title : .title3)
+                        .padding(isFullScreen ? 6 : 4)
                 }
                 .accessibilityLabel("Forward \(skipForward) Seconds")
             }

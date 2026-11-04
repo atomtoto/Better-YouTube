@@ -157,6 +157,7 @@ private struct PlaybackSection: View {
     @AppStorage(PlayerControlsPreference.storageKey) private var playerControls = PlayerControlsPreference.app
     #if os(iOS)
     @AppStorage(FullScreenPlayerPreference.storageKey) private var fullScreenPlayer = FullScreenPlayerPreference.app
+    @AppStorage(FullScreenControlsPlacement.storageKey) private var fullScreenControlsPlacement = FullScreenControlsPlacement.clearOfCamera
     @AppStorage(BackgroundPlaybackPreference.storageKey) private var playsInBackground = true
     @AppStorage(AutoPictureInPicturePreference.storageKey) private var startsPictureInPicture = false
     #endif
@@ -201,6 +202,19 @@ private struct PlaybackSection: View {
             Text("Full Screen")
         } footer: {
             Text(fullScreenPlayer.summary)
+        }
+
+        // Only a phone has a camera on the side of the screen to keep clear of.
+        if fullScreenPlayer == .app, UIDevice.current.userInterfaceIdiom == .phone {
+            Section {
+                Picker("Controls", selection: $fullScreenControlsPlacement) {
+                    ForEach(FullScreenControlsPlacement.allCases) { placement in
+                        Text(placement.title).tag(placement)
+                    }
+                }
+            } footer: {
+                Text("Where the title, the buttons and the progress bar go in full screen. Clear of the Camera keeps them where iOS's own player has them; Near the Edges brings them close to the sides of the screen, beside the camera.")
+            }
         }
         #endif
 

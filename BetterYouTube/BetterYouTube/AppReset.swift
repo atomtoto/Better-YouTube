@@ -48,6 +48,7 @@ enum AppReset {
         UserDefaults.standard.removeObject(forKey: SkipIntervalPreference.forwardKey)
         UserDefaults.standard.removeObject(forKey: PlayerControlsPreference.storageKey)
         UserDefaults.standard.removeObject(forKey: FullScreenPlayerPreference.storageKey)
+        UserDefaults.standard.removeObject(forKey: FullScreenControlsPlacement.storageKey)
         UserDefaults.standard.removeObject(forKey: BackgroundPlaybackPreference.storageKey)
         UserDefaults.standard.removeObject(forKey: AutoPictureInPicturePreference.storageKey)
         UserDefaults.standard.removeObject(forKey: SettingsTabPreference.storageKey)

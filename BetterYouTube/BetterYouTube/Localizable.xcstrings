@@ -6660,6 +6660,46 @@
           }
         }
       }
+    },
+    "Controls" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commandes"
+          }
+        }
+      }
+    },
+    "Clear of the Camera" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À l’écart de l’appareil photo"
+          }
+        }
+      }
+    },
+    "Near the Edges" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Près des bords"
+          }
+        }
+      }
+    },
+    "Where the title, the buttons and the progress bar go in full screen. Clear of the Camera keeps them where iOS's own player has them; Near the Edges brings them close to the sides of the screen, beside the camera." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Où vont le titre, les boutons et la barre de lecture en plein écran. « À l’écart de l’appareil photo » les place là où le lecteur d’iOS met les siens ; « Près des bords » les rapproche des côtés de l’écran, à côté de l’appareil photo."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
