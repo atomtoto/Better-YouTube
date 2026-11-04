@@ -197,6 +197,9 @@ struct PlayerContainerView: View {
                         style: .continuous
                     )
                 )
+                // After the clip, which would otherwise crop the zoom back to the fitted frame,
+                // and before the controls, which stay where they are.
+                .scaleEffect(layout.fillZoom)
                 // Full screen, the controls take the whole screen — its dim and its taps reach
                 // the bars beside the picture too — and keep their buttons to the fitted picture,
                 // clear of the notch, even when the video is zoomed to fill the screen. YouTube's
@@ -860,14 +863,22 @@ private struct PlayerLayout {
     }
 
     /// The video full screen: the biggest 16:9 the screen holds, centred in it — height-bound in
-    /// landscape, so the video grows to the full height and leaves black to either side — or,
-    /// zoomed to fill, the smallest 16:9 that covers the screen, cropped at its edges.
-    private var fullScreenVideoFrame: CGRect {
-        fillsScreen ? centred16by9(scale: max(size.width / 16, size.height / 9)) : fittedFrame
-    }
+    /// landscape, so the video grows to the full height and leaves black to either side. Zoomed
+    /// to fill, it keeps this frame and is scaled up — see `fillZoom`.
+    private var fullScreenVideoFrame: CGRect { fittedFrame }
 
     private var fittedFrame: CGRect {
         centred16by9(scale: min(size.width / 16, size.height / 9))
+    }
+
+    /// Full screen and zoomed to fill, how much the fitted video is scaled up to cover the screen,
+    /// cropped at its edges; 1 otherwise. Scaled rather than resized, like the morph into the bar:
+    /// re-laying out the web view on every frame of the zoom is what made it stutter.
+    var fillZoom: CGFloat {
+        guard isFullScreen, fillsScreen else { return 1 }
+        let fitted = min(size.width / 16, size.height / 9)
+        guard fitted > 0 else { return 1 }
+        return max(size.width / 16, size.height / 9) / fitted
     }
 
     private func centred16by9(scale: CGFloat) -> CGRect {
