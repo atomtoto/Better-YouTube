@@ -12,7 +12,9 @@ import Security
 /// login keychain rather than the app's own, and the user is asked for a password the first time
 /// the app reads back something it wrote itself. With it, both platforms use the same keychain
 /// with the same semantics — which is also what makes an item follow the app rather than the Mac
-/// it was signed on, and why the macOS build is sandboxed (see `BetterYouTube-macOS.entitlements`).
+/// it was signed on. The price is an `application-identifier`: without one every write fails with
+/// errSecMissingEntitlement, and on a Mac only a provisioning profile brings it, which is what the
+/// `keychain-access-groups` entry in `BetterYouTube-macOS.entitlements` is there for.
 ///
 /// Every item is `AfterFirstUnlock`: the app has to be able to refresh a token from a background
 /// task, which runs with the device locked.

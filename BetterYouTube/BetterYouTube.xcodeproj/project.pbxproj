@@ -65,6 +65,7 @@
 		BEEFB1000000000000000000 /* DownloadConfigLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFF1000000000000000000 /* DownloadConfigLinkTests.swift */; };
 		BEEFB2000000000000000000 /* DurationFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFF2000000000000000000 /* DurationFormatterTests.swift */; };
 		BEEFB3000000000000000000 /* TakeoutPlaylistCSVTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFF3000000000000000000 /* TakeoutPlaylistCSVTests.swift */; };
+		BEEFB4000000000000000000 /* KeychainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEFF4000000000000000000 /* KeychainTests.swift */; };
 		BF90A7E4C3175D350C572ED8 /* DownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D29E2556D0A833F15A04D6B0 /* DownloadService.swift */; };
 		C5F04AFA84BF255122D02CF1 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61454B909858AA3CBDB6C50B /* NotificationsView.swift */; };
 		C6BACBED1D1C50E9026BAEAC /* DownloadConfigLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ECDDB993DD4C6CDAA43CDB3 /* DownloadConfigLink.swift */; };
@@ -222,6 +223,7 @@
 		BEEFF1000000000000000000 /* DownloadConfigLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadConfigLinkTests.swift; sourceTree = "<group>"; };
 		BEEFF2000000000000000000 /* DurationFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DurationFormatterTests.swift; sourceTree = "<group>"; };
 		BEEFF3000000000000000000 /* TakeoutPlaylistCSVTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeoutPlaylistCSVTests.swift; sourceTree = "<group>"; };
+		BEEFF4000000000000000000 /* KeychainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTests.swift; sourceTree = "<group>"; };
 		BEEFPRODUCT0000000000000 /* BetterYouTubeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BetterYouTubeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C2B3D4E5F60718293A4B5C6D /* Platform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Platform.swift; sourceTree = "<group>"; };
 		C41F60B8D2A93E571806C4BD /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
@@ -423,6 +425,7 @@
 				BEEFF1000000000000000000 /* DownloadConfigLinkTests.swift */,
 				BEEFF2000000000000000000 /* DurationFormatterTests.swift */,
 				BEEFF3000000000000000000 /* TakeoutPlaylistCSVTests.swift */,
+				BEEFF4000000000000000000 /* KeychainTests.swift */,
 			);
 			path = BetterYouTubeTests;
 			sourceTree = "<group>";
@@ -678,6 +681,7 @@
 				BEEFB1000000000000000000 /* DownloadConfigLinkTests.swift in Sources */,
 				BEEFB2000000000000000000 /* DurationFormatterTests.swift in Sources */,
 				BEEFB3000000000000000000 /* TakeoutPlaylistCSVTests.swift in Sources */,
+				BEEFB4000000000000000000 /* KeychainTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

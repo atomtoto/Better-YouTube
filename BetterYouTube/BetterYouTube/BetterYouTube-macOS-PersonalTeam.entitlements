@@ -4,19 +4,25 @@
 <!-- The Mac build for a free "Personal Team": everything in BetterYouTube-macOS.entitlements
      but iCloud and push, which such a team can't sign. -->
 <dict>
-	<!-- The Mac build runs in the App Sandbox. Three reasons, in order of how much they matter:
+	<!-- The Mac build runs in the App Sandbox. Two reasons:
 
 	     1. It is what a signed Mac app that talks to the internet and holds an OAuth token
 	        should be doing at all.
 	     2. It gives the app a container of its own, so Documents/Downloads on a Mac means the
-	        same thing it means on a phone — the app's own folder, not the user's.
-	     3. It is what gets the app an `application-identifier`, and therefore a keychain access
-	        group of its own. `KeychainStore` asks for the data-protection keychain on macOS
-	        (see `kSecUseDataProtectionKeychain` there), which needs one; without it the token
-	        would land in the login keychain and the user would be asked for their password the
-	        first time the app read its own credentials back. -->
+	        same thing it means on a phone — the app's own folder, not the user's. -->
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+
+	<!-- The keychain the Google and resolver tokens are kept in. `Keychain` asks for the
+	     data-protection keychain on macOS, which refuses every write from an app without an
+	     `application-identifier` (errSecMissingEntitlement). That identifier only comes with a
+	     provisioning profile, and the sandbox doesn't make Xcode embed one: this entry does, with
+	     any team, a free one included. The group is the app's own identifier, the one items go
+	     to by default anyway. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	</array>
 
 	<!-- Everything the app fetches: the Data API, YouTube's pages, the thumbnails, and the
 	     download resolver. Nothing listens. -->
