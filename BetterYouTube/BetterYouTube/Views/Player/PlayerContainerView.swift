@@ -64,6 +64,9 @@ struct PlayerContainerView: View {
     /// Full screen, the video zoomed to fill the screen — cropped at its edges — rather than
     /// fitted inside it. Pinched in and out, as in the YouTube app, and kept for the session.
     @State private var fillsScreen = false
+    /// While a pinch is under way full screen, how far it has gone, for the video to follow the
+    /// fingers; nil the rest of the time.
+    @State private var pinchMagnification: CGFloat?
     #if os(iOS)
     @State private var menuSwitchRequest = MiniPlayerMenuSwitchRequest()
     #endif
@@ -122,6 +125,7 @@ struct PlayerContainerView: View {
                 horizontalDrag: horizontalDrag,
                 isFullScreen: player.isFullScreen,
                 fillsScreen: fillsScreen,
+                pinchMagnification: pinchMagnification,
                 clearsSearchButton: clearsSearchButton
             )
             playerBody(in: layout)
@@ -199,7 +203,7 @@ struct PlayerContainerView: View {
                 )
                 // After the clip, which would otherwise crop the zoom back to the fitted frame,
                 // and before the controls, which stay where they are.
-                .scaleEffect(layout.fillZoom)
+                .scaleEffect(layout.videoZoom)
                 // Full screen, the controls take the whole screen — its dim and its taps reach
                 // the bars beside the picture too — and keep their buttons to the fitted picture,
                 // clear of the notch, even when the video is zoomed to fill the screen. YouTube's
@@ -213,6 +217,8 @@ struct PlayerContainerView: View {
                             isFullScreen: player.isFullScreen,
                             locksCollapse: $drag.isLocked,
                             fillsScreen: $fillsScreen,
+                            pinchMagnification: $pinchMagnification,
+                            fillZoom: layout.fillZoom,
                             horizontalInset: layout.controlsHorizontalInset
                         )
                         .frame(width: controls.width, height: controls.height)
@@ -728,6 +734,8 @@ private struct PlayerLayout {
     let isFullScreen: Bool
     /// Full screen, the video zoomed to cover the screen rather than fitted inside it.
     let fillsScreen: Bool
+    /// While a pinch is under way, how far it has gone.
+    let pinchMagnification: CGFloat?
     /// Set while Search is a button of its own at the end of the tab bar's row.
     let clearsSearchButton: Bool
 
@@ -864,21 +872,39 @@ private struct PlayerLayout {
 
     /// The video full screen: the biggest 16:9 the screen holds, centred in it — height-bound in
     /// landscape, so the video grows to the full height and leaves black to either side. Zoomed
-    /// to fill, it keeps this frame and is scaled up — see `fillZoom`.
+    /// to fill, it keeps this frame and is scaled up — see `videoZoom`.
     private var fullScreenVideoFrame: CGRect { fittedFrame }
 
     private var fittedFrame: CGRect {
         centred16by9(scale: min(size.width / 16, size.height / 9))
     }
 
-    /// Full screen and zoomed to fill, how much the fitted video is scaled up to cover the screen,
-    /// cropped at its edges; 1 otherwise. Scaled rather than resized, like the morph into the bar:
-    /// re-laying out the web view on every frame of the zoom is what made it stutter.
+    /// Full screen, how much the fitted video has to be scaled up to cover the screen, cropped at
+    /// its edges; 1 when it isn't full screen.
     var fillZoom: CGFloat {
-        guard isFullScreen, fillsScreen else { return 1 }
         let fitted = min(size.width / 16, size.height / 9)
-        guard fitted > 0 else { return 1 }
+        guard isFullScreen, fitted > 0 else { return 1 }
         return max(size.width / 16, size.height / 9) / fitted
+    }
+
+    /// How much the video is scaled up: `fillZoom` zoomed to fill, 1 fitted, and under a pinch
+    /// wherever the fingers take it — past either end only reluctantly, as a scroll view goes
+    /// past its edge. Scaled rather than resized, like the morph into the bar: re-laying out the
+    /// web view on every frame of the zoom is what made it stutter.
+    var videoZoom: CGFloat {
+        let settled = fillsScreen ? fillZoom : 1
+        guard isFullScreen, let pinchMagnification else { return settled }
+        let zoom = settled * pinchMagnification
+        if zoom > fillZoom { return fillZoom * (1 + rubberBand(zoom / fillZoom - 1)) }
+        if zoom < 1 { return 1 - rubberBand(1 - zoom) }
+        return zoom
+    }
+
+    /// How far past its end a pinch shows, for how far past it the fingers went: about half of
+    /// it at first, then less and less, and never more than a tenth.
+    private func rubberBand(_ overshoot: CGFloat) -> CGFloat {
+        let limit: CGFloat = 0.1
+        return (1 - 1 / (overshoot * 0.55 / limit + 1)) * limit
     }
 
     private func centred16by9(scale: CGFloat) -> CGRect {

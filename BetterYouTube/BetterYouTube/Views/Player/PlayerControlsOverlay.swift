@@ -29,6 +29,10 @@ struct PlayerControlsOverlay: View {
     /// Full screen, the video zoomed to fill the screen. A pinch out zooms it, a pinch in fits it
     /// back, as in the YouTube app.
     @Binding var fillsScreen: Bool
+    /// How far the pinch under way has gone, which the video follows; nil between pinches.
+    @Binding var pinchMagnification: CGFloat?
+    /// How much the video is scaled up when it fills the screen.
+    var fillZoom: CGFloat = 1
     /// How far in from the sides the buttons sit, beyond their usual margin. Full screen, the
     /// controls span the screen but keep their buttons over the fitted picture.
     var horizontalInset: CGFloat = 0
@@ -45,6 +49,7 @@ struct PlayerControlsOverlay: View {
     @State private var isMenuOpen = false
     @State private var skipFeedback: SkipFeedback?
     @GestureState private var isHolding = false
+    @GestureState private var isPinching = false
     /// When a hold to speed up last ended. The finger lifting from it also ends a tap, which
     /// mustn't then hide or show the controls.
     @State private var holdEndedAt: Date?
@@ -146,7 +151,13 @@ struct PlayerControlsOverlay: View {
         .onChange(of: isMenuOpen) { _, open in
             if open { hideTask?.cancel() } else { scheduleHide() }
         }
+        .onChange(of: isPinching) { _, pinching in
+            // A pinch cut short, without its fingers lifting, puts the video back as it was.
+            guard !pinching, pinchMagnification != nil else { return }
+            withAnimation(.snappy) { pinchMagnification = nil }
+        }
         .onDisappear {
+            pinchMagnification = nil
             locksCollapse = false
             hideTask?.cancel()
             player.endSpeedingUp()
@@ -209,13 +220,25 @@ struct PlayerControlsOverlay: View {
     }
     #endif
 
+    /// The video follows the fingers, and when they lift settles on whichever of fitted and
+    /// filled it is nearer — carried on a little by how fast they were going, so a quick flick
+    /// is enough.
     private var zoom: some Gesture {
         MagnifyGesture()
+            .updating($isPinching) { _, state, _ in state = true }
+            .onChanged { value in
+                guard fillZoom > 1.01 else { return }
+                pinchMagnification = value.magnification
+            }
             .onEnded { value in
-                guard value.magnification > 1.15 || value.magnification < 0.87 else { return }
-                let fills = value.magnification > 1
-                guard fills != fillsScreen else { return }
-                withAnimation(.snappy) { fillsScreen = fills }
+                guard fillZoom > 1.01 else { return }
+                let settled: CGFloat = fillsScreen ? fillZoom : 1
+                let projected = settled * (value.magnification + value.velocity * 0.1)
+                let fills = projected > (1 + fillZoom) / 2
+                withAnimation(.snappy) {
+                    fillsScreen = fills
+                    pinchMagnification = nil
+                }
             }
     }
 
@@ -223,7 +246,8 @@ struct PlayerControlsOverlay: View {
         LongPressGesture(minimumDuration: 0.4)
             .sequenced(before: DragGesture(minimumDistance: 0))
             .updating($isHolding) { value, state, _ in
-                guard holdsToSpeedUp, case .second(true, _) = value else { return }
+                // A pinch isn't a hold, even with one of its fingers kept still.
+                guard holdsToSpeedUp, !isPinching, case .second(true, _) = value else { return }
                 state = true
             }
     }
