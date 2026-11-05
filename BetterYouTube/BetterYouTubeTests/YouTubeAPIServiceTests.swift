@@ -232,6 +232,27 @@ struct YouTubeAPIServiceTests {
         _ = try await stub.service.video(id: "x")
     }
 
+    @Test("comments carry the account when there is one, and are read with the key when not")
+    func commentsUseTheAccountIfThere() async throws {
+        let signedIn = StubAPI(accessToken: "token")
+        signedIn.respond(to: "commentThreads") { request in
+            #expect(request.authorization == "Bearer token")
+            return Fixture.json(["items": []])
+        }
+        _ = try await signedIn.service.comments(videoId: "x", order: .relevance, pageToken: nil)
+
+        // Signed in, with Google out of reach for the token's renewal: the key still reads them.
+        let unrenewed = StubAPI(renewalFailed: true)
+        let key = unrenewed.apiKey
+        unrenewed.respond(to: "commentThreads") { request in
+            #expect(request.authorization == nil)
+            #expect(request.query["key"] == key)
+            return Fixture.json(["items": []])
+        }
+        _ = try await unrenewed.service.comments(videoId: "x", order: .relevance, pageToken: nil)
+        #expect(unrenewed.requests.count == 1)
+    }
+
     // MARK: Channel playlists
 
     @Test("a channel's playlists page through with their counts")
@@ -325,7 +346,7 @@ final class StubAPI: @unchecked Sendable {
     private var recordedRequests: [StubRequest] = []
     private var recordedCharges: [Charge] = []
 
-    init(apiKey: String = "test-\(UUID().uuidString)", renewalFailed: Bool = false) {
+    init(apiKey: String = "test-\(UUID().uuidString)", accessToken: String? = nil, renewalFailed: Bool = false) {
         self.apiKey = apiKey
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
@@ -333,7 +354,7 @@ final class StubAPI: @unchecked Sendable {
         let box = WeakBox()
         service = YouTubeAPIService(
             session: URLSession(configuration: configuration),
-            credentials: { .init(accessToken: nil, apiKey: routeKey, renewalFailed: renewalFailed) },
+            credentials: { .init(accessToken: accessToken, apiKey: routeKey, renewalFailed: renewalFailed) },
             recordSpend: { units, endpoint in box.stub?.record(Charge(units: units, endpoint: endpoint)) }
         )
         box.stub = self

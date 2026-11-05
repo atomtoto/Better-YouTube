@@ -185,12 +185,16 @@ actor YouTubeAPIService {
 
     // MARK: - Request plumbing
 
+    /// `usesAccountIfThere` sends the account along when there is one, without requiring it.
     private func request<T: Decodable>(
         path: String,
         query: [String: String],
-        requiresAuth: Bool = false
+        requiresAuth: Bool = false,
+        usesAccountIfThere: Bool = false
     ) async throws -> T {
-        let data = try await perform(makeRequest(path: path, query: query, requiresAuth: requiresAuth))
+        let data = try await perform(makeRequest(
+            path: path, query: query, requiresAuth: requiresAuth, usesAccountIfThere: usesAccountIfThere
+        ))
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
@@ -266,7 +270,8 @@ actor YouTubeAPIService {
     private func makeRequest(
         path: String,
         query: [String: String],
-        requiresAuth: Bool
+        requiresAuth: Bool,
+        usesAccountIfThere: Bool = false
     ) async throws -> URLRequest {
         let credentials = await credentials()
         let token = credentials.accessToken
@@ -301,7 +306,7 @@ actor YouTubeAPIService {
         // perfectly public call carrying a Bearer token can be refused 403 for lack of a
         // permission the call never needed. Comments and search are the ones that bite, and they
         // run on every video opened.
-        if let token, requiresAuth || key.isEmpty {
+        if let token, requiresAuth || usesAccountIfThere || key.isEmpty {
             urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         return urlRequest
@@ -557,8 +562,11 @@ actor YouTubeAPIService {
         maxResults: Int = 20,
         pageToken: String?
     ) async throws -> Page<VideoComment> {
-        // viewerRating belongs to the account: a key-only request always reads it as "none".
-        let hasAccount = await GoogleAuthService.shared.isSignedIn
+        // viewerRating belongs to the account: a key-only request always reads it as "none". So
+        // the account goes along when this service has one — but isn't required: without a token,
+        // signed out or with Google out of reach for its renewal, the key still reads the
+        // comments. This used to ask whether the app was signed in rather than whether there was
+        // a token to send, and failed the comments outright whenever the two disagreed.
         var query = [
             "part": "snippet",
             "videoId": videoId,
@@ -570,7 +578,7 @@ actor YouTubeAPIService {
         let response: YTListResponse<YTCommentThreadItem> = try await request(
             path: "commentThreads",
             query: query,
-            requiresAuth: hasAccount
+            usesAccountIfThere: true
         )
         return Page(items: response.items.map(VideoComment.init(thread:)), nextPageToken: response.nextPageToken)
     }
