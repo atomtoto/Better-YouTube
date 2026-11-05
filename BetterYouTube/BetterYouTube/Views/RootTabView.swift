@@ -7,7 +7,7 @@ struct RootTabView: View {
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var notificationStore: NotificationStore
-    @EnvironmentObject private var player: PlayerManager
+    // No player here: see `PlayerLayer`.
     /// Search's state, held here so links and Siri can run a search, leaving the search tab can put
     /// its field away, and a search survives switching sections on a Mac.
     @StateObject private var search = SearchViewModel()
@@ -19,10 +19,6 @@ struct RootTabView: View {
     @AppStorage(OnboardingProgress.completedKey) private var hasCompletedOnboarding = false
     #if os(iOS)
     @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
-    @AppStorage(SearchTabPreference.storageKey) private var searchInTabBar = false
-    /// Where the tab bar's row starts, in window coordinates. A tab's content is the one place
-    /// that knows: its bottom safe area is the tab bar plus the home indicator.
-    @State private var tabBarTop = CGFloat.infinity
     #endif
 
     var body: some View {
@@ -31,23 +27,21 @@ struct RootTabView: View {
                 #if os(macOS)
                 sidebarSections
                 #else
-                tabs
+                AppTabs(search: search, unreadCount: notificationStore.unreadCount)
+                    .equatable()
                 #endif
             }
             // Every screen starts over when a demo begins or ends: what they hold in memory
             // belongs to the library and account being swapped out.
             .id(demo.isActive)
-            // Lives above every tab so playback survives navigation and tab switches. It keeps
-            // its place when the keyboard comes up — in Search, that means the keyboard covers
-            // it rather than shoving it up the screen.
-            PlayerContainerView(screenSafeArea: screenSafeArea)
-                .ignoresKeyboardInset()
-                // Full screen, the player takes the notch's side and the home indicator's strip
-                // too. Set aside here rather than inside the player: there it had no effect, and
-                // the video stopped short of the bottom with wider bars at its sides.
-                .ignoresSafeArea(.container, edges: player.isFullScreen ? .all : [])
+            PlayerLayer(screenSafeArea: screenSafeArea)
         }
-        .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { screenSafeArea = $0 }
+        // Only the sides: the player has no use for the bottom, which the keyboard changes.
+        .onGeometryChange(for: EdgeInsets.self) {
+            EdgeInsets(top: 0, leading: $0.safeAreaInsets.leading, bottom: 0, trailing: $0.safeAreaInsets.trailing)
+        } action: {
+            screenSafeArea = $0
+        }
         .sheet(isPresented: $showsOnboarding) {
             OnboardingView {
                 hasCompletedOnboarding = true
@@ -61,7 +55,6 @@ struct RootTabView: View {
         .onOpenURL { url in
             router.open(url)
         }
-        .handsOffPlayback(player)
         .onAppear {
             presentOnboardingIfNeeded()
         }
@@ -108,7 +101,7 @@ struct RootTabView: View {
             router.pendingVideoId = nil
             // A tapped notification is in the inbox, which already knows the title and channel.
             let known = notificationStore.items.first { $0.videoId == videoId }?.video
-            Task { await player.open(videoId: videoId, fallback: known) }
+            Task { await PlayerManager.shared.open(videoId: videoId, fallback: known) }
         }
         #if os(iOS)
         .onChange(of: showsSettingsTab) { _, visible in
@@ -131,10 +124,95 @@ struct RootTabView: View {
         showsOnboarding = true
     }
 
-    /// Whichever section is selected, in its own navigation stack. Shared by both shapes below,
-    /// so a screen never has to know whether it was reached from a tab or from a sidebar row.
-    @ViewBuilder
-    private func screen(for tab: AppRouter.Tab) -> some View {
+#if os(macOS)
+
+    /// The Mac's shape: the same four sections as a source list down the side.
+    ///
+    /// A `TabView` on macOS becomes a row of segments across the top of the window, which is a
+    /// preferences pane rather than an app. A sidebar is where a Mac app of this shape — Music,
+    /// Podcasts, TV — puts its sections, and it leaves the top of the window to the screen's own
+    /// title and toolbar.
+    private var sidebarSections: some View {
+        NavigationSplitView {
+            // A source list's selection is optional — clicking the empty space below the rows
+            // clears it — while the app always has a section open. Dropping the nil rather than
+            // acting on it is what keeps those two facts from disagreeing.
+            List(selection: Binding(
+                get: { Optional(router.selectedTab) },
+                set: { if let tab = $0 { router.selectedTab = tab } }
+            )) {
+                Label("Home", systemImage: "play.circle.fill")
+                    .badge(notificationStore.unreadCount)
+                    .tag(AppRouter.Tab.home)
+                Label("Search", systemImage: "magnifyingglass")
+                    .tag(AppRouter.Tab.search)
+                Label("Library", systemImage: "rectangle.stack.badge.play.fill")
+                    .tag(AppRouter.Tab.library)
+                // No Settings row: on a Mac it is a window, opened with ⌘, from the app menu
+                // like every other Mac app's. See the `Settings` scene in `BetterYouTubeApp`.
+            }
+            .navigationSplitViewColumnWidth(min: 178, ideal: 205, max: 280)
+        } detail: {
+            SectionScreen(tab: router.selectedTab, search: search)
+        }
+        // The docked player floats over the bottom of the window rather than sitting in a tab
+        // bar's row, so the content underneath is given its height to keep clear of. Without
+        // this the last row of every list hides behind the bar.
+        .safeAreaInset(edge: .bottom) {
+            DockedPlayerClearance()
+        }
+    }
+
+#endif
+}
+
+/// The player that lives above every screen, so playback survives navigation and tab switches.
+///
+/// A view of its own because it watches the player, which at times changes several times a
+/// second: watched by the root view, every change drew the root again, and with it the tab bar
+/// handed its tabs again — which took the open section off the screen and dropped the scroll
+/// under the finger. Only this is drawn again now.
+private struct PlayerLayer: View {
+    let screenSafeArea: EdgeInsets
+    @EnvironmentObject private var player: PlayerManager
+
+    var body: some View {
+        PlayerContainerView(screenSafeArea: screenSafeArea)
+            // It keeps its place when the keyboard comes up — in Search, that means the keyboard
+            // covers it rather than shoving it up the screen.
+            .ignoresKeyboardInset()
+            // Full screen, the player takes the notch's side and the home indicator's strip too.
+            // Set aside here rather than inside the player: there it had no effect, and the video
+            // stopped short of the bottom with wider bars at its sides.
+            .ignoresSafeArea(.container, edges: player.isFullScreen ? .all : [])
+            .handsOffPlayback(player)
+    }
+}
+
+#if os(macOS)
+/// Room under the sections for the docked player while there is one. A view of its own so that
+/// only it is drawn again as the player changes — see `PlayerLayer`.
+private struct DockedPlayerClearance: View {
+    @EnvironmentObject private var player: PlayerManager
+
+    var body: some View {
+        Color.clear.frame(height: player.currentVideo == nil ? 0 : 84)
+    }
+}
+#endif
+
+/// Whichever section is selected, in its own navigation stack. Shared by the tab bar and the
+/// Mac's sidebar, so a screen never has to know whether it was reached from a tab or from a
+/// sidebar row.
+private struct SectionScreen: View {
+    let tab: AppRouter.Tab
+    let search: SearchViewModel
+    @EnvironmentObject private var router: AppRouter
+    #if os(iOS)
+    @AppStorage(SearchTabPreference.storageKey) private var searchInTabBar = false
+    #endif
+
+    var body: some View {
         switch tab {
         case .home:
             NavigationStack(path: $router.homePath) { HomeView() }
@@ -151,15 +229,45 @@ struct RootTabView: View {
             NavigationStack { SettingsView() }
         }
     }
+}
 
 #if os(iOS)
+/// The tab bar and the sections in it, in a view of its own so it is drawn again only when what
+/// it shows changes.
+///
+/// Each time the tab view is drawn again, SwiftUI hands UIKit its tabs again, and UIKit takes the
+/// open section off the screen and puts it back. Drawn along with the root view — whenever the
+/// player changed, several times a second while the docked bar follows the tab bar — that
+/// cancelled a scroll under the finger the moment the tab bar minimized; and in Search, whose tab
+/// bar sits minimized, putting the section back grew the tab bar, the docked bar grew with it,
+/// and the two never settled. A reference and a count, which is all this takes, compare equal
+/// across the root's redraws, so SwiftUI leaves it alone. Nothing here watches the player.
+///
+/// Compared by hand: SwiftUI's own comparison finds every new copy different, by the box
+/// `tabBarTop` starts with. What it watches itself — the router, the two settings — still draws
+/// it again when they change.
+private struct AppTabs: View, Equatable {
+    let search: SearchViewModel
+    let unreadCount: Int
+    @EnvironmentObject private var router: AppRouter
+    @AppStorage(SettingsTabPreference.storageKey) private var showsSettingsTab = false
+    @AppStorage(SearchTabPreference.storageKey) private var searchInTabBar = false
+    /// Where the tab bar's row starts, in window coordinates. A tab's content is the one place
+    /// that knows: its bottom safe area is the tab bar plus the home indicator. Kept where
+    /// changing it draws nothing again — it changes as the tab bar minimizes, mid-scroll — since
+    /// it is only read when the tab bar is touched.
+    @State private var tabBarTop = TabBarTop()
 
-    private var tabs: some View {
+    nonisolated static func == (lhs: AppTabs, rhs: AppTabs) -> Bool {
+        lhs.search === rhs.search && lhs.unreadCount == rhs.unreadCount
+    }
+
+    var body: some View {
         TabView(selection: $router.selectedTab) {
             Tab("Home", systemImage: "play.circle.fill", value: AppRouter.Tab.home) {
                 tab(.home)
             }
-            .badge(notificationStore.unreadCount)
+            .badge(unreadCount)
 
             // By default the search role lifts Search out of the bar into a button of its own at
             // the end, which turns into the search field along the bottom when selected — in
@@ -189,62 +297,32 @@ struct RootTabView: View {
         // Touching the shrunk tab bar brings it back without any scroll, which the player bar
         // has no other way to hear about when the tab bar's state can't be read. See
         // `PassiveTap` for why it isn't a SwiftUI gesture.
-        .gesture(PassiveTap { location in
-            if location.y >= tabBarTop { player.tabBarWasTouched() }
+        .gesture(PassiveTap { [tabBarTop] location in
+            if location.y >= tabBarTop.y { PlayerManager.shared.tabBarWasTouched() }
         })
+        // The keyboard is each section's to make room for, which it does on its own. Made room
+        // for here as well, the tab view was laid out again as the keyboard came up and handed
+        // UIKit its tabs again, which took the search field's focus, put the keyboard away, and
+        // gave the field its focus back — over and over, as long as Search was open.
+        .ignoresSafeArea(.keyboard)
     }
 
     /// A section's screen, measuring where the tab bar's row starts on the way.
     private func tab(_ tab: AppRouter.Tab) -> some View {
-        screen(for: tab)
+        SectionScreen(tab: tab, search: search)
             .onGeometryChange(for: CGFloat.self) { proxy in
                 proxy.frame(in: .global).maxY - proxy.safeAreaInsets.bottom
-            } action: { top in
-                tabBarTop = top
+            } action: { [tabBarTop] top in
+                tabBarTop.y = top
             }
     }
-
-#else
-
-    /// The Mac's shape: the same four sections as a source list down the side.
-    ///
-    /// A `TabView` on macOS becomes a row of segments across the top of the window, which is a
-    /// preferences pane rather than an app. A sidebar is where a Mac app of this shape — Music,
-    /// Podcasts, TV — puts its sections, and it leaves the top of the window to the screen's own
-    /// title and toolbar.
-    private var sidebarSections: some View {
-        NavigationSplitView {
-            // A source list's selection is optional — clicking the empty space below the rows
-            // clears it — while the app always has a section open. Dropping the nil rather than
-            // acting on it is what keeps those two facts from disagreeing.
-            List(selection: Binding(
-                get: { Optional(router.selectedTab) },
-                set: { if let tab = $0 { router.selectedTab = tab } }
-            )) {
-                Label("Home", systemImage: "play.circle.fill")
-                    .badge(notificationStore.unreadCount)
-                    .tag(AppRouter.Tab.home)
-                Label("Search", systemImage: "magnifyingglass")
-                    .tag(AppRouter.Tab.search)
-                Label("Library", systemImage: "rectangle.stack.badge.play.fill")
-                    .tag(AppRouter.Tab.library)
-                // No Settings row: on a Mac it is a window, opened with ⌘, from the app menu
-                // like every other Mac app's. See the `Settings` scene in `BetterYouTubeApp`.
-            }
-            .navigationSplitViewColumnWidth(min: 178, ideal: 205, max: 280)
-        } detail: {
-            screen(for: router.selectedTab)
-        }
-        // The docked player floats over the bottom of the window rather than sitting in a tab
-        // bar's row, so the content underneath is given its height to keep clear of. Without
-        // this the last row of every list hides behind the bar.
-        .safeAreaInset(edge: .bottom) {
-            Color.clear.frame(height: player.currentVideo == nil ? 0 : 84)
-        }
-    }
-
-#endif
 }
+
+/// See `AppTabs.tabBarTop`.
+private final class TabBarTop {
+    var y = CGFloat.infinity
+}
+#endif
 
 #if os(iOS)
 /// A tap anywhere, heard without taking the touch from whatever it lands on.

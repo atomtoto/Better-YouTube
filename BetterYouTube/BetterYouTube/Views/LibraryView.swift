@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Apple Music-style library: category rows on top, recently watched artwork underneath.
 struct LibraryView: View {
-    @EnvironmentObject private var player: PlayerManager
+    private var player: PlayerManager { .shared }
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var watchLater: WatchLaterStore
     @EnvironmentObject private var auth: GoogleAuthService

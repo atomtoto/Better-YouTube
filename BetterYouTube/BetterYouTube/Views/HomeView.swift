@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @EnvironmentObject private var player: PlayerManager
+    private var player: PlayerManager { .shared }
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var notificationStore: NotificationStore

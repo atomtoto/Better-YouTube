@@ -8,7 +8,7 @@ struct NotificationsView: View {
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var watchLater: WatchLaterStore
     @State private var saveError: String?
-    @EnvironmentObject private var player: PlayerManager
+    private var player: PlayerManager { .shared }
     @Environment(\.dismiss) private var dismiss
 
     @State private var isRefreshing = false

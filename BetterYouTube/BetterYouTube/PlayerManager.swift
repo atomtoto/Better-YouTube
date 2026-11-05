@@ -128,6 +128,10 @@ final class PlaybackProgress: ObservableObject {
 /// file, so the player looks and behaves the same whichever of the two is playing.
 @MainActor
 final class PlayerManager: ObservableObject {
+    /// The one player. A screen that only tells it what to play reaches it here rather than
+    /// observing it: observed, the screen is drawn again with every change to the player —
+    /// several a second while the docked bar follows the tab bar, in the middle of a scroll.
+    /// Observe it only to show what it is doing.
     static let shared = PlayerManager()
 
     @Published private(set) var currentVideo: Video?

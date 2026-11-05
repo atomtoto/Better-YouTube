@@ -7,7 +7,7 @@ import SwiftUI
 /// What is still *coming*, or stopped, or went wrong, sits underneath with the buttons to do
 /// something about it.
 struct DownloadsView: View {
-    @EnvironmentObject private var player: PlayerManager
+    private var player: PlayerManager { .shared }
     @EnvironmentObject private var store: DownloadStore
     @EnvironmentObject private var manager: DownloadManager
     @EnvironmentObject private var settings: DownloadSettings

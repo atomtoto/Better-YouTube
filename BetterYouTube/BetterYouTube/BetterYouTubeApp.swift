@@ -16,21 +16,15 @@ struct BetterYouTubeApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     #endif
 
-    @StateObject private var apiKeyStore = APIKeyStore.shared
-    @StateObject private var library = LibraryStore.shared
-    @StateObject private var watchLater = WatchLaterStore.shared
-    @StateObject private var auth = GoogleAuthService.shared
-    @StateObject private var recentSearches = RecentSearchStore.shared
-    @StateObject private var notificationStore = NotificationStore.shared
-    @StateObject private var notifications = NotificationService.shared
-    @StateObject private var router = AppRouter.shared
-    @StateObject private var player = PlayerManager.shared
-    @StateObject private var quota = QuotaTracker.shared
-    @StateObject private var webSession = YouTubeWebSession.shared
-    @StateObject private var downloadStore = DownloadStore.shared
-    @StateObject private var downloadManager = DownloadManager.shared
-    @StateObject private var downloadSettings = DownloadSettings.shared
-    @StateObject private var cloudSync = ICloudSyncService.shared
+    // The stores the scene itself calls on. Every store is a singleton that lives as long as the
+    // app, so they are reached rather than held as `@StateObject`s: held, each of them was
+    // observed here, and any change to any of them — a download's progress, the docked player
+    // shrinking as the tab bar does — drew the whole scene again, tab bar and all. Views watch
+    // what they show themselves, through `appEnvironment`.
+    private var player: PlayerManager { .shared }
+    private var router: AppRouter { .shared }
+    private var notifications: NotificationService { .shared }
+    private var cloudSync: ICloudSyncService { .shared }
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -102,8 +96,8 @@ struct BetterYouTubeApp: App {
 ///
 /// It exists because macOS has two scenes — the window and Settings — and a scene inherits
 /// nothing from its neighbour, so this list would otherwise be written out twice and drift. Every
-/// store here is the same singleton the `@StateObject` properties above hold; those keep the
-/// objects alive for the app's lifetime, this puts them where views can find them.
+/// store here is a singleton that lives as long as the app; this puts them where views can find
+/// them.
 private extension View {
     func appEnvironment() -> some View {
         self

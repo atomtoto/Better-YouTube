@@ -2,10 +2,21 @@ import Foundation
 
 @MainActor
 final class SearchViewModel: ObservableObject {
-    @Published var query: String = ""
+    /// The text in the field.
+    ///
+    /// This and `isPresented` are announced only when they change. The search field writes both
+    /// back whenever it is drawn, changed or not, and `@Published` announces every write: in the
+    /// search tab, that drew the search screen again, which handed the tab bar its tabs again,
+    /// which drew the field again — a loop that never stopped, kept the processor busy and made
+    /// the tab bar and the docked player flicker.
+    var query: String = "" {
+        willSet { if newValue != query { objectWillChange.send() } }
+    }
     /// Whether the search field is up. Leaving the search tab by a link — a channel opening in
     /// Home, say — puts it away, or it would stay open over the screen arrived at.
-    @Published var isPresented = false
+    var isPresented = false {
+        willSet { if newValue != isPresented { objectWillChange.send() } }
+    }
     @Published private(set) var results: [SearchResult] = []
     @Published private(set) var isSearching = false
     @Published private(set) var hasSearched = false

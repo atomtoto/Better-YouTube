@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ChannelView: View {
-    @EnvironmentObject private var player: PlayerManager
+    private var player: PlayerManager { .shared }
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var notificationStore: NotificationStore
     @EnvironmentObject private var notifications: NotificationService

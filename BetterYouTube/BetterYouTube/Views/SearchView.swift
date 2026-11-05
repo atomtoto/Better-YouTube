@@ -4,7 +4,7 @@ import SwiftUI
 /// turns into it, and in the window's toolbar on a Mac. Opening the tab raises the keyboard and
 /// shows recent searches — nothing is fetched until you ask.
 struct SearchView: View {
-    @EnvironmentObject private var player: PlayerManager
+    private var player: PlayerManager { .shared }
     @EnvironmentObject private var recents: RecentSearchStore
     /// Owned by the root view, which runs searches from links and Siri and puts the field away
     /// when a link leaves the search tab.

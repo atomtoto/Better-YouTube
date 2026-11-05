@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Reusable list of videos, used for "See All" destinations and every library category.
 struct VideoListView: View {
-    @EnvironmentObject private var player: PlayerManager
+    private var player: PlayerManager { .shared }
     let title: LocalizedStringKey
     let videos: [Video]
     var onDelete: ((IndexSet) -> Void)?
@@ -227,7 +227,7 @@ struct PlaylistCardView: View {
 
 /// Videos inside a playlist, fetched via `playlistItems.list` (1 quota unit).
 struct PlaylistDetailView: View {
-    @EnvironmentObject private var player: PlayerManager
+    private var player: PlayerManager { .shared }
     @StateObject private var viewModel: PlaylistViewModel
 
     init(playlist: Playlist) {
