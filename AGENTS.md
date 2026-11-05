@@ -3,6 +3,13 @@ Ask clarifying questions whenever my requests are ambiguous.
 Prefer committing and pushing directly to `main`.
 Avoid creating unnecessary long docs/README.
 
+# Simulators
+Several agents may work on this Mac at the same time. Share the simulators carefully:
+- Before using a simulator, run `xcrun simctl list devices booted`. A booted simulator you did not boot in this session belongs to another agent: don't install, launch, erase, shut down or drive anything on it.
+- Pick another simulator instead (an available one that is shut down, or `xcrun simctl clone` if none fits), and target it by UDID in every command (`-destination 'id=<UDID>'`, `simctl … <UDID>`), never `booted`.
+- Keep the Mac responsive: no more than two simulators booted at once, and one `xcodebuild` build/test at a time. If that limit is reached, wait for the other agent to finish instead of booting more.
+- Shut down the simulators you booted (and delete the ones you cloned) when you are done.
+
 # SwiftUI Native-First Design
 
 When building or modifying the UI of this app, follow a **native-first SwiftUI approach**.
