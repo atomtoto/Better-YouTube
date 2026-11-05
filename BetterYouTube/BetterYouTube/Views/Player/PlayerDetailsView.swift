@@ -249,6 +249,10 @@ struct PlayerDetailsView: View {
             if let url = displayed.watchURL {
                 Link("Open in YouTube", destination: url)
                     .font(.subheadline.weight(.semibold))
+                    // Out of the app, to the YouTube app or the browser. The details' own link
+                    // handling keeps YouTube links in the app, and took this one — the video on
+                    // screen — for a jump back to its start, so the button seemed to do nothing.
+                    .environment(\.openURL, OpenURLAction { _ in .systemAction })
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
