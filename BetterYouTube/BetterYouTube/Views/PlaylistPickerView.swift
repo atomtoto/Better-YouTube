@@ -35,7 +35,7 @@ struct PlaylistPickerView: View {
                     Section {
                         Text(errorMessage).foregroundStyle(.red)
                         if mutatingID == nil, auth.isSignedIn {
-                            Button("Reload Playlists") { Task { await load() } }
+                            Button("Reload Playlists") { Task { await load(forceRefresh: true) } }
                         }
                     }
                 }
@@ -66,6 +66,19 @@ struct PlaylistPickerView: View {
             .navigationTitle("Add to Playlist")
             .inlineNavigationBar()
             .toolbar {
+                if auth.isSignedIn {
+                    ToolbarItem(placement: .primaryAction) {
+                        if loading && !playlists.isEmpty {
+                            ProgressView("Loading playlists…")
+                                .labelsHidden()
+                        } else {
+                            Button("Refresh", systemImage: "arrow.clockwise") {
+                                Task { await load(forceRefresh: true) }
+                            }
+                            .disabled(loading || !checkingPlaylistIDs.isEmpty || mutatingID != nil)
+                        }
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                         .disabled(mutatingID != nil)
@@ -163,7 +176,7 @@ struct PlaylistPickerView: View {
                         }
                         .padding(.vertical, 4)
                     }
-                    .disabled(mutatingID != nil || isChecking)
+                    .disabled(loading || mutatingID != nil || isChecking)
                     .accessibilityAddTraits(isContained ? .isSelected : [])
                 }
 
@@ -235,7 +248,7 @@ struct PlaylistPickerView: View {
         if !loading, playlists.isEmpty, errorMessage == nil {
             Text("No custom playlists found. Create one on YouTube, then reload.")
                 .foregroundStyle(.secondary)
-            Button("Reload Playlists") { Task { await load() } }
+            Button("Reload Playlists") { Task { await load(forceRefresh: true) } }
         }
     }
 
@@ -264,14 +277,35 @@ struct PlaylistPickerView: View {
         }
     }
 
-    private func load() async {
-        guard auth.isSignedIn else { playlists = []; loading = false; return }
+    private func load(forceRefresh: Bool = false) async {
+        guard auth.isSignedIn else {
+            playlists = []
+            containedPlaylistIDs = []
+            checkingPlaylistIDs = []
+            cachedItemIDs = [:]
+            loading = false
+            return
+        }
         loading = true
         errorMessage = nil
         defer { loading = false }
         do {
-            let fetched = try await YouTubeAPIService.shared.myPlaylists()
+            // Library already keeps the account's own playlists and clears them on account changes.
+            // Demo data must never be mixed with the signed-in account's cache.
+            let cache: AccountLibraryCache? = DemoMode.isRunning ? nil : .shared
+            let cached: [Playlist]? = forceRefresh ? nil : cache?.load(.ownedPlaylists)
+            let allPlaylists: [Playlist]
+            if let cached {
+                allPlaylists = cached
+            } else {
+                allPlaylists = try await YouTubeAPIService.shared.myPlaylists()
+                guard !Task.isCancelled, auth.isSignedIn else { return }
+                cache?.save(allPlaylists, as: .ownedPlaylists)
+            }
+            let fetched = allPlaylists
                 .filter { $0.id != "WL" && $0.id != "HL" && $0.id != "LL" }
+            containedPlaylistIDs = []
+            cachedItemIDs = [:]
             playlists = fetched
 
             if let video = singleVideo, isSingleVideo {
@@ -287,7 +321,7 @@ struct PlaylistPickerView: View {
                             return (playlist.id, items)
                         }
                     }
-                    for await (playlistId, items) in group {
+                    for await (playlistId, items) in group where !Task.isCancelled {
                         _ = withAnimation {
                             checkingPlaylistIDs.remove(playlistId)
                         }
@@ -437,6 +471,6 @@ struct PlaylistPickerView: View {
             }
             .padding(.vertical, 4)
         }
-        .disabled(mutatingID != nil || savedID != nil)
+        .disabled((loading && id != "WL") || mutatingID != nil || savedID != nil)
     }
 }
