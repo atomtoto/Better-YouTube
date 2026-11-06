@@ -6,6 +6,7 @@ struct PlaylistPickerView: View {
     @EnvironmentObject private var auth: GoogleAuthService
     @EnvironmentObject private var watchLater: WatchLaterStore
     @Environment(\.dismiss) private var dismiss
+    @ScaledMetric(relativeTo: .body) private var artworkWidth: CGFloat = 64
     @State private var playlists: [Playlist] = []
     @State private var loading = true
     @State private var containedPlaylistIDs: Set<String> = []
@@ -86,18 +87,21 @@ struct PlaylistPickerView: View {
     private var headerSection: some View {
         Section {
             if isSingleVideo, let video = singleVideo {
-                Text(video.title)
-                    .font(.headline)
-                    .lineLimit(2)
-                Text("Tap a playlist to add or remove this video.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(video.title)
+                        .font(.headline)
+                    Text("Tap a playlist to add or remove this video.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             } else {
-                Text("\(videos.count) videos from Google Takeout")
-                    .font(.headline)
-                Text("Choose the destination. Custom playlists use the Google account connected in Settings.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(videos.count) videos from Google Takeout")
+                        .font(.headline)
+                    Text("Choose the destination. Custom playlists use the Google account connected in Settings.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -128,14 +132,13 @@ struct PlaylistPickerView: View {
                     }
                 }
                 .disabled(mutatingID != nil)
+                .accessibilityAddTraits(watchLater.contains(video) ? .isSelected : [])
             }
         }
 
         if auth.isSignedIn {
-            Section {
-                if loading {
-                    ProgressView("Loading playlists…")
-                }
+            Section("Playlists") {
+                playlistLoadingState
                 ForEach(playlists) { playlist in
                     let isContained = containedPlaylistIDs.contains(playlist.id)
                     let isChecking = checkingPlaylistIDs.contains(playlist.id)
@@ -143,8 +146,7 @@ struct PlaylistPickerView: View {
                         Task { await toggle(playlist: playlist) }
                     } label: {
                         HStack(spacing: 12) {
-                            Label(playlist.title, systemImage: "music.note.list")
-                                .foregroundStyle(.primary)
+                            playlistDetails(playlist)
                             Spacer()
                             if mutatingID == playlist.id || isChecking {
                                 ProgressView()
@@ -159,14 +161,13 @@ struct PlaylistPickerView: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
+                        .padding(.vertical, 4)
                     }
                     .disabled(mutatingID != nil || isChecking)
+                    .accessibilityAddTraits(isContained ? .isSelected : [])
                 }
 
-                if !loading, playlists.isEmpty, errorMessage == nil {
-                    Text("No custom playlists found. Create one on YouTube, then reload.")
-                    Button("Reload Playlists") { Task { await load() } }
-                }
+                emptyPlaylistState
             }
         } else {
             Section {
@@ -185,23 +186,26 @@ struct PlaylistPickerView: View {
     @ViewBuilder
     private var bulkImportPlaylistSections: some View {
         if watchLater.usesYouTubeWatchLater {
-            destinationButton(id: "WL", title: String(localized: "Watch Later"), systemImage: "clock") {
-                await saveBulkToWatchLater()
+            Section {
+                destinationButton(id: "WL") {
+                    Label("Watch Later", systemImage: "clock")
+                } action: {
+                    await saveBulkToWatchLater()
+                }
             }
         }
 
         if auth.isSignedIn {
-            if loading {
-                ProgressView("Loading playlists…")
-            }
-            ForEach(playlists) { playlist in
-                destinationButton(id: playlist.id, title: playlist.title, systemImage: "music.note.list") {
-                    await saveBulk(to: playlist)
+            Section("Playlists") {
+                playlistLoadingState
+                ForEach(playlists) { playlist in
+                    destinationButton(id: playlist.id) {
+                        playlistDetails(playlist)
+                    } action: {
+                        await saveBulk(to: playlist)
+                    }
                 }
-            }
-            if !loading, playlists.isEmpty, errorMessage == nil {
-                Text("No custom playlists found. Create one on YouTube, then reload.")
-                Button("Reload Playlists") { Task { await load() } }
+                emptyPlaylistState
             }
         } else {
             Section {
@@ -213,6 +217,49 @@ struct PlaylistPickerView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 OpenSettingsButton()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var playlistLoadingState: some View {
+        if loading, playlists.isEmpty {
+            ProgressView("Loading playlists…")
+                .frame(maxWidth: .infinity)
+                .padding(.vertical)
+        }
+    }
+
+    @ViewBuilder
+    private var emptyPlaylistState: some View {
+        if !loading, playlists.isEmpty, errorMessage == nil {
+            Text("No custom playlists found. Create one on YouTube, then reload.")
+                .foregroundStyle(.secondary)
+            Button("Reload Playlists") { Task { await load() } }
+        }
+    }
+
+    private func playlistDetails(_ playlist: Playlist) -> some View {
+        HStack(spacing: 12) {
+            Group {
+                if let url = playlist.thumbnailURL {
+                    ArtworkView(url: url)
+                } else {
+                    Image(systemName: "music.note.list")
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .frame(width: artworkWidth, height: artworkWidth * 9 / 16)
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(playlist.title)
+                    .foregroundStyle(.primary)
+                if let count = playlist.itemCount {
+                    Text("\(count) videos")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -229,6 +276,7 @@ struct PlaylistPickerView: View {
 
             if let video = singleVideo, isSingleVideo {
                 checkingPlaylistIDs = Set(fetched.map(\.id))
+                loading = false
                 await withTaskGroup(of: (String, [String]).self) { group in
                     for playlist in fetched {
                         group.addTask {
@@ -373,21 +421,21 @@ struct PlaylistPickerView: View {
         savedID = "WL"
     }
 
-    private func destinationButton(
+    private func destinationButton<Label: View>(
         id: String,
-        title: String,
-        systemImage: String,
+        @ViewBuilder label: () -> Label,
         action: @escaping @MainActor () async -> Void
     ) -> some View {
         Button { Task { await action() } } label: {
             HStack {
-                Label(title, systemImage: systemImage)
+                label()
                 Spacer()
-                if mutatingID == id { ProgressView() }
+                if mutatingID == id { ProgressView().controlSize(.small) }
                 if savedID == id {
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                 }
             }
+            .padding(.vertical, 4)
         }
         .disabled(mutatingID != nil || savedID != nil)
     }
