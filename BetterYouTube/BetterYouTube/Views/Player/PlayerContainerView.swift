@@ -86,6 +86,11 @@ struct PlayerContainerView: View {
     @AppStorage(FullScreenControlsPlacement.storageKey) private var controlsPlacement = FullScreenControlsPlacement.clearOfCamera
     #endif
 
+    @State private var showsActions = false
+    @GestureState private var actionDrag: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     private let metrics = PlayerMetrics()
 
     init(screenSafeArea: EdgeInsets = EdgeInsets()) {
@@ -175,7 +180,10 @@ struct PlayerContainerView: View {
         }
         .onChange(of: player.currentVideo?.id) { _, _ in
             expandedScrollOffset = 0
+            showsActions = false
         }
+        .onChange(of: player.controls) { _, _ in showsActions = false }
+        .onChange(of: player.isFullScreen) { _, _ in showsActions = false }
         .onChange(of: miniPlayerStyle) { _, style in
             // The Settings picker can change the same preference while the player is visible.
             guard displayedMiniPlayerStyle != style else { return }
@@ -192,6 +200,15 @@ struct PlayerContainerView: View {
         let video = layout.expandedVideoFrame
         let scale = layout.videoScale(expansion: expansion)
         let center = layout.videoCenter(expansion: expansion)
+
+        let hasActions = player.isExpanded && player.isFullScreen && !player.isSystemFullScreen && player.controls == .app
+        let travel = min(180, max(80, layout.size.height * 0.32))
+        let reveal = hasActions ? min(1, max(0, (showsActions ? 1 : 0) + actionDrag / travel)) : 0
+        #if os(macOS)
+        let panelWidth = min(350, layout.size.width * 0.42)
+        let previewProgress = reduceMotion ? (showsActions && hasActions ? 1.0 : 0.0) : reveal
+        let previewScale = 1 - previewProgress * (panelWidth + 20) / max(1, layout.size.width)
+        #endif
 
         ZStack(alignment: .topLeading) {
             // 1. Backdrops — drawn under the video surface. Black full screen, so the bars
@@ -239,9 +256,15 @@ struct PlayerContainerView: View {
                             pinchMagnification: $pinchMagnification,
                             fillZoom: layout.fillZoom,
                             horizontalInset: layout.controlsHorizontalInset,
-                            fullScreenMargins: layout.controlsMargins
+                            fullScreenMargins: layout.controlsMargins,
+                            showsActions: showsActions,
+                            toggleActions: { setActionsShown(!showsActions) }
                         )
                         .frame(width: controls.width, height: controls.height)
+                        #if os(iOS)
+                        .opacity(1 - reveal)
+                        .accessibilityHidden(hasActions && showsActions)
+                        #endif
                         .opacity(chromeOpacity(expansion: expansion))
                         .transition(.opacity)
                     }
@@ -257,6 +280,7 @@ struct PlayerContainerView: View {
                 #if os(macOS)
                 // The macOS ScrollView occupies the whole window. Keep the shared video above
                 // its transparent gap so the player's controls still receive clicks.
+                .scaleEffect(previewScale, anchor: .bottomLeading)
                 .zIndex(player.isExpanded ? 1 : 0)
                 #endif
 
@@ -278,6 +302,36 @@ struct PlayerContainerView: View {
                 .offset(y: drag.translation)
                 .opacity(chromeOpacity(expansion: expansion))
                 .transition(.opacity)
+            }
+
+            if hasActions, let item = player.currentVideo {
+                #if os(iOS)
+                Rectangle()
+                    .fill(reduceTransparency ? AnyShapeStyle(.black) : AnyShapeStyle(.regularMaterial))
+                    .environment(\.colorScheme, .dark)
+                    .opacity(reveal * 0.88)
+                    .allowsHitTesting(showsActions)
+                    .onTapGesture { setActionsShown(false) }
+                    .accessibilityHidden(true)
+                    .zIndex(3)
+                #endif
+
+                if reveal > 0 || showsActions {
+                    fullScreenActions(item, reveal: reveal)
+                        #if os(macOS)
+                        .frame(width: panelWidth)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                        #else
+                        .padding(.leading, layout.controlsMargins.leading)
+                        .padding(.trailing, layout.controlsMargins.trailing)
+                        .padding(.bottom, max(20, screenSafeArea.bottom))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                        #endif
+                        .opacity(reveal)
+                        .allowsHitTesting(showsActions)
+                        .accessibilityHidden(!showsActions)
+                        .zIndex(4)
+                }
             }
 
             MiniPlayerControls(
@@ -314,6 +368,7 @@ struct PlayerContainerView: View {
             .zIndex(2)
             #endif
         }
+        .simultaneousGesture(actionGesture(travel: travel, size: layout.size), isEnabled: hasActions)
         #if os(iOS)
         // The native preview lifts the actual player. Keep its mask limited to the docked card;
         // wait for dismissal before changing the layout behind that preview.
@@ -332,6 +387,62 @@ struct PlayerContainerView: View {
             }
         }
         #endif
+    }
+
+    private func setActionsShown(_ shown: Bool) {
+        withAnimation(reduceMotion ? .easeOut(duration: 0.15) : .snappy) { showsActions = shown }
+    }
+
+    private func actionGesture(travel: CGFloat, size: CGSize) -> some Gesture {
+        func accepts(_ value: DragGesture.Value) -> Bool {
+            guard !drag.isLocked, pinchMagnification == nil,
+                  abs(value.translation.height) > abs(value.translation.width) * 1.4 else { return false }
+            #if os(macOS)
+            if showsActions && value.startLocation.x > size.width - min(350, size.width * 0.42) { return false }
+            #endif
+            return true
+        }
+        return DragGesture(minimumDistance: 16)
+            .updating($actionDrag) { value, offset, _ in
+                guard accepts(value) else { return }
+                offset = -value.translation.height
+            }
+            .onEnded { value in
+                guard accepts(value) else { return }
+                let projected = -value.predictedEndTranslation.height / travel
+                if showsActions ? projected < -0.4 : projected > 0.4 { setActionsShown(!showsActions) }
+            }
+    }
+
+    private func fullScreenActions(_ video: Video, reveal: CGFloat) -> some View {
+        let model = VideoDetailViewModel.forVideo(video)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Video Actions").font(.headline)
+                Spacer()
+                Button("Close", systemImage: "xmark") { setActionsShown(false) }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.circle)
+            }
+            #if os(macOS)
+            ViewThatFits(in: .vertical) {
+                PlayerActionRow(viewModel: model, usesGrid: true)
+                    .fixedSize(horizontal: false, vertical: true)
+                ScrollView {
+                    PlayerActionRow(viewModel: model, usesGrid: true)
+                }
+            }
+            #else
+            PlayerActionRow(viewModel: model)
+            #endif
+        }
+        .padding(Theme.Spacing.gutter)
+        .background(.regularMaterial, in: .rect(cornerRadius: 20))
+        .padding(8)
+        .environment(\.colorScheme, .dark)
+        .offset(y: reduceMotion ? 0 : 40 * (1 - reveal))
+        .task(id: showsActions) { if showsActions { await model.loadAll() } }
     }
 
     /// Commit the anchor and clear the translation in the same animation transaction.

@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Video Actions" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actions vidéo"
+          }
+        }
+      }
+    },
     "Edit “%@”" : {
       "localizations" : {
         "fr" : {
@@ -1339,6 +1349,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "L’identifiant client semble correct."
+          }
+        }
+      }
+    },
+    "Close" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer"
           }
         }
       }

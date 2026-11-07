@@ -15,21 +15,14 @@ struct PlayerDetailsView: View {
         let videoHeight: CGFloat
     }
 
-    @EnvironmentObject private var library: LibraryStore
-    @EnvironmentObject private var watchLater: WatchLaterStore
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var router: AppRouter
-    @EnvironmentObject private var downloads: DownloadStore
-    @EnvironmentObject private var downloadManager: DownloadManager
     @StateObject private var viewModel: VideoDetailViewModel
     @State private var isDescriptionExpanded = false
     @State private var newCommentText = ""
-    @State private var watchLaterError: String?
-    @State private var showsPlaylistPicker = false
     @State private var showsComments = false
     @State private var showsChapters = false
     // What the native haptics below are keyed to: each tap moves its counter once.
-    @State private var shareTaps = 0
     @State private var channelTaps = 0
     @State private var seeks = 0
     @State private var commentPosts = 0
@@ -64,14 +57,10 @@ struct PlayerDetailsView: View {
         }
         .environment(\.openURL, linkAction)
         .sensoryFeedback(.selection, trigger: seeks)
-        .sensoryFeedback(.impact(weight: .light), trigger: shareTaps)
         .sensoryFeedback(.impact(weight: .light), trigger: channelTaps)
         .sensoryFeedback(.impact(weight: .light), trigger: isDescriptionExpanded)
         .sensoryFeedback(.impact(weight: .medium), trigger: commentPosts)
         .task { await viewModel.loadAll() }
-        .sheet(isPresented: $showsPlaylistPicker) {
-            PlaylistPickerView(video: displayed)
-        }
         .sheet(isPresented: $showsChapters) {
             NavigationStack {
                 ChapterList(options: player.options, progress: player.progress,
@@ -114,14 +103,6 @@ struct PlayerDetailsView: View {
             .presentationDragIndicator(.visible)
         }
         #endif
-        .alert("Watch Later", isPresented: Binding(
-            get: { watchLaterError != nil },
-            set: { if !$0 { watchLaterError = nil } }
-        )) {
-            Button("OK", role: .cancel) { watchLaterError = nil }
-        } message: {
-            Text(watchLaterError ?? "")
-        }
     }
 
     private var detailsContent: some View {
@@ -210,7 +191,7 @@ struct PlayerDetailsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            actionRow
+            PlayerActionRow(viewModel: viewModel)
             // A video opened from a link before the Data API could be asked has no channel ID,
             // and a row leading to a channel page that can't load is worse than none.
             if !displayed.channelId.isEmpty {
@@ -301,106 +282,6 @@ struct PlayerDetailsView: View {
             parts.append(RelativeDateFormatter.string(from: date))
         }
         return parts.joined(separator: " · ")
-    }
-
-    /// The thumbs-up is the real like — a `videos.rate` write to the account, which is what
-    /// puts the video in Liked videos here and in the YouTube app. The heart beside it is this
-    /// device's own favourites list, which is what the thumbs-up used to be: tapping it looked
-    /// like liking a video on YouTube and never left the phone.
-    private var actionRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    PlayerActionPill(
-                        title: displayed.likeCount.map { CountFormatter.abbreviated($0) } ?? String(localized: "Like"),
-                        systemImage: viewModel.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup",
-                        isActive: viewModel.isLiked,
-                        activeTint: .red,
-                        isBusy: viewModel.isRating
-                    ) {
-                        Task { await viewModel.toggleLike() }
-                    }
-
-                    PlayerActionPill(
-                        title: viewModel.isDisliked ? String(localized: "Dislike") : "",
-                        systemImage: viewModel.isDisliked ? "hand.thumbsdown.fill" : "hand.thumbsdown",
-                        isActive: viewModel.isDisliked,
-                        activeTint: .purple,
-                        isBusy: viewModel.isRating
-                    ) {
-                        Task { await viewModel.toggleDislike() }
-                    }
-                    .accessibilityLabel("Dislike")
-
-                    PlayerActionPill(
-                        title: String(localized: "Favorite"),
-                        systemImage: library.isFavorite(displayed) ? "heart.fill" : "heart",
-                        isActive: library.isFavorite(displayed),
-                        activeTint: .pink,
-                        // Read once the tap has landed: firmer for adding, lighter for removing.
-                        feedback: .impact(weight: library.isFavorite(displayed) ? .medium : .light)
-                    ) {
-                        library.toggleFavorite(displayed)
-                    }
-
-                    PlayerActionPill(
-                        title: String(localized: "Later", comment: "Short button title that adds the video to Watch Later"),
-                        systemImage: watchLater.contains(displayed) ? "clock.fill" : "clock",
-                        isActive: watchLater.contains(displayed),
-                        activeTint: .indigo,
-                        isBusy: watchLater.pendingVideoIDs.contains(displayed.id)
-                    ) {
-                        Task {
-                            await watchLater.toggle(displayed)
-                            watchLaterError = watchLater.errorMessage
-                        }
-                    }
-
-                    PlayerActionPill(
-                        title: String(localized: "Playlist", comment: "Short button title that adds the video to a playlist"),
-                        systemImage: "text.badge.plus",
-                        feedback: .impact(weight: .light)
-                    ) {
-                        showsPlaylistPicker = true
-                    }
-
-                    PlayerDownloadPill(
-                        video: displayed,
-                        store: downloads,
-                        manager: downloadManager
-                    )
-
-                    if let url = displayed.watchURL {
-                        ShareLink(item: url) {
-                            PlayerPillFace(title: String(localized: "Share"), systemImage: "square.and.arrow.up")
-                        }
-                        .buttonStyle(PillButtonStyle())
-                        .simultaneousGesture(TapGesture().onEnded { shareTaps += 1 })
-                    }
-
-                    PlayerActionPill(
-                        title: String(localized: "Picture in Picture"),
-                        systemImage: "pip.enter"
-                    ) {
-                        player.startPictureInPicture()
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-            .scrollIndicators(.hidden)
-            // The row runs out to the edges, so the pills scroll off there rather than vanishing
-            // at the gutter, and still starts in line with the rest of the details.
-            .contentMargins(.horizontal, Theme.Spacing.gutter, for: .scrollContent)
-            .padding(.horizontal, -Theme.Spacing.gutter)
-
-            // Nearly always "sign in with Google", which is the one thing worth saying here.
-            if let ratingError = viewModel.ratingError {
-                Text(ratingError)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
     }
 
     private var channelRow: some View {
@@ -655,6 +536,137 @@ struct PlayerDetailsView: View {
             if await viewModel.addComment(text) {
                 newCommentText = ""
             }
+        }
+    }
+}
+
+struct PlayerActionRow: View {
+    @ObservedObject var viewModel: VideoDetailViewModel
+    var usesGrid = false
+    private var displayed: Video { viewModel.video }
+    @EnvironmentObject private var player: PlayerManager
+    @EnvironmentObject private var library: LibraryStore
+    @EnvironmentObject private var watchLater: WatchLaterStore
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
+    @State private var watchLaterError: String?
+    @State private var showsPlaylistPicker = false
+    @State private var shareTaps = 0
+
+    /// The thumbs-up is the real like — a `videos.rate` write to the account, which is what
+    /// puts the video in Liked videos here and in the YouTube app. The heart beside it is this
+    /// device's own favourites list, which is what the thumbs-up used to be: tapping it looked
+    /// like liking a video on YouTube and never left the phone.
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if usesGrid {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 135), alignment: .leading)], alignment: .leading) {
+                    pills
+                }
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) { pills }
+                        .padding(.vertical, 2)
+                }
+                .contentMargins(.horizontal, Theme.Spacing.gutter, for: .scrollContent)
+                .padding(.horizontal, -Theme.Spacing.gutter)
+            }
+
+            // Nearly always "sign in with Google", which is the one thing worth saying here.
+            if let ratingError = viewModel.ratingError {
+                Text(ratingError)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .sensoryFeedback(.impact(weight: .light), trigger: shareTaps)
+        .sheet(isPresented: $showsPlaylistPicker) {
+            PlaylistPickerView(video: displayed)
+        }
+        .alert("Watch Later", isPresented: Binding(
+            get: { watchLaterError != nil },
+            set: { if !$0 { watchLaterError = nil } }
+        )) {
+            Button("OK", role: .cancel) { watchLaterError = nil }
+        } message: {
+            Text(watchLaterError ?? "")
+        }
+    }
+
+    @ViewBuilder private var pills: some View {
+        PlayerActionPill(
+            title: displayed.likeCount.map { CountFormatter.abbreviated($0) } ?? String(localized: "Like"),
+            systemImage: viewModel.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup",
+            isActive: viewModel.isLiked,
+            activeTint: .red,
+            isBusy: viewModel.isRating
+        ) {
+            Task { await viewModel.toggleLike() }
+        }
+
+        PlayerActionPill(
+            title: viewModel.isDisliked ? String(localized: "Dislike") : "",
+            systemImage: viewModel.isDisliked ? "hand.thumbsdown.fill" : "hand.thumbsdown",
+            isActive: viewModel.isDisliked,
+            activeTint: .purple,
+            isBusy: viewModel.isRating
+        ) {
+            Task { await viewModel.toggleDislike() }
+        }
+        .accessibilityLabel("Dislike")
+
+        PlayerActionPill(
+            title: String(localized: "Favorite"),
+            systemImage: library.isFavorite(displayed) ? "heart.fill" : "heart",
+            isActive: library.isFavorite(displayed),
+            activeTint: .pink,
+            // Read once the tap has landed: firmer for adding, lighter for removing.
+            feedback: .impact(weight: library.isFavorite(displayed) ? .medium : .light)
+        ) {
+            library.toggleFavorite(displayed)
+        }
+
+        PlayerActionPill(
+            title: String(localized: "Later", comment: "Short button title that adds the video to Watch Later"),
+            systemImage: watchLater.contains(displayed) ? "clock.fill" : "clock",
+            isActive: watchLater.contains(displayed),
+            activeTint: .indigo,
+            isBusy: watchLater.pendingVideoIDs.contains(displayed.id)
+        ) {
+            Task {
+                await watchLater.toggle(displayed)
+                watchLaterError = watchLater.errorMessage
+            }
+        }
+
+        PlayerActionPill(
+            title: String(localized: "Playlist", comment: "Short button title that adds the video to a playlist"),
+            systemImage: "text.badge.plus",
+            feedback: .impact(weight: .light)
+        ) {
+            showsPlaylistPicker = true
+        }
+
+        PlayerDownloadPill(
+            video: displayed,
+            store: downloads,
+            manager: downloadManager
+        )
+
+        if let url = displayed.watchURL {
+            ShareLink(item: url) {
+                PlayerPillFace(title: String(localized: "Share"), systemImage: "square.and.arrow.up")
+            }
+            .buttonStyle(PillButtonStyle())
+            .simultaneousGesture(TapGesture().onEnded { shareTaps += 1 })
+        }
+
+        PlayerActionPill(
+            title: String(localized: "Picture in Picture"),
+            systemImage: "pip.enter"
+        ) {
+            player.startPictureInPicture()
         }
     }
 }

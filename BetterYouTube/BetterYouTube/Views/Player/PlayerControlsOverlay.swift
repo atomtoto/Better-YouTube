@@ -40,6 +40,9 @@ struct PlayerControlsOverlay: View {
     /// stay from the sides of the screen.
     var fullScreenMargins = EdgeInsets()
 
+    var showsActions = false
+    var toggleActions: () -> Void = {}
+
     @AppStorage(HoldToSpeedUpPreference.storageKey) private var holdsToSpeedUp = true
     @AppStorage(SkipIntervalPreference.backKey) private var storedSkipBack = SkipIntervalPreference.defaultSeconds
     @AppStorage(SkipIntervalPreference.forwardKey) private var storedSkipForward = SkipIntervalPreference.defaultSeconds
@@ -297,6 +300,10 @@ struct PlayerControlsOverlay: View {
 
             GlassEffectContainer {
                 HStack(spacing: 8) {
+                    if isFullScreen {
+                        Button("Video Actions", systemImage: "ellipsis.circle", action: toggleActions)
+                            .labelStyle(.iconOnly)
+                    }
                     if !options.captions.isEmpty {
                         Button {
                             player.toggleCaptions()
@@ -479,6 +486,9 @@ struct PlayerControlsOverlay: View {
 
                 Spacer(minLength: 12)
 
+                if isFullScreen {
+                    barButton("ellipsis.circle", "Video Actions", action: toggleActions)
+                }
                 if !options.captions.isEmpty {
                     barButton(options.caption == nil ? "captions.bubble" : "captions.bubble.fill",
                               options.caption == nil ? "Turn On Captions" : "Turn Off Captions") {
@@ -562,7 +572,7 @@ struct PlayerControlsOverlay: View {
             skip(by: Double(skipForward), feedback: true)
         case .escape:
             guard isFullScreen else { return .ignored }
-            player.toggleFullScreen()
+            if showsActions { toggleActions() } else { player.toggleFullScreen() }
         default:
             switch press.characters.lowercased() {
             case "k":
