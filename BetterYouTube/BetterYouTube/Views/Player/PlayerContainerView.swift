@@ -305,6 +305,11 @@ struct PlayerContainerView: View {
             }
 
             if hasActions, let item = player.currentVideo {
+                #if os(macOS)
+                TrackpadActionSwipe(panelWidth: showsActions ? panelWidth : 0, setShown: setActionsShown)
+                    .frame(width: layout.size.width, height: layout.size.height)
+                    .allowsHitTesting(false)
+                #endif
                 #if os(iOS)
                 Rectangle()
                     .fill(reduceTransparency ? AnyShapeStyle(.black) : AnyShapeStyle(.regularMaterial))
@@ -1325,3 +1330,61 @@ private struct MiniProgressLine: View {
             .accessibilityHidden(true)
     }
 }
+
+#if os(macOS)
+/// SwiftUI's DragGesture on Mac requires a click. A two-finger swipe arrives as scroll events.
+private struct TrackpadActionSwipe: NSViewRepresentable {
+    let panelWidth: CGFloat
+    let setShown: (Bool) -> Void
+
+    func makeNSView(context: Context) -> Listener { Listener() }
+
+    func updateNSView(_ view: Listener, context: Context) {
+        view.panelWidth = panelWidth
+        view.setShown = setShown
+    }
+
+    static func dismantleNSView(_ view: Listener, coordinator: ()) { view.stop() }
+
+    final class Listener: NSView {
+        var panelWidth: CGFloat = 0
+        var setShown: ((Bool) -> Void)?
+        private var monitor: Any?
+        private var tracking = false
+        private var movement = CGPoint.zero
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            stop()
+            guard window != nil else { return }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+                guard let self, event.window === window, event.hasPreciseScrollingDeltas,
+                      event.momentumPhase.isEmpty else { return event }
+                if event.phase.contains(.began) {
+                    let point = convert(event.locationInWindow, from: nil)
+                    tracking = window?.attachedSheet == nil && bounds.contains(point)
+                        && point.x < bounds.maxX - panelWidth
+                    movement = .zero
+                }
+                guard tracking else { return event }
+                movement.x += event.scrollingDeltaX
+                movement.y += event.scrollingDeltaY * (event.isDirectionInvertedFromDevice ? -1 : 1)
+                if abs(movement.x) > 12 && abs(movement.x) > abs(movement.y) {
+                    tracking = false
+                } else if abs(movement.y) > 36 {
+                    tracking = false
+                    setShown?(movement.y > 0)
+                }
+                if !event.phase.intersection([.ended, .cancelled]).isEmpty { tracking = false }
+                return event
+            }
+        }
+
+        func stop() {
+            if let monitor { NSEvent.removeMonitor(monitor) }
+            monitor = nil
+            tracking = false
+        }
+    }
+}
+#endif
