@@ -1,0 +1,5 @@
+:root { color-scheme: light dark; font: 15px system-ui; }
+body { min-width: 240px; padding: 12px; }
+h1 { font-size: 18px; }
+label { display: flex; align-items: center; gap: 8px; }
+a { color: LinkText; }

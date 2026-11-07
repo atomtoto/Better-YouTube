@@ -1,0 +1,17 @@
+{
+  "description": {
+    "message": "Ouvre les vidéos, chaînes et playlists YouTube dans Better YouTube."
+  },
+  "open": {
+    "message": "Ouvrir dans Better YouTube"
+  },
+  "dismiss": {
+    "message": "Fermer"
+  },
+  "automatic": {
+    "message": "Ouvrir automatiquement les liens YouTube"
+  },
+  "unsupported": {
+    "message": "Ouvre une vidéo, une chaîne ou une playlist YouTube pour utiliser cette extension."
+  }
+}

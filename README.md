@@ -16,6 +16,7 @@ Watch app handles library, search and offline audio.
   Later and history synced through iCloud
 - **Downloads** — real files in a `Downloads` folder, played offline anywhere they appear in the app
 - **Background playback** — keeps playing when the iPhone locks, with lock-screen controls
+- **YouTube links** — a Safari extension opens videos, channels and playlists in the app on iOS and Mac
 - **Shortcuts, Siri, Spotlight and Handoff**
 - **Demo mode** — real videos, no account or key needed (`betteryoutube://demo`)
 - **English and French** everywhere
@@ -61,6 +62,18 @@ YouTube permission**, or the sign-in is refused.
 For iCloud, deploy the CloudKit schema to production in the
 [CloudKit Console](https://icloud.developer.apple.com/) before shipping a TestFlight or App Store build.
 
+## Open YouTube links in the app
+
+Enable **Better YouTube** in Safari’s extension settings and allow access to `youtube.com` and
+`youtu.be` (on iOS: *Settings → Apps → Safari → Extensions*; on Mac: *Safari → Settings → Extensions*).
+Links that reach Safari can then open in the app, including their timestamps. Safari may ask for
+confirmation; an **Open in Better YouTube** button remains on the page if automatic opening is
+blocked. The extension menu lets you turn automatic opening off.
+
+This cannot override YouTube’s universal links or intercept links handled by another browser or
+the YouTube app. For those, create a shortcut using **Open YouTube Link**, enable **Show in Share
+Sheet**, and share the link to it.
+
 ## Downloads
 
 By default, videos are downloaded and assembled **on the device** with
@@ -85,6 +98,7 @@ xcodebuild test -project BetterYouTube.xcodeproj -scheme BetterYouTube -destinat
 ```
 
 - `scripts/check-localizations.py` fails when a string has no French translation.
+- `node --test scripts/test-youtube-links-extension.cjs` checks Safari link routing and redirection.
 - `scripts/build-demo-catalog.py` rebuilds the demo catalogue.
 - There is no CI: build and test on a Mac.
 

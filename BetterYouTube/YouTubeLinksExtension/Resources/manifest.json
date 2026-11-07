@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Better YouTube",
+  "description": "__MSG_description__",
+  "version": "1.1",
+  "default_locale": "en",
+  "permissions": ["storage", "activeTab"],
+  "content_scripts": [{
+    "matches": ["*://*.youtube.com/*", "*://youtu.be/*", "*://www.youtu.be/*"],
+    "exclude_matches": ["*://*.youtube.com/embed/*"],
+    "js": ["links.js", "content.js"],
+    "run_at": "document_start",
+    "all_frames": false
+  }],
+  "action": {
+    "default_title": "Better YouTube",
+    "default_popup": "popup.html"
+  }
+}

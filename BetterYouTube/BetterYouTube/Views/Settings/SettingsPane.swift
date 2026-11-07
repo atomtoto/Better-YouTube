@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import SafariServices
+#endif
 
 /// The groups Settings is divided into.
 ///
@@ -111,6 +114,7 @@ struct SettingsPaneView: View {
                     Text("Search in Tab Bar makes Search a tab like the others, with its field under the title. Turned off, Search is a separate button at the end of the tab bar that turns into a field along the bottom.")
                 }
                 #endif
+                YouTubeLinksSection()
                 ResetSection()
                 AboutSection()
             }
@@ -294,5 +298,46 @@ private struct PlaybackSection: View {
         } footer: {
             Text("Floating keeps a resizable 16:9 player in a bottom corner. Playback Bar shows the title and channel across the bottom. Long-press the mini player and choose Switch to change style.")
         }
+    }
+}
+
+/// Safari needs the user's explicit extension and website permission on each device.
+private struct YouTubeLinksSection: View {
+    #if os(macOS)
+    @State private var settingsError: String?
+    #endif
+
+    var body: some View {
+        Section {
+            #if os(macOS)
+            Button("Open Safari Extension Settings") {
+                guard let bundleID = Bundle.main.bundleIdentifier else { return }
+                Task {
+                    do {
+                        try await SFSafariApplication.showPreferencesForExtension(withIdentifier: bundleID + ".YouTubeLinks")
+                    } catch {
+                        settingsError = error.localizedDescription
+                    }
+                }
+            }
+            Text("In Safari Settings → Extensions, enable Better YouTube and allow access to youtube.com and youtu.be.")
+            #else
+            Text("In Settings → Apps → Safari → Extensions, enable Better YouTube and allow access to youtube.com and youtu.be.")
+            #endif
+            Text("YouTube links that open in Safari can then open in Better YouTube. Safari may ask you to confirm. Use the extension's menu to turn automatic opening off.")
+            Text("For other browsers or the YouTube app, create a shortcut with the Open YouTube Link action and enable Show in Share Sheet. Share the link to that shortcut to open it here.")
+        } header: {
+            Text("YouTube Links")
+        }
+        #if os(macOS)
+        .alert("Couldn't Open Safari Settings", isPresented: Binding(
+            get: { settingsError != nil },
+            set: { if !$0 { settingsError = nil } }
+        )) {
+            Button("OK", role: .cancel) { settingsError = nil }
+        } message: {
+            Text(settingsError ?? "")
+        }
+        #endif
     }
 }

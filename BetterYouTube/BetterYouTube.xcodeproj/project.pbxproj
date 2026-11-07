@@ -132,6 +132,15 @@
 		EB7C9488DF326C6E08588087 /* DemoModeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06CCE6151B261D4875A42DB9 /* DemoModeViews.swift */; };
 		92F78B68B3453A43AF5CE45E /* DemoCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = D3DB23BA5130156FD0F2D863 /* DemoCatalog.json */; };
 		0412DC0A3E4320DF94D69CAC /* DemoModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99FE3AD4DF636A0C41D429AA /* DemoModeTests.swift */; };
+		91BEAA2A5DB07C865DEEDC2D /* SafariWebExtensionHandler.swift build */ = {isa = PBXBuildFile; fileRef = 2E9AC94A4AA2902E38A53803 /* SafariWebExtensionHandler.swift */; };
+		3282C92972E3103F786E45DE /* manifest.json build */ = {isa = PBXBuildFile; fileRef = B0E8D97D336EE9DC6EDEB440 /* manifest.json */; };
+		E6C643B34C284F80B9BEC914 /* links.js build */ = {isa = PBXBuildFile; fileRef = EFD0F142DA55AB4250E57084 /* links.js */; };
+		029923F488D41AECE5AF07A6 /* content.js build */ = {isa = PBXBuildFile; fileRef = D5C596CA95FD9216930AC855 /* content.js */; };
+		B0026277E758153AE546E173 /* popup.html build */ = {isa = PBXBuildFile; fileRef = DD7A23E09F69D3B147EF1A0E /* popup.html */; };
+		8C27890C13049AD33BBAF8CB /* popup.js build */ = {isa = PBXBuildFile; fileRef = B972C8E783CCB79D17CE1D92 /* popup.js */; };
+		BE3F26B5C75F8E981DFFE999 /* popup.css build */ = {isa = PBXBuildFile; fileRef = 4CF2B85A734B5DC3EBFA7E01 /* popup.css */; };
+		E3280213D9A7A310C9BA3F32 /* _locales build */ = {isa = PBXBuildFile; fileRef = 165752B435DD4ADBE0942B05 /* _locales */; };
+		D4C806F4DEC34B8E382C5863 /* Embed YouTubeLinksExtension */ = {isa = PBXBuildFile; fileRef = BE43D1AD3B8F355A0F87E1A9 /* YouTubeLinksExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -149,6 +158,7 @@
 			remoteGlobalIDString = E4A053270B13451D8D669F6C;
 			remoteInfo = BetterYouTubeWatch;
 		};
+		962AF20A4C86CD8C05D0D263 /* Extension proxy */ = {isa = PBXContainerItemProxy; containerPortal = 46F86FAA6BBF9AC94A7E4595; proxyType = 1; remoteGlobalIDString = 034EDBDDBF7F09C538A89E26; remoteInfo = YouTubeLinksExtension; };
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -163,6 +173,7 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CF4CEF5FB4E87334798D7171 /* Embed App Extensions */ = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = (D4C806F4DEC34B8E382C5863 /* Embed YouTubeLinksExtension */, ); name = "Embed App Extensions"; runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -295,6 +306,17 @@
 		D3DB23BA5130156FD0F2D863 /* DemoCatalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = DemoCatalog.json; sourceTree = "<group>"; };
 		99FE3AD4DF636A0C41D429AA /* DemoModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoModeTests.swift; sourceTree = "<group>"; };
 		5C0F1A6E2B3D4C5E6F708192 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Signing.xcconfig; sourceTree = SOURCE_ROOT; };
+		2E9AC94A4AA2902E38A53803 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SafariWebExtensionHandler.swift"; sourceTree = "<group>"; };
+		0FB063127DABBDF031C560FA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info.plist"; sourceTree = "<group>"; };
+		C16779FBE2AE136DA45BAE89 /* macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "macOS.entitlements"; sourceTree = "<group>"; };
+		B0E8D97D336EE9DC6EDEB440 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "manifest.json"; sourceTree = "<group>"; };
+		EFD0F142DA55AB4250E57084 /* links.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "links.js"; sourceTree = "<group>"; };
+		D5C596CA95FD9216930AC855 /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "content.js"; sourceTree = "<group>"; };
+		DD7A23E09F69D3B147EF1A0E /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "popup.html"; sourceTree = "<group>"; };
+		B972C8E783CCB79D17CE1D92 /* popup.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "popup.js"; sourceTree = "<group>"; };
+		4CF2B85A734B5DC3EBFA7E01 /* popup.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = "popup.css"; sourceTree = "<group>"; };
+		165752B435DD4ADBE0942B05 /* _locales */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "_locales"; sourceTree = "<group>"; };
+		BE43D1AD3B8F355A0F87E1A9 /* YouTubeLinksExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = YouTubeLinksExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -312,6 +334,7 @@
 		1BADDC1D73C1A20F347483E1 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				BE43D1AD3B8F355A0F87E1A9 /* YouTubeLinksExtension.appex */,
 				BEEFPRODUCT0000000000000 /* BetterYouTubeTests.xctest */,
 				81918909E83595C8F4212CCC /* BetterYouTube.app */,
 				602AD486682D4D2092F5E7DB /* BetterYouTubeWatch.app */,
@@ -336,6 +359,7 @@
 		8D3FC6DB5D0827F168A73277 = {
 			isa = PBXGroup;
 			children = (
+				B49693CE679439691E543F21 /* YouTubeLinksExtension */,
 				5C0F1A6E2B3D4C5E6F708192 /* Signing.xcconfig */,
 				BEEFGROUP000000000000000 /* BetterYouTubeTests */,
 				0137AF6FC606487BAC0F087D /* BetterYouTubeWatch */,
@@ -522,6 +546,18 @@
 			path = BetterYouTubeWatch;
 			sourceTree = "<group>";
 		};
+		B49693CE679439691E543F21 /* YouTubeLinksExtension */ = {
+            isa = PBXGroup;
+            children = (2E9AC94A4AA2902E38A53803 /* SafariWebExtensionHandler.swift */, 0FB063127DABBDF031C560FA /* Info.plist */, C16779FBE2AE136DA45BAE89 /* macOS.entitlements */, 005B419D5682478E5BC040E0 /* Extension Resources */, );
+            path = YouTubeLinksExtension;
+            sourceTree = "<group>";
+        };
+        005B419D5682478E5BC040E0 /* Extension Resources */ = {
+            isa = PBXGroup;
+            children = (B0E8D97D336EE9DC6EDEB440 /* manifest.json */, EFD0F142DA55AB4250E57084 /* links.js */, D5C596CA95FD9216930AC855 /* content.js */, DD7A23E09F69D3B147EF1A0E /* popup.html */, B972C8E783CCB79D17CE1D92 /* popup.js */, 4CF2B85A734B5DC3EBFA7E01 /* popup.css */, 165752B435DD4ADBE0942B05 /* _locales */, );
+            path = Resources;
+            sourceTree = "<group>";
+        };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -532,11 +568,13 @@
 				F680599402C0D80E245DE801 /* Sources */,
 				781C774F390DF12CD292A30B /* Resources */,
 				D10CA1000000000000000005 /* Frameworks */,
+				CF4CEF5FB4E87334798D7171 /* Embed App Extensions */,
 				7F8DC335523F4DD48A6AA2AE /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				FB0B761CF359CDD3BDF0C342 /* Extension dependency */,
 				E3C53B8735144B8CB4B03A1B /* PBXTargetDependency */,
 			);
 			name = BetterYouTube;
@@ -575,6 +613,17 @@
 			productReference = 602AD486682D4D2092F5E7DB /* BetterYouTubeWatch.app */;
 			productType = "com.apple.product-type.application";
 		};
+		034EDBDDBF7F09C538A89E26 /* Extension target */ = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = 359FACEDEDC12A2BA8468AD8 /* Extension configurations */;
+            buildPhases = (219C78D870C3F49809B0C900 /* Extension Sources */, 1AC1D77AE466E703FBAD9D23 /* Extension Resources phase */, );
+            buildRules = ();
+            dependencies = ();
+            name = YouTubeLinksExtension;
+            productName = YouTubeLinksExtension;
+            productReference = BE43D1AD3B8F355A0F87E1A9 /* YouTubeLinksExtension.appex */;
+            productType = "com.apple.product-type.app-extension";
+        };
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -615,6 +664,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				034EDBDDBF7F09C538A89E26 /* Extension target */,
 				88F56D6A2F90F79D5F551E46 /* BetterYouTube */,
 				BEEFTARGET00000000000000 /* BetterYouTubeTests */,
 				E4A053270B13451D8D669F6C /* BetterYouTubeWatch */,
@@ -654,6 +704,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1AC1D77AE466E703FBAD9D23 /* Extension Resources phase */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (3282C92972E3103F786E45DE /* manifest.json build */, E6C643B34C284F80B9BEC914 /* links.js build */, 029923F488D41AECE5AF07A6 /* content.js build */, B0026277E758153AE546E173 /* popup.html build */, 8C27890C13049AD33BBAF8CB /* popup.js build */, BE3F26B5C75F8E981DFFE999 /* popup.css build */, E3280213D9A7A310C9BA3F32 /* _locales build */, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -791,6 +842,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		219C78D870C3F49809B0C900 /* Extension Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (91BEAA2A5DB07C865DEEDC2D /* SafariWebExtensionHandler.swift build */, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -805,6 +857,7 @@
 			target = E4A053270B13451D8D669F6C /* BetterYouTubeWatch */;
 			targetProxy = EEEFB06016B7495CB6C3A555 /* PBXContainerItemProxy */;
 		};
+		FB0B761CF359CDD3BDF0C342 /* Extension dependency */ = {isa = PBXTargetDependency; target = 034EDBDDBF7F09C538A89E26 /* Extension target */; targetProxy = 962AF20A4C86CD8C05D0D263 /* Extension proxy */; };
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -1099,6 +1152,62 @@
 			};
 			name = Release;
 		};
+		0E9E5696D89CB7AA8C6F3252 /* Extension Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                APPLICATION_EXTENSION_API_ONLY = YES;
+                CODE_SIGN_STYLE = Automatic;
+                "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = YouTubeLinksExtension/macOS.entitlements;
+                CURRENT_PROJECT_VERSION = 1;
+                ENABLE_HARDENED_RUNTIME = YES;
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = YouTubeLinksExtension/Info.plist;
+                INFOPLIST_KEY_CFBundleDisplayName = "Better YouTube";
+                IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+                MACOSX_DEPLOYMENT_TARGET = 26.0;
+                LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+                "LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", );
+                MARKETING_VERSION = 1.1;
+                OTHER_LDFLAGS = ("$(inherited)", "-framework", SafariServices, );
+                PRODUCT_BUNDLE_IDENTIFIER = "$(BY_BUNDLE_ID).YouTubeLinks";
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SDKROOT = auto;
+                SKIP_INSTALL = YES;
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+                SUPPORTS_MACCATALYST = NO;
+                SWIFT_VERSION = 6.0;
+                TARGETED_DEVICE_FAMILY = "1,2";
+            };
+            name = Debug;
+        };
+		565F43F6FF37F67852030453 /* Extension Release */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                APPLICATION_EXTENSION_API_ONLY = YES;
+                CODE_SIGN_STYLE = Automatic;
+                "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = YouTubeLinksExtension/macOS.entitlements;
+                CURRENT_PROJECT_VERSION = 1;
+                ENABLE_HARDENED_RUNTIME = YES;
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = YouTubeLinksExtension/Info.plist;
+                INFOPLIST_KEY_CFBundleDisplayName = "Better YouTube";
+                IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+                MACOSX_DEPLOYMENT_TARGET = 26.0;
+                LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+                "LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", );
+                MARKETING_VERSION = 1.1;
+                OTHER_LDFLAGS = ("$(inherited)", "-framework", SafariServices, );
+                PRODUCT_BUNDLE_IDENTIFIER = "$(BY_BUNDLE_ID).YouTubeLinks";
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SDKROOT = auto;
+                SKIP_INSTALL = YES;
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+                SUPPORTS_MACCATALYST = NO;
+                SWIFT_VERSION = 6.0;
+                TARGETED_DEVICE_FAMILY = "1,2";
+            };
+            name = Release;
+        };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1135,6 +1244,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		359FACEDEDC12A2BA8468AD8 /* Extension configurations */ = {isa = XCConfigurationList; buildConfigurations = (0E9E5696D89CB7AA8C6F3252 /* Extension Debug */, 565F43F6FF37F67852030453 /* Extension Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */

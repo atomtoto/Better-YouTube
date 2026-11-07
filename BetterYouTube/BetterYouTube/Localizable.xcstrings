@@ -1,6 +1,76 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+  "Open Safari Extension Settings": {
+    "localizations": {
+      "fr": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Ouvrir les réglages des extensions Safari"
+        }
+      }
+    }
+  },
+  "In Safari Settings → Extensions, enable Better YouTube and allow access to youtube.com and youtu.be.": {
+    "localizations": {
+      "fr": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Dans les réglages de Safari → Extensions, active Better YouTube et autorise l’accès à youtube.com et youtu.be."
+        }
+      }
+    }
+  },
+  "In Settings → Apps → Safari → Extensions, enable Better YouTube and allow access to youtube.com and youtu.be.": {
+    "localizations": {
+      "fr": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Dans Réglages → Apps → Safari → Extensions, active Better YouTube et autorise l’accès à youtube.com et youtu.be."
+        }
+      }
+    }
+  },
+  "YouTube links that open in Safari can then open in Better YouTube. Safari may ask you to confirm. Use the extension's menu to turn automatic opening off.": {
+    "localizations": {
+      "fr": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Les liens YouTube qui passent par Safari peuvent ensuite s’ouvrir dans Better YouTube. Safari peut te demander de confirmer. Le menu de l’extension permet de désactiver l’ouverture automatique."
+        }
+      }
+    }
+  },
+  "For other browsers or the YouTube app, create a shortcut with the Open YouTube Link action and enable Show in Share Sheet. Share the link to that shortcut to open it here.": {
+    "localizations": {
+      "fr": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Pour les autres navigateurs ou l’app YouTube, crée un raccourci avec l’action Ouvrir un lien YouTube et active Dans la feuille de partage. Partage le lien avec ce raccourci pour l’ouvrir ici."
+        }
+      }
+    }
+  },
+  "YouTube Links": {
+    "localizations": {
+      "fr": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Liens YouTube"
+        }
+      }
+    }
+  },
+  "Couldn't Open Safari Settings": {
+    "localizations": {
+      "fr": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Impossible d’ouvrir les réglages de Safari"
+        }
+      }
+    }
+  },
     "Mac-Style Controls" : {
       "localizations": {
         "fr": {
