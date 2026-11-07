@@ -97,7 +97,7 @@ final class ChannelViewModel: ObservableObject {
     // MARK: - Subscribing
 
     /// Reads whether the account follows this channel. 1 unit, and only when signed in.
-    func loadSubscription(isSignedIn: Bool) async {
+    func loadSubscription(isSignedIn: Bool, reportsError: Bool = false) async {
         guard isSignedIn else {
             subscription = .unknown
             return
@@ -107,6 +107,7 @@ final class ChannelViewModel: ObservableObject {
                 .map { .subscribed(id: $0) } ?? .notSubscribed
         } catch {
             subscription = .unknown
+            if reportsError { subscriptionError = error.localizedDescription }
         }
     }
 

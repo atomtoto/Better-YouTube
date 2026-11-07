@@ -43,6 +43,24 @@ struct PlayerControlsOverlay: View {
     var showsActions = false
     var toggleActions: () -> Void = {}
 
+    #if os(iOS)
+    @AppStorage(IPadPlayerControlsPreference.storageKey) private var usesMacControls = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
+
+    @ViewBuilder
+    private var chrome: some View {
+        #if os(macOS)
+        desktopChrome
+        #else
+        if UIDevice.current.userInterfaceIdiom == .pad, usesMacControls, horizontalSizeClass == .regular {
+            desktopChrome
+        } else {
+            touchChrome
+        }
+        #endif
+    }
+
     @AppStorage(HoldToSpeedUpPreference.storageKey) private var holdsToSpeedUp = true
     @AppStorage(SkipIntervalPreference.backKey) private var storedSkipBack = SkipIntervalPreference.defaultSeconds
     @AppStorage(SkipIntervalPreference.forwardKey) private var storedSkipForward = SkipIntervalPreference.defaultSeconds
@@ -261,7 +279,7 @@ struct PlayerControlsOverlay: View {
     // MARK: - The controls
 
     #if os(iOS)
-    private var chrome: some View {
+    private var touchChrome: some View {
         ZStack {
             // A dim over the picture, so white controls read on a white frame.
             Color.black.opacity(0.4)
@@ -411,10 +429,11 @@ struct PlayerControlsOverlay: View {
             if ended { scheduleHide() } else { hideTask?.cancel() }
         }
     }
-    #else
+    #endif
+
     /// A Mac's controls: the title up top while the video is full screen, and everything else in
     /// one bar of glass along the bottom, as in QuickTime Player and on YouTube's website.
-    private var chrome: some View {
+    private var desktopChrome: some View {
         VStack(spacing: 0) {
             if isFullScreen, let video = player.currentVideo {
                 VStack(alignment: .leading, spacing: 2) {
@@ -470,7 +489,7 @@ struct PlayerControlsOverlay: View {
                         }
                     }
                     .font(.title2)
-                    .frame(width: 38, height: 34)
+                    .frame(width: max(38, barControlSize), height: barControlSize)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -503,10 +522,12 @@ struct PlayerControlsOverlay: View {
                 }
 
                 settingsMenu
+                    #if os(macOS)
                     .menuStyle(.button)
+                    #endif
                     .buttonStyle(.plain)
                     .font(.title3)
-                    .frame(width: 34, height: 34)
+                    .frame(width: barControlSize, height: barControlSize)
                     .help("Settings")
 
                 barButton(isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
@@ -522,21 +543,34 @@ struct PlayerControlsOverlay: View {
         .glassEffect(.regular, in: .rect(cornerRadius: 22))
         // Clicks between the buttons stay on the bar rather than pausing the video under it.
         .contentShape(.rect(cornerRadius: 22))
+        #if os(macOS)
         .onHover { hovering in
             isHoveringBar = hovering
             if hovering { hideTask?.cancel() } else { scheduleHide() }
         }
+        #endif
         .onChange(of: scrubTime == nil) { _, ended in
             if ended { scheduleHide() } else { hideTask?.cancel() }
         }
     }
 
+    private var barControlSize: CGFloat {
+        #if os(iOS)
+        44
+        #else
+        34
+        #endif
+    }
+
     private func barButton(_ symbol: String, _ label: LocalizedStringKey,
                            action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            action()
+            show()
+        } label: {
             Image(systemName: symbol)
                 .font(.title3)
-                .frame(width: 34, height: 34)
+                .frame(width: barControlSize, height: barControlSize)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -547,6 +581,7 @@ struct PlayerControlsOverlay: View {
     private func togglePlayPause(feedback: Bool) {
         player.togglePlayPause()
         show()
+        #if os(macOS)
         guard feedback else { return }
         let shown = PlayFeedback(isPlaying: player.isPlaying)
         withAnimation(.easeOut(duration: 0.12)) { playFeedback = shown }
@@ -555,8 +590,10 @@ struct PlayerControlsOverlay: View {
             guard playFeedback?.id == shown.id else { return }
             withAnimation(.easeIn(duration: 0.3)) { playFeedback = nil }
         }
+        #endif
     }
 
+    #if os(macOS)
     /// YouTube's keyboard shortcuts, for as long as the player is the thing in front: Space or K
     /// plays and pauses, the arrows or J and L skip, F goes full screen and Esc comes back out,
     /// C turns captions on or off, and a digit jumps to that tenth of the video. Anything with ⌘,

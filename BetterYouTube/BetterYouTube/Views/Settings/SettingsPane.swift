@@ -156,6 +156,7 @@ private struct PlaybackSection: View {
     @AppStorage(SkipIntervalPreference.forwardKey) private var skipForward = SkipIntervalPreference.defaultSeconds
     @AppStorage(PlayerControlsPreference.storageKey) private var playerControls = PlayerControlsPreference.app
     #if os(iOS)
+    @AppStorage(IPadPlayerControlsPreference.storageKey) private var usesMacControls = false
     @AppStorage(FullScreenPlayerPreference.storageKey) private var fullScreenPlayer = FullScreenPlayerPreference.app
     @AppStorage(FullScreenControlsPlacement.storageKey) private var fullScreenControlsPlacement = FullScreenControlsPlacement.clearOfCamera
     @AppStorage(BackgroundPlaybackPreference.storageKey) private var playsInBackground = true
@@ -190,6 +191,14 @@ private struct PlaybackSection: View {
         }
 
         #if os(iOS)
+        if UIDevice.current.userInterfaceIdiom == .pad, playerControls == .app {
+            Section {
+                Toggle("Mac-Style Controls", isOn: $usesMacControls)
+            } footer: {
+                Text("Arrange playback controls in a bar along the bottom, as on Mac. Narrow windows keep the touch layout.")
+            }
+        }
+
         Section {
             Picker("Full Screen", selection: $fullScreenPlayer) {
                 ForEach(FullScreenPlayerPreference.allCases) { player in

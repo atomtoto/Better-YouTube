@@ -325,6 +325,8 @@ struct PlayerDetailsView: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .modifier(PlayerChannelActions(channelId: displayed.channelId, channelTitle: displayed.channelTitle))
+        .id(displayed.channelId)
     }
 
     /// Taps on a link in the description or a comment. A timestamp seeks this video, a YouTube
@@ -986,4 +988,86 @@ struct CommentRowView: View {
         }
     }
 
+}
+
+/// Native long-press actions on the channel, using the same subscription and bell as its page.
+private struct PlayerChannelActions: ViewModifier {
+    let channelId: String
+    let channelTitle: String
+    @EnvironmentObject private var auth: GoogleAuthService
+    @EnvironmentObject private var notificationStore: NotificationStore
+    @EnvironmentObject private var notifications: NotificationService
+    @StateObject private var viewModel: ChannelViewModel
+    @State private var confirmsUnsubscribe = false
+
+    init(channelId: String, channelTitle: String) {
+        self.channelId = channelId
+        self.channelTitle = channelTitle
+        _viewModel = StateObject(wrappedValue: ChannelViewModel(channelId: channelId))
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .contextMenu {
+                if auth.isSignedIn {
+                    switch viewModel.subscription {
+                    case .unknown:
+                        Button("Check Subscription", systemImage: "arrow.clockwise") {
+                            Task { await viewModel.loadSubscription(isSignedIn: auth.isSignedIn, reportsError: true) }
+                        }
+                    case .notSubscribed:
+                        Button("Subscribe", systemImage: "plus") {
+                            Task { await viewModel.toggleSubscription() }
+                        }
+                        .disabled(viewModel.isChangingSubscription)
+                    case .subscribed:
+                        Button("Unsubscribe", systemImage: "person.badge.minus", role: .destructive) {
+                            confirmsUnsubscribe = true
+                        }
+                        .disabled(viewModel.isChangingSubscription)
+                    }
+                } else {
+                    Text("Sign in with Google to subscribe.")
+                }
+
+                Button {
+                    let wasOptedIn = notificationStore.isOptedIn(channelId)
+                    notificationStore.toggleOptIn(channelId)
+                    if !wasOptedIn {
+                        Task {
+                            if notifications.authorizationStatus == .notDetermined {
+                                await notifications.requestAuthorization()
+                            }
+                        }
+                    }
+                } label: {
+                    Label(
+                        notificationStore.isOptedIn(channelId)
+                            ? "Turn off notifications for this channel"
+                            : "Notify me about new videos from this channel",
+                        systemImage: notificationStore.isOptedIn(channelId) ? "bell.slash" : "bell.badge"
+                    )
+                }
+            }
+            .task(id: auth.isSignedIn) {
+                await viewModel.loadSubscription(isSignedIn: auth.isSignedIn)
+            }
+            .confirmationDialog(
+                Text("Unsubscribe from \(channelTitle)?"),
+                isPresented: $confirmsUnsubscribe,
+                titleVisibility: .visible
+            ) {
+                Button("Unsubscribe", role: .destructive) {
+                    Task { await viewModel.toggleSubscription() }
+                }
+            }
+            .alert("Subscription", isPresented: Binding(
+                get: { viewModel.subscriptionError != nil },
+                set: { if !$0 { viewModel.subscriptionError = nil } }
+            )) {
+                Button("OK", role: .cancel) { viewModel.subscriptionError = nil }
+            } message: {
+                Text(viewModel.subscriptionError ?? "")
+            }
+    }
 }

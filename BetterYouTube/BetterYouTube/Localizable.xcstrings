@@ -1,6 +1,46 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Mac-Style Controls" : {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Commandes de style Mac"
+          }
+        }
+      }
+    },
+    "Arrange playback controls in a bar along the bottom, as on Mac. Narrow windows keep the touch layout." : {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dispose les commandes de lecture dans une barre en bas, comme sur Mac. Les fenêtres étroites conservent la disposition tactile."
+          }
+        }
+      }
+    },
+    "Check Subscription" : {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérifier l’abonnement"
+          }
+        }
+      }
+    },
+    "Sign in with Google to subscribe." : {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecte-toi avec Google pour t’abonner."
+          }
+        }
+      }
+    },
     "Video Actions" : {
       "localizations" : {
         "fr" : {

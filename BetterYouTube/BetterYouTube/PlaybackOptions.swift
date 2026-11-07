@@ -344,3 +344,8 @@ enum SkipIntervalPreference {
         valid(UserDefaults.standard.integer(forKey: key))
     }
 }
+
+/// An iPad-only arrangement of the app's own controls; touch gestures stay unchanged.
+enum IPadPlayerControlsPreference {
+    static let storageKey = "ipad_mac_player_controls"
+}
