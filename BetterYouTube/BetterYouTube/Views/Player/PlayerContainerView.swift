@@ -89,7 +89,6 @@ struct PlayerContainerView: View {
     @State private var showsActions = false
     @GestureState private var actionDrag: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     private let metrics = PlayerMetrics()
 
@@ -204,12 +203,6 @@ struct PlayerContainerView: View {
         let hasActions = player.isExpanded && player.isFullScreen && !player.isSystemFullScreen && player.controls == .app
         let travel = min(180, max(80, layout.size.height * 0.32))
         let reveal = hasActions ? min(1, max(0, (showsActions ? 1 : 0) + actionDrag / travel)) : 0
-        #if os(macOS)
-        let panelWidth = min(350, layout.size.width * 0.42)
-        let previewProgress = reduceMotion ? (showsActions && hasActions ? 1.0 : 0.0) : reveal
-        let previewScale = 1 - previewProgress * (panelWidth + 20) / max(1, layout.size.width)
-        #endif
-
         ZStack(alignment: .topLeading) {
             // 1. Backdrops — drawn under the video surface. Black full screen, so the bars
             //    beside a video that isn't the screen's shape read as part of the picture.
@@ -258,13 +251,10 @@ struct PlayerContainerView: View {
                             horizontalInset: layout.controlsHorizontalInset,
                             fullScreenMargins: layout.controlsMargins,
                             showsActions: showsActions,
+                            actionReveal: reveal,
                             toggleActions: { setActionsShown(!showsActions) }
                         )
                         .frame(width: controls.width, height: controls.height)
-                        #if os(iOS)
-                        .opacity(1 - reveal)
-                        .accessibilityHidden(hasActions && showsActions)
-                        #endif
                         .opacity(chromeOpacity(expansion: expansion))
                         .transition(.opacity)
                     }
@@ -280,7 +270,6 @@ struct PlayerContainerView: View {
                 #if os(macOS)
                 // The macOS ScrollView occupies the whole window. Keep the shared video above
                 // its transparent gap so the player's controls still receive clicks.
-                .scaleEffect(previewScale, anchor: .bottomLeading)
                 .zIndex(player.isExpanded ? 1 : 0)
                 #endif
 
@@ -304,40 +293,13 @@ struct PlayerContainerView: View {
                 .transition(.opacity)
             }
 
-            if hasActions, let item = player.currentVideo {
-                #if os(macOS)
-                TrackpadActionSwipe(panelWidth: showsActions ? panelWidth : 0, setShown: setActionsShown)
+            #if os(macOS)
+            if hasActions {
+                TrackpadActionSwipe(setShown: setActionsShown)
                     .frame(width: layout.size.width, height: layout.size.height)
                     .allowsHitTesting(false)
-                #endif
-                #if os(iOS)
-                Rectangle()
-                    .fill(reduceTransparency ? AnyShapeStyle(.black) : AnyShapeStyle(.regularMaterial))
-                    .environment(\.colorScheme, .dark)
-                    .opacity(reveal * 0.88)
-                    .allowsHitTesting(showsActions)
-                    .onTapGesture { setActionsShown(false) }
-                    .accessibilityHidden(true)
-                    .zIndex(3)
-                #endif
-
-                if reveal > 0 || showsActions {
-                    fullScreenActions(item, reveal: reveal)
-                        #if os(macOS)
-                        .frame(width: panelWidth)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                        #else
-                        .padding(.leading, layout.controlsMargins.leading)
-                        .padding(.trailing, layout.controlsMargins.trailing)
-                        .padding(.bottom, max(20, screenSafeArea.bottom))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                        #endif
-                        .opacity(reveal)
-                        .allowsHitTesting(showsActions)
-                        .accessibilityHidden(!showsActions)
-                        .zIndex(4)
-                }
             }
+            #endif
 
             MiniPlayerControls(
                 metrics: metrics,
@@ -373,7 +335,7 @@ struct PlayerContainerView: View {
             .zIndex(2)
             #endif
         }
-        .simultaneousGesture(actionGesture(travel: travel, size: layout.size), isEnabled: hasActions)
+        .simultaneousGesture(actionGesture(travel: travel), isEnabled: hasActions)
         #if os(iOS)
         // The native preview lifts the actual player. Keep its mask limited to the docked card;
         // wait for dismissal before changing the layout behind that preview.
@@ -398,13 +360,10 @@ struct PlayerContainerView: View {
         withAnimation(reduceMotion ? .easeOut(duration: 0.15) : .snappy) { showsActions = shown }
     }
 
-    private func actionGesture(travel: CGFloat, size: CGSize) -> some Gesture {
+    private func actionGesture(travel: CGFloat) -> some Gesture {
         func accepts(_ value: DragGesture.Value) -> Bool {
             guard !drag.isLocked, pinchMagnification == nil,
                   abs(value.translation.height) > abs(value.translation.width) * 1.4 else { return false }
-            #if os(macOS)
-            if showsActions && value.startLocation.x > size.width - min(350, size.width * 0.42) { return false }
-            #endif
             return true
         }
         return DragGesture(minimumDistance: 16)
@@ -417,37 +376,6 @@ struct PlayerContainerView: View {
                 let projected = -value.predictedEndTranslation.height / travel
                 if showsActions ? projected < -0.4 : projected > 0.4 { setActionsShown(!showsActions) }
             }
-    }
-
-    private func fullScreenActions(_ video: Video, reveal: CGFloat) -> some View {
-        let model = VideoDetailViewModel.forVideo(video)
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Video Actions").font(.headline)
-                Spacer()
-                Button("Close", systemImage: "xmark") { setActionsShown(false) }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.circle)
-            }
-            #if os(macOS)
-            ViewThatFits(in: .vertical) {
-                PlayerActionRow(viewModel: model, usesGrid: true)
-                    .fixedSize(horizontal: false, vertical: true)
-                ScrollView {
-                    PlayerActionRow(viewModel: model, usesGrid: true)
-                }
-            }
-            #else
-            PlayerActionRow(viewModel: model)
-            #endif
-        }
-        .padding(Theme.Spacing.gutter)
-        .background(.regularMaterial, in: .rect(cornerRadius: 20))
-        .padding(8)
-        .environment(\.colorScheme, .dark)
-        .offset(y: reduceMotion ? 0 : 40 * (1 - reveal))
-        .task(id: showsActions) { if showsActions { await model.loadAll() } }
     }
 
     /// Commit the anchor and clear the translation in the same animation transaction.
@@ -1334,20 +1262,17 @@ private struct MiniProgressLine: View {
 #if os(macOS)
 /// SwiftUI's DragGesture on Mac requires a click. A two-finger swipe arrives as scroll events.
 private struct TrackpadActionSwipe: NSViewRepresentable {
-    let panelWidth: CGFloat
     let setShown: (Bool) -> Void
 
     func makeNSView(context: Context) -> Listener { Listener() }
 
     func updateNSView(_ view: Listener, context: Context) {
-        view.panelWidth = panelWidth
         view.setShown = setShown
     }
 
     static func dismantleNSView(_ view: Listener, coordinator: ()) { view.stop() }
 
     final class Listener: NSView {
-        var panelWidth: CGFloat = 0
         var setShown: ((Bool) -> Void)?
         private var monitor: Any?
         private var tracking = false
@@ -1363,7 +1288,6 @@ private struct TrackpadActionSwipe: NSViewRepresentable {
                 if event.phase.contains(.began) {
                     let point = convert(event.locationInWindow, from: nil)
                     tracking = window?.attachedSheet == nil && bounds.contains(point)
-                        && point.x < bounds.maxX - panelWidth
                     movement = .zero
                 }
                 guard tracking else { return event }

@@ -544,7 +544,7 @@ struct PlayerDetailsView: View {
 
 struct PlayerActionRow: View {
     @ObservedObject var viewModel: VideoDetailViewModel
-    var usesGrid = false
+    var extendsToEdges = true
     private var displayed: Video { viewModel.video }
     @EnvironmentObject private var player: PlayerManager
     @EnvironmentObject private var library: LibraryStore
@@ -561,18 +561,12 @@ struct PlayerActionRow: View {
     /// like liking a video on YouTube and never left the phone.
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if usesGrid {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 135), alignment: .leading)], alignment: .leading) {
-                    pills
-                }
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) { pills }
-                        .padding(.vertical, 2)
-                }
-                .contentMargins(.horizontal, Theme.Spacing.gutter, for: .scrollContent)
-                .padding(.horizontal, -Theme.Spacing.gutter)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) { pills }
+                    .padding(.vertical, 2)
             }
+            .contentMargins(.horizontal, extendsToEdges ? Theme.Spacing.gutter : 0, for: .scrollContent)
+            .padding(.horizontal, extendsToEdges ? -Theme.Spacing.gutter : 0)
 
             // Nearly always "sign in with Google", which is the one thing worth saying here.
             if let ratingError = viewModel.ratingError {

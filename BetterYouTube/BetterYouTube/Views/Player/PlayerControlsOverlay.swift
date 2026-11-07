@@ -41,6 +41,8 @@ struct PlayerControlsOverlay: View {
     var fullScreenMargins = EdgeInsets()
 
     var showsActions = false
+    var actionReveal: CGFloat = 0
+    @State private var actionHeight: CGFloat = 0
     var toggleActions: () -> Void = {}
 
     #if os(iOS)
@@ -98,7 +100,7 @@ struct PlayerControlsOverlay: View {
         ZStack {
             touchSurface
 
-            if isShown, !options.showsYouTubeLayer {
+            if isShown || actionReveal > 0, !options.showsYouTubeLayer {
                 chrome
                     .transition(.opacity)
             }
@@ -291,6 +293,7 @@ struct PlayerControlsOverlay: View {
                 topBar
                 Spacer(minLength: 0)
                 bottomBar
+                actionShelf
             }
             .padding(.leading, isFullScreen ? fullScreenMargins.leading : 12)
             .padding(.trailing, isFullScreen ? fullScreenMargins.trailing : 12)
@@ -456,9 +459,38 @@ struct PlayerControlsOverlay: View {
 
             Spacer(minLength: 0)
 
-            controlBar
+            VStack(spacing: 0) {
+                controlBar
+                actionShelf
+            }
                 .padding(.horizontal, (isFullScreen ? 32 : 10) + horizontalInset)
                 .padding(.bottom, isFullScreen ? 28 : 10)
+        }
+    }
+
+    @ViewBuilder
+    private var actionShelf: some View {
+        if isFullScreen, let video = player.currentVideo, showsActions || actionReveal > 0 {
+            let model = VideoDetailViewModel.forVideo(video)
+            HStack(spacing: 8) {
+                PlayerActionRow(viewModel: model, extendsToEdges: false)
+                Button("Close", systemImage: "xmark", action: toggleActions)
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+            }
+            .padding(8)
+            .clipShape(.rect(cornerRadius: 20))
+            .glassEffect(.regular, in: .rect(cornerRadius: 20))
+            .padding(.top, 8)
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { actionHeight = $0 }
+            .frame(height: actionHeight * actionReveal, alignment: .bottom)
+            .clipped()
+            .opacity(actionReveal)
+            .allowsHitTesting(showsActions)
+            .accessibilityHidden(!showsActions)
+            .task(id: showsActions) { if showsActions { await model.loadAll() } }
         }
     }
 
