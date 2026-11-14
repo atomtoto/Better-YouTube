@@ -154,6 +154,7 @@ struct RootTabView: View {
             .navigationSplitViewColumnWidth(min: 178, ideal: 205, max: 280)
         } detail: {
             SectionScreen(tab: router.selectedTab, search: search)
+                .modifier(MacPlayerActionsToolbar())
         }
         // The docked player floats over the bottom of the window rather than sitting in a tab
         // bar's row, so the content underneath is given its height to keep clear of. Without
@@ -175,6 +176,10 @@ struct RootTabView: View {
 private struct PlayerLayer: View {
     let screenSafeArea: EdgeInsets
     @EnvironmentObject private var player: PlayerManager
+    #if os(macOS)
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var contentColorScheme: ColorScheme?
+    #endif
 
     var body: some View {
         PlayerContainerView(screenSafeArea: screenSafeArea)
@@ -186,6 +191,14 @@ private struct PlayerLayer: View {
             // stopped short of the bottom with wider bars at its sides.
             .ignoresSafeArea(.container, edges: player.isFullScreen ? .all : [])
             .handsOffPlayback(player)
+            #if os(macOS)
+            // Keep the page's appearance while the window's native toolbar uses dark glass.
+            // Capture it as expansion begins, before the toolbar's preference reaches the window.
+            .environment(\.colorScheme, contentColorScheme ?? colorScheme)
+            .onReceive(player.$isExpanded.removeDuplicates()) { expanded in
+                contentColorScheme = expanded ? colorScheme : nil
+            }
+            #endif
     }
 }
 

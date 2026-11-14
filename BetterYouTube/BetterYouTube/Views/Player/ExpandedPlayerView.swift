@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 /// The expanded player. The video is the shared surface drawn through the gap in this view.
 ///
@@ -40,12 +43,13 @@ struct ExpandedPlayerView: View {
                         player.collapse()
                     }
                     .help("Back to browsing")
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    actionsMenu
-                        .help("More")
+                    .buttonStyle(.borderedProminent)
+                    .tint(.black)
                 }
             }
+            .toolbarBackground(.black, for: .windowToolbar)
+            .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
+            .toolbarColorScheme(.dark, for: .windowToolbar)
             #else
             content
             #endif
@@ -148,3 +152,52 @@ struct ExpandedPlayerView: View {
     }
     #endif
 }
+
+#if os(macOS)
+/// The split view's detail column owns the trailing toolbar section. Actions declared on the
+/// player overlay belong to the window's leading section, before the page's own controls.
+struct MacPlayerActionsToolbar: ViewModifier {
+    @EnvironmentObject private var player: PlayerManager
+    @EnvironmentObject private var downloads: DownloadStore
+    @EnvironmentObject private var downloadManager: DownloadManager
+    @State private var showsPlaylistPicker = false
+    @State private var browsingColorScheme: ColorScheme = NSApplication.shared.effectiveAppearance
+        .bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? .dark : .light
+
+    func body(content: Content) -> some View {
+        content
+            .toolbar {
+                if player.isExpanded, !player.isFullScreen {
+                    ToolbarItem(placement: .automatic) {
+                        Menu {
+                            PlayerActions(
+                                player: player,
+                                downloads: downloads,
+                                downloadManager: downloadManager,
+                                onAddToPlaylist: { showsPlaylistPicker = true }
+                            )
+                        } label: {
+                            Label("More", systemImage: "ellipsis")
+                        }
+                        .help("More")
+                        .menuStyle(.button)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.black)
+                    }
+                }
+            }
+            .toolbarColorScheme(player.isExpanded ? .dark : nil, for: .windowToolbar)
+            // macOS keeps the previous window appearance when this preference becomes nil.
+            // Restore the app's appearance explicitly and follow system appearance changes.
+            .preferredColorScheme(player.isExpanded && !player.isFullScreen ? .dark : browsingColorScheme)
+            .onReceive(NSApplication.shared.publisher(for: \.effectiveAppearance)) { appearance in
+                browsingColorScheme = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? .dark : .light
+            }
+            .sheet(isPresented: $showsPlaylistPicker) {
+                if let video = player.currentVideo {
+                    PlaylistPickerView(video: video)
+                }
+            }
+    }
+}
+#endif
