@@ -278,6 +278,7 @@ struct PlayerContainerView: View {
             //    screen there is no chrome at all: the video has the screen to itself.
             if player.isExpanded, !player.isFullScreen {
                 ExpandedPlayerView(
+                    videoWidth: video.width,
                     videoHeight: video.height,
                     sideBySide: layout.sideColumnWidth == nil
                         ? nil
@@ -763,7 +764,11 @@ private struct PlayerMetrics {
     }
 
     let artworkPadding: CGFloat = 8
+    #if os(macOS)
+    let headerHeight: CGFloat = 0
+    #else
     let headerHeight: CGFloat = 44
+    #endif
     /// The pill the bar shrinks to on scroll keeps the artwork and play/pause, nothing else.
     #if os(macOS)
     let compactBarHeight: CGFloat = 52
@@ -921,8 +926,15 @@ private struct PlayerLayout {
     /// The video across the width of the screen, sitting under the header — or, on a wide iPad,
     /// across its own column, with the details' second column beside it.
     private var headedVideoFrame: CGRect {
+        #if os(macOS)
+        // Leave room for the title and actions, even in a wide, short window. A large desktop
+        // window also keeps a readable content width rather than stretching the video forever.
+        let width = min(size.width, 1120, size.height * 0.7 * 16 / 9)
+        return CGRect(x: (size.width - width) / 2, y: 0, width: width, height: width * 9 / 16)
+        #else
         let width = sideColumnWidth.map { size.width - $0 } ?? size.width
         return CGRect(x: 0, y: metrics.headerHeight, width: width, height: width * 9 / 16)
+        #endif
     }
 
     /// The width of the details' second column on an iPad held landscape — wide enough for the
