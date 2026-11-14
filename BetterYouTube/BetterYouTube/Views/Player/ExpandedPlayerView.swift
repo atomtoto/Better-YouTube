@@ -43,12 +43,11 @@ struct ExpandedPlayerView: View {
                         player.collapse()
                     }
                     .help("Back to browsing")
-                    .buttonStyle(.borderedProminent)
-                    .tint(.black)
+                    .environment(\.colorScheme, .dark)
                 }
             }
-            .toolbarBackground(.black, for: .windowToolbar)
-            .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
+            .toolbarBackground(.bar, for: .windowToolbar)
+            .toolbarBackgroundVisibility(.automatic, for: .windowToolbar)
             .toolbarColorScheme(.dark, for: .windowToolbar)
             #else
             content
@@ -181,8 +180,6 @@ struct MacPlayerActionsToolbar: ViewModifier {
                         }
                         .help("More")
                         .menuStyle(.button)
-                        .buttonStyle(.borderedProminent)
-                        .tint(.black)
                     }
                 }
             }
