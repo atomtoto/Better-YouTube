@@ -6,6 +6,7 @@ struct HomeView: View {
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var notificationStore: NotificationStore
     @EnvironmentObject private var webSession: YouTubeWebSession
+    @EnvironmentObject private var player: PlayerManager
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var youTubeNavigation = YouTubeWebNavigationModel()
     @ObservedObject private var positions = PlaybackPositionStore.shared
@@ -50,29 +51,34 @@ struct HomeView: View {
         .demoMenu()
         .toolbar {
             #if os(macOS)
-            ToolbarItem(placement: .principal) {
-                // `fixedSize` because a segmented picker in a toolbar is given the whole width
-                // otherwise, and hugs its titles with it.
-                feedNavigationBar
-                    .fixedSize()
-            }
+            // While a video is playing, the toolbar belongs to the player: the feed selectors
+            // have nothing to switch there.
+            if !player.isExpanded {
+                ToolbarItem(placement: .principal) {
+                    // `fixedSize` because a segmented picker in a toolbar is given the whole width
+                    // otherwise, and hugs its titles with it.
+                    feedNavigationBar
+                        .fixedSize()
+                }
 
-            if viewModel.feed == .youTube || viewModel.feed == .forYou {
-                ToolbarItem(placement: .primaryAction) {
-                    Picker("Show as", selection: $webSession.rendering) {
-                        ForEach(YouTubeWebSession.FeedRendering.allCases) { rendering in
-                            Text(rendering.title).tag(rendering)
+                if viewModel.feed == .youTube || viewModel.feed == .forYou {
+                    ToolbarItem(placement: .primaryAction) {
+                        Picker("Show as", selection: $webSession.rendering) {
+                            ForEach(YouTubeWebSession.FeedRendering.allCases) { rendering in
+                                Text(rendering.title).tag(rendering)
+                            }
                         }
+                        .pickerStyle(.menu)
+                        .fixedSize()
+                        .disabled(wrongChannel != nil)
                     }
-                    .pickerStyle(.menu)
-                    .fixedSize()
-                    .disabled(wrongChannel != nil)
                 }
             }
 
             // Pull-to-refresh below is the phone's affordance; a Mac needs somewhere to click.
+            // With the player open, the same button reloads the video instead of the feed.
             ToolbarItem(placement: .primaryAction) {
-                RefreshButton { await refresh(force: true) }
+                RefreshButton { await reloadVisibleContent() }
             }
             #endif
 
@@ -136,6 +142,20 @@ struct HomeView: View {
             await viewModel.loadYouTubeFeed(force: force)
         } else {
             await viewModel.load(isSignedIn: auth.isSignedIn, library: library, force: force)
+        }
+    }
+
+    /// The toolbar's reload answers either screen: the feed while browsing, the video itself
+    /// while it plays — from where it stands, not from the start.
+    private func reloadVisibleContent() async {
+        if player.isExpanded, let video = player.currentVideo {
+            await player.open(
+                videoId: video.id,
+                fallback: video,
+                startTime: player.progress.currentTime
+            )
+        } else {
+            await refresh(force: true)
         }
     }
 
