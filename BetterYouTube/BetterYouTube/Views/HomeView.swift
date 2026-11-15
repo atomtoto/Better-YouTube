@@ -6,7 +6,6 @@ struct HomeView: View {
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var notificationStore: NotificationStore
     @EnvironmentObject private var webSession: YouTubeWebSession
-    @EnvironmentObject private var player: PlayerManager
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var youTubeNavigation = YouTubeWebNavigationModel()
     @ObservedObject private var positions = PlaybackPositionStore.shared
