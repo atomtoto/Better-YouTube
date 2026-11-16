@@ -125,7 +125,11 @@ phrases) and the Watch's `Localizable.xcstrings`. French uses the informal *tu*.
 a literal in `Text`, `Label`, `Button`…, or `String(localized:)`. The test action is pinned to
 English.
 
-## No CI
+## Checks
 
-The GitHub macOS runner's Swift compiler crashed on `HomeView.swift`, so the workflow was removed.
-It is still in the history (`.github/workflows/build.yml`).
+Run `scripts/check-all.sh` on a Mac before pushing to `main`. It runs Swift tests and Xcode's
+French localization export sequentially after the portable extension and resolver tests.
+GitHub Actions runs the portable checks on Linux for pushes and pull requests to `main`.
+
+The previous hosted macOS workflow was removed after its Swift compiler crashed on
+`HomeView.swift`. Swift compilation, tests and localization checks run locally with Xcode 27+.

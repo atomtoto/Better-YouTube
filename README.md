@@ -92,15 +92,18 @@ resolver to run at home with `docker compose up -d`.
 
 ## Development
 
+Before pushing directly to `main`, run the full checks on a Mac with Xcode:
+
 ```sh
-cd BetterYouTube
-xcodebuild test -project BetterYouTube.xcodeproj -scheme BetterYouTube -destination "platform=macOS"
+scripts/check-all.sh
 ```
 
-- `scripts/check-localizations.py` fails when a string has no French translation.
-- `node --test scripts/test-youtube-links-extension.cjs` checks Safari link routing and redirection.
-- `scripts/build-demo-catalog.py` rebuilds the demo catalogue.
-- There is no CI: build and test on a Mac.
+This runs Safari extension tests, offline resolver tests, macOS Swift tests, then the French
+localization check (which uses Xcode to extract strings). Live download tests remain opt-in.
+GitHub Actions runs `scripts/check-all.sh --portable` on Linux for pushes and pull requests to
+`main`, covering the extension and resolver.
+
+`scripts/build-demo-catalog.py` rebuilds the demo catalogue.
 
 Conventions, design decisions and on-device checks are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
