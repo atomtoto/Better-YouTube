@@ -141,6 +141,7 @@
 		BE3F26B5C75F8E981DFFE999 /* popup.css build */ = {isa = PBXBuildFile; fileRef = 4CF2B85A734B5DC3EBFA7E01 /* popup.css */; };
 		E3280213D9A7A310C9BA3F32 /* _locales build */ = {isa = PBXBuildFile; fileRef = 165752B435DD4ADBE0942B05 /* _locales */; };
 		D4C806F4DEC34B8E382C5863 /* Embed YouTubeLinksExtension */ = {isa = PBXBuildFile; fileRef = BE43D1AD3B8F355A0F87E1A9 /* YouTubeLinksExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A11000000000000000000001 /* PlayerShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11000000000000000000002 /* PlayerShell.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -317,6 +318,7 @@
 		4CF2B85A734B5DC3EBFA7E01 /* popup.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = "popup.css"; sourceTree = "<group>"; };
 		165752B435DD4ADBE0942B05 /* _locales */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "_locales"; sourceTree = "<group>"; };
 		BE43D1AD3B8F355A0F87E1A9 /* YouTubeLinksExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = YouTubeLinksExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A11000000000000000000002 /* PlayerShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerShell.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -507,6 +509,7 @@
 				166B42AABD82F80D72120EEE /* NotificationService.swift */,
 				974548E984460DB3448AB42E /* BackgroundRefresh.swift */,
 				F2AB4B2A9355C5BE1085AE20 /* PlayerManager.swift */,
+				A11000000000000000000003 /* Player */,
 				CA1200000000000000000002 /* CarPlaySceneDelegate.swift */,
 				A573CD2046EE48A38E75B6CE /* WatchPhoneBridge.swift */,
 			);
@@ -556,6 +559,14 @@
             isa = PBXGroup;
             children = (B0E8D97D336EE9DC6EDEB440 /* manifest.json */, EFD0F142DA55AB4250E57084 /* links.js */, D5C596CA95FD9216930AC855 /* content.js */, DD7A23E09F69D3B147EF1A0E /* popup.html */, B972C8E783CCB79D17CE1D92 /* popup.js */, 4CF2B85A734B5DC3EBFA7E01 /* popup.css */, 165752B435DD4ADBE0942B05 /* _locales */, );
             path = Resources;
+            sourceTree = "<group>";
+        };
+        A11000000000000000000003 /* Player */ = {
+            isa = PBXGroup;
+            children = (
+                A11000000000000000000002 /* PlayerShell.swift */,
+            );
+            path = Player;
             sourceTree = "<group>";
         };
 /* End PBXGroup section */
@@ -805,6 +816,7 @@
 				92C647B6ACC49AED8349A942 /* BackgroundRefresh.swift in Sources */,
 				C5F04AFA84BF255122D02CF1 /* NotificationsView.swift in Sources */,
 				74CB4F3A9608187F225EAE7F /* PlayerManager.swift in Sources */,
+				A11000000000000000000001 /* PlayerShell.swift in Sources */,
 				CA1200000000000000000001 /* CarPlaySceneDelegate.swift in Sources */,
 				944B4C0EA281BF27CC553EE3 /* PlayerSurface.swift in Sources */,
 				7AAD4AA89BAED0BD4237EBEF /* PlayerContainerView.swift in Sources */,
