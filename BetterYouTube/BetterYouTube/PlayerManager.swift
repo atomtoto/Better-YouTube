@@ -43,60 +43,6 @@ enum PlaybackIssue: Equatable {
     case noResponse
 }
 
-/// The player's web view. It never sees the screen's safe area: the player places it, and full
-/// screen with the video zoomed to fill, a web view that knew it lay under the notch moved its
-/// picture aside by the notch's width.
-final class PlayerWebView: WKWebView {
-    #if os(iOS)
-    override var safeAreaInsets: UIEdgeInsets { .zero }
-    #endif
-}
-
-/// Surfaces page-level load failures, which never reach the JavaScript bridge.
-final class PlayerNavigationBridge: NSObject, WKNavigationDelegate {
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        let message = error.localizedDescription
-        Task { @MainActor in PlayerManager.shared.handleLoadFailure(message) }
-    }
-
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        let message = error.localizedDescription
-        Task { @MainActor in PlayerManager.shared.handleLoadFailure(message) }
-    }
-}
-
-/// Bridges `window.webkit.messageHandlers.player` into `PlayerManager`.
-final class PlayerScriptBridge: NSObject, WKScriptMessageHandler {
-    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard let body = message.body as? [String: Any],
-              let type = body["type"] as? String else { return }
-        if type == "pipFrame" {
-            PlayerManager.shared.pictureInPictureFrame = message.frameInfo
-            return
-        }
-        if type == "pip" {
-            #if os(iOS)
-            let active = body["active"] as? Bool ?? false
-            Task { @MainActor in PlayerManager.shared.embedPictureInPictureDidChange(active) }
-            #endif
-            return
-        }
-
-        let event = PlayerEvent(
-            type: type,
-            time: body["time"] as? Double,
-            duration: body["duration"] as? Double,
-            state: body["state"] as? Int,
-            videoID: body["videoID"] as? String,
-            playbackID: body["playbackID"] as? String,
-            payload: body["payload"] as? String
-        )
-        Task { @MainActor in
-            PlayerManager.shared.handle(event)
-        }
-    }
-}
-
 /// Playback position, deliberately kept off `PlayerManager`: the embed reports it several times
 /// a second, and publishing it on the manager would re-render every view that watches the player
 /// at that rate — which is what made dragging the player down feel jerky. Only the hairline of
@@ -250,13 +196,13 @@ final class PlayerManager: ObservableObject {
         return false
     }
 
-    private let bridge = PlayerScriptBridge()
-    private let navigationBridge = PlayerNavigationBridge()
+    private lazy var bridge = PlayerScriptBridge(owner: self)
+    private lazy var navigationBridge = PlayerNavigationBridge(owner: self)
     private var watchdog: Task<Void, Never>?
     /// The video that should be playing, and the one the web view actually has.
     private var desiredVideoId: String?
     private var loadedVideoId: String?
-    private var playbackID: String?
+    private(set) var playbackID: String?
     private var loadedPlaybackID: String?
     private var pendingSeekTime: Double?
     private var isRestoringPosition = false
@@ -400,9 +346,9 @@ final class PlayerManager: ObservableObject {
         // Whatever opens or closes the system's full-screen window — a rotation, the embed's own
         // full-screen button, the Done button over the video — WebKit reports it here, so the
         // app's idea of the state never drifts from what is on screen.
-        fullScreenObserver = webView.observe(\.fullscreenState, options: [.new]) { _, change in
+        fullScreenObserver = webView.observe(\.fullscreenState, options: [.new]) { [weak self] _, change in
             let active = change.newValue == .inFullscreen
-            Task { @MainActor in PlayerManager.shared.setSystemFullScreen(active) }
+            Task { @MainActor [weak self] in self?.setSystemFullScreen(active) }
         }
 
         hasWebView = true
