@@ -11,6 +11,7 @@ struct HomeView: View {
     @ObservedObject private var positions = PlaybackPositionStore.shared
 
     @State private var showsNotifications = false
+    @State private var playerIsExpanded = PlayerManager.shared.isExpanded
     @State private var recommendationError: String?
     /// The channel the Google sign-in is for: the one youtube.com should be showing too.
     @State private var googleChannel: Channel?
@@ -51,8 +52,10 @@ struct HomeView: View {
         .toolbar {
             #if os(macOS)
             // While a video is playing, the toolbar belongs to the player: the feed selectors
-            // have nothing to switch there.
-            if !player.isExpanded {
+            // have nothing to switch there. This mirrors `isExpanded` into local state because
+            // this view does not watch the player otherwise, and should not: the feed would
+            // redraw with every playback report.
+            if !playerIsExpanded {
                 ToolbarItem(placement: .principal) {
                     // `fixedSize` because a segmented picker in a toolbar is given the whole width
                     // otherwise, and hugs its titles with it.
@@ -113,6 +116,7 @@ struct HomeView: View {
         }
         .navigationDestination(for: Playlist.self) { PlaylistDetailView(playlist: $0) }
         .refreshable { await refresh(force: true) }
+        .onReceive(player.$isExpanded) { playerIsExpanded = $0 }
         .onChange(of: webSession.isSignedIn, initial: true) { _, signedIn in
             viewModel.adoptDefaultFeed(webSignedIn: signedIn)
         }
@@ -147,7 +151,7 @@ struct HomeView: View {
     /// The toolbar's reload answers either screen: the feed while browsing, the video itself
     /// while it plays — from where it stands, not from the start.
     private func reloadVisibleContent() async {
-        if player.isExpanded, let video = player.currentVideo {
+        if playerIsExpanded, let video = player.currentVideo {
             await player.open(
                 videoId: video.id,
                 fallback: video,
