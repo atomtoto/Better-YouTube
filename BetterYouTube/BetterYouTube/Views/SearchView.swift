@@ -186,6 +186,7 @@ struct SearchView: View {
                 }
                 .listStyle(.plain)
                 .scrollDismissesKeyboard(.interactively)
+                .warmPage()
                 .minimizesPlayerBarOnScroll()
             }
         }
@@ -253,6 +254,7 @@ struct SearchView: View {
             .padding(Theme.Spacing.gutter)
         }
         .scrollDismissesKeyboard(.immediately)
+        .warmPage()
         .minimizesPlayerBarOnScroll()
     }
 }

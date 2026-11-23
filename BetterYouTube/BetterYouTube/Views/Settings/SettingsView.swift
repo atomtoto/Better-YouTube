@@ -68,6 +68,7 @@ struct SettingsView: View {
         }
         .id(reset.generation)
         .groupedListStyle()
+        .warmPage()
         .minimizesPlayerBarOnScroll()
         .navigationTitle("Settings")
     }

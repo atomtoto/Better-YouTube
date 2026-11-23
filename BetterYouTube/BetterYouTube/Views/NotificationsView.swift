@@ -75,6 +75,7 @@ struct NotificationsView: View {
             )) {
                 Button("OK", role: .cancel) { saveError = nil }
             } message: { Text(saveError ?? "") }
+            .warmPage()
             .navigationTitle("Notifications")
             .inlineNavigationBar()
             .toolbar {

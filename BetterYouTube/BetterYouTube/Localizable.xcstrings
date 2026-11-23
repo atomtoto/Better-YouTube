@@ -6830,6 +6830,286 @@
           }
         }
       }
+    },
+    "Appearance": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apparence"
+          }
+        }
+      }
+    },
+    "Warm Background": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fond chaud"
+          }
+        }
+      }
+    },
+    "In light mode, the app's pages take a warm cream background. Dark mode is unchanged.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En mode clair, les pages de l’app prennent un fond crème chaud. Le mode sombre ne change pas."
+          }
+        }
+      }
+    },
+    "App Icon": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icône de l’app"
+          }
+        }
+      }
+    },
+    "Light": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clair"
+          }
+        }
+      }
+    },
+    "Red": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rouge"
+          }
+        }
+      }
+    },
+    "The icon could not be changed.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’icône n’a pas pu être changée."
+          }
+        }
+      }
+    },
+    "Feedback": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Commentaires"
+          }
+        }
+      }
+    },
+    "Send Feedback": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer un commentaire"
+          }
+        }
+      }
+    },
+    "Send Feedback…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer un commentaire…"
+          }
+        }
+      }
+    },
+    "Your feedback": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre commentaire"
+          }
+        }
+      }
+    },
+    "Feedback message": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message du commentaire"
+          }
+        }
+      }
+    },
+    "Your message and optional email address are sent to Formspree. Include an email address if you would like a reply.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre message et votre adresse e-mail facultative sont envoyés à Formspree. Indiquez une adresse e-mail si vous souhaitez recevoir une réponse."
+          }
+        }
+      }
+    },
+    "Sending…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoi…"
+          }
+        }
+      }
+    },
+    "Send": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer"
+          }
+        }
+      }
+    },
+    "Feedback sending is not configured yet.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’envoi de commentaires n’est pas encore configuré."
+          }
+        }
+      }
+    },
+    "Your feedback was accepted. Thank you!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre commentaire a bien été accepté. Merci !"
+          }
+        }
+      }
+    },
+    "Could not send your feedback. Please try again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le commentaire n’a pas pu être envoyé. Veuillez réessayer."
+          }
+        }
+      }
+    },
+    "Open a GitHub Issue": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir une issue GitHub"
+          }
+        }
+      }
+    },
+    "Could not prepare the GitHub link for this message.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le lien GitHub n’a pas pu être préparé pour ce message."
+          }
+        }
+      }
+    },
+    "Send an Email": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer un e-mail"
+          }
+        }
+      }
+    },
+    "The contact email is not configured yet.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’adresse e-mail de contact n’est pas encore configurée."
+          }
+        }
+      }
+    },
+    "Could not prepare the email link for this message.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le lien e-mail n’a pas pu être préparé pour ce message."
+          }
+        }
+      }
+    },
+    "Other ways to send feedback": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autres moyens d’envoyer un commentaire"
+          }
+        }
+      }
+    },
+    "You can also open an issue on the app's public GitHub repository.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous pouvez aussi ouvrir une issue dans le dépôt GitHub public de l’app."
+          }
+        }
+      }
+    },
+    "Email address (optional)": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse e-mail (facultative)"
+          }
+        }
+      }
+    },
+    "Unable to Open Link": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’ouvrir le lien"
+          }
+        }
+      }
+    },
+    "Check that an app is available to open this link and try again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérifiez qu’une app peut ouvrir ce lien, puis réessayez."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

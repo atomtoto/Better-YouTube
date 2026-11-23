@@ -30,6 +30,7 @@ struct DownloadsView: View {
                 }
                 .groupedListStyle()
                 .minimizesPlayerBarOnScroll()
+                .warmPage()
             }
         }
         .navigationTitle("Downloads")

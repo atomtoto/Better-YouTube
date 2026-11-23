@@ -54,6 +54,7 @@ struct VideoListView: View {
                 }
                 .listFilter($filter, prompt: "Filter by title or channel")
                 .minimizesPlayerBarOnScroll()
+                .warmPage()
                 .optionalRefreshable(action: onRefresh)
             }
         }
@@ -120,6 +121,7 @@ struct SubscriptionsView: View {
                 }
                 .listFilter($filter, prompt: "Filter channels")
                 .minimizesPlayerBarOnScroll()
+                .warmPage()
                 .optionalRefreshable(action: onRefresh)
             }
         }
@@ -187,6 +189,7 @@ struct PlaylistsView: View {
                 }
                 .listFilter($filter, prompt: "Filter playlists")
                 .minimizesPlayerBarOnScroll()
+                .warmPage()
                 .optionalRefreshable(action: onRefresh)
             }
         }
@@ -306,6 +309,7 @@ struct PlaylistDetailView: View {
                 }
                 .listStyle(.plain)
                 .minimizesPlayerBarOnScroll()
+                .warmPage()
                 .refreshable {
                     await viewModel.load()
                 }

@@ -141,6 +141,7 @@ struct LibraryView: View {
             }
         }
         .groupedListStyle()
+        .warmPage()
         .minimizesPlayerBarOnScroll()
         .navigationTitle("Library")
         .demoMenu()

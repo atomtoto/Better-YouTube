@@ -61,6 +61,7 @@ struct ChannelView: View {
                     }
                 }
                 .minimizesPlayerBarOnScroll()
+                .warmPage()
             }
         }
         .navigationTitle(channel?.title ?? String(localized: "Channel"))

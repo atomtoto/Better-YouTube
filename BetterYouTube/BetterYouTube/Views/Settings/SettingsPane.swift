@@ -14,13 +14,14 @@ import SafariServices
 /// live in: the API key and what it has spent are one subject, a playlist and the videos kept on
 /// the device are another.
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case account, playback, library, notifications, youTubeHome, downloads, api, advanced
+    case account, appearance, playback, library, notifications, youTubeHome, downloads, api, advanced
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .account: return String(localized: "Account")
+        case .appearance: return String(localized: "Appearance")
         case .playback: return String(localized: "Playback")
         case .library: return String(localized: "Library")
         case .notifications: return String(localized: "Notifications")
@@ -34,6 +35,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .account: return "person.crop.circle"
+        case .appearance: return "paintpalette"
         case .playback: return "play.rectangle"
         case .library: return "rectangle.stack"
         case .notifications: return "bell"
@@ -48,6 +50,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .account: return .blue
+        case .appearance: return .purple
         case .playback: return .red
         case .library: return .orange
         case .notifications: return .red
@@ -78,6 +81,8 @@ struct SettingsPaneView: View {
             switch pane {
             case .account:
                 AccountSection()
+            case .appearance:
+                AppearanceSection()
             case .playback:
                 PlaybackSection()
             case .library:
@@ -114,12 +119,14 @@ struct SettingsPaneView: View {
                     Text("Search in Tab Bar makes Search a tab like the others, with its field under the title. Turned off, Search is a separate button at the end of the tab bar that turns into a field along the bottom.")
                 }
                 #endif
+                FeedbackSection()
                 YouTubeLinksSection()
                 ResetSection()
                 AboutSection()
             }
         }
         .settingsFormStyle()
+        .warmPage()
         .sheet(isPresented: $showsYouTubeSignIn) {
             YouTubeSignInView()
         }
@@ -337,6 +344,45 @@ private struct YouTubeLinksSection: View {
             Button("OK", role: .cancel) { settingsError = nil }
         } message: {
             Text(settingsError ?? "")
+        }
+        #endif
+    }
+}
+
+/// A bug report, an idea, a few kind words — sent from a form of its own.
+///
+/// On a phone the form is pushed onto the stack like any other settings screen. The Mac's
+/// Settings window has no stack in its detail column, so there the form opens in a sheet.
+private struct FeedbackSection: View {
+    #if os(macOS)
+    @State private var showsFeedback = false
+    #endif
+
+    var body: some View {
+        Section {
+            #if os(macOS)
+            LabeledContent("Feedback") {
+                Button("Send Feedback…") { showsFeedback = true }
+            }
+            #else
+            NavigationLink {
+                FeedbackView()
+            } label: {
+                Label("Send Feedback", systemImage: "text.bubble")
+            }
+            #endif
+        }
+        #if os(macOS)
+        .sheet(isPresented: $showsFeedback) {
+            NavigationStack {
+                FeedbackView()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showsFeedback = false }
+                        }
+                    }
+            }
+            .frame(minWidth: 440, idealWidth: 520, minHeight: 480, idealHeight: 560)
         }
         #endif
     }

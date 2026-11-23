@@ -63,6 +63,7 @@ struct PlaylistPickerView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .warmPage()
             .navigationTitle("Add to Playlist")
             .inlineNavigationBar()
             .toolbar {

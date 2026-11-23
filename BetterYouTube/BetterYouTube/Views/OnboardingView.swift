@@ -463,6 +463,7 @@ private struct OnboardingPage<Content: View, Actions: View>: View {
             content
         }
         .settingsFormStyle()
+        .warmPage()
         .safeAreaBar(edge: .bottom) {
             VStack(spacing: 10) {
                 actions

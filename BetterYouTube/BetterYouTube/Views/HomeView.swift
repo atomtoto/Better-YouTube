@@ -277,6 +277,7 @@ struct HomeView: View {
             .padding(.vertical, 12)
         }
         .scrollIndicators(.hidden)
+        .warmPage()
         .minimizesPlayerBarOnScroll()
     }
 
