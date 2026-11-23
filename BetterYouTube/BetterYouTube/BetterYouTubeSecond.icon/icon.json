@@ -1,0 +1,132 @@
+{
+  "features" : [
+    "refractivity",
+    "specular-location"
+  ],
+  "fill" : {
+    "solid" : "display-p3:0.83529,0.22353,0.20000,1.00000"
+  },
+  "groups" : [
+    {
+      "blur-material" : 0.02,
+      "layers" : [
+        {
+          "blend-mode" : "normal",
+          "fill-specializations" : [
+            {
+              "value" : "system-light"
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.83529,0.22353,0.20000,1.00000"
+              }
+            }
+          ],
+          "hidden" : false,
+          "image-name" : "Rectangle 2.svg",
+          "name" : "Rectangle 2",
+          "opacity" : 0.5,
+          "position" : {
+            "scale" : 4,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "name" : "Group",
+      "refractivity" : {
+        "depth" : 0.025,
+        "enabled" : true,
+        "strength" : 0.5058203125
+      },
+      "shadow-specializations" : [
+        {
+          "value" : {
+            "kind" : "layer-color",
+            "opacity" : 0.25
+          }
+        },
+        {
+          "appearance" : "dark",
+          "value" : {
+            "kind" : "layer-color",
+            "opacity" : 0.6
+          }
+        }
+      ],
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.15
+      }
+    },
+    {
+      "blur-material" : null,
+      "layers" : [
+        {
+          "blend-mode" : "normal",
+          "fill-specializations" : [
+            {
+              "value" : "system-light"
+            },
+            {
+              "appearance" : "dark",
+              "value" : "automatic"
+            }
+          ],
+          "glass" : true,
+          "image-name" : "Polygon 1.svg",
+          "name" : "Polygon 1",
+          "opacity" : 0.98,
+          "position" : {
+            "scale" : 3.15,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "blend-mode" : "lighten",
+          "fill" : {
+            "automatic-gradient" : "display-p3:0.83529,0.22353,0.20000,1.00000"
+          },
+          "glass" : true,
+          "hidden" : true,
+          "image-name" : "Rectangle 1 2.svg",
+          "name" : "Rectangle 1 2",
+          "position" : {
+            "scale" : 4,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "opacity" : 1,
+      "refractivity" : {
+        "depth" : 0,
+        "enabled" : false,
+        "strength" : 0.5
+      },
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 0.5
+      },
+      "specular" : "inside",
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.25
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
